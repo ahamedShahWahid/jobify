@@ -419,7 +419,7 @@ DB/Redis readiness probes land in a later plan.
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
 from kpa import __version__
@@ -436,8 +436,10 @@ class HealthResponse(BaseModel):
 
 
 @router.get("/health", response_model=HealthResponse, tags=["meta"])
-def health() -> HealthResponse:
-    settings = Settings()
+def health(request: Request) -> HealthResponse:
+    # Settings is parsed once at app startup and stored on app.state;
+    # don't re-parse env vars per request.
+    settings: Settings = request.app.state.settings
     return HealthResponse(
         status="ok",
         service=settings.service_name,
