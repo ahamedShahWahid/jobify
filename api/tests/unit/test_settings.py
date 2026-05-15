@@ -53,3 +53,25 @@ def test_settings_defaults_when_optional_missing(monkeypatch: pytest.MonkeyPatch
 
     assert settings.log_level == "INFO"
     assert settings.log_format == "text"
+
+
+def test_settings_raises_when_required_vars_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("KPA_ENV", raising=False)
+    monkeypatch.delenv("KPA_SERVICE_NAME", raising=False)
+    monkeypatch.delenv("KPA_LOG_LEVEL", raising=False)
+    monkeypatch.delenv("KPA_LOG_FORMAT", raising=False)
+
+    with pytest.raises(ValidationError):
+        Settings()
+
+
+def test_settings_normalizes_log_level_case(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("KPA_ENV", "local")
+    monkeypatch.setenv("KPA_SERVICE_NAME", "kpa-api")
+    monkeypatch.setenv("KPA_LOG_LEVEL", "debug")  # lowercase
+    monkeypatch.setenv("KPA_LOG_FORMAT", "JSON")  # uppercase
+
+    settings = Settings()
+
+    assert settings.log_level == "DEBUG"
+    assert settings.log_format == "json"

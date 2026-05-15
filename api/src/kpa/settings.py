@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import Literal
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Environment = Literal["local", "dev", "staging", "prod"]
@@ -31,3 +32,13 @@ class Settings(BaseSettings):
     service_name: str
     log_level: LogLevel = "INFO"
     log_format: LogFormat = "text"
+
+    @field_validator("log_level", mode="before")
+    @classmethod
+    def _upper_log_level(cls, v: object) -> object:
+        return v.upper() if isinstance(v, str) else v
+
+    @field_validator("log_format", mode="before")
+    @classmethod
+    def _lower_log_format(cls, v: object) -> object:
+        return v.lower() if isinstance(v, str) else v
