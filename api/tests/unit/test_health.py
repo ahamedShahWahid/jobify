@@ -12,5 +12,5 @@ def test_health_returns_ok(client: TestClient) -> None:
     body = response.json()
     assert body["status"] == "ok"
     assert body["service"] == "kpa-api"
-    assert "version" in body
-    assert "env" in body
+    assert body["version"] == "0.1.0"
+    assert body["env"] == "local"

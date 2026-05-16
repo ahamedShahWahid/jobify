@@ -20,5 +20,7 @@ def create_app() -> FastAPI:
         openapi_url="/openapi.json",
     )
     app.state.settings = settings
+    # /health is intentionally not under /v1 — ALB and Kubernetes probes target
+    # it directly. Versioned API routes will be mounted with prefix="/v1" later.
     app.include_router(health.router)
     return app
