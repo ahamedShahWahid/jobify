@@ -128,3 +128,56 @@ async def test_upload_resume_rejects_oversized_payload(
     assert response.status_code == 413
     rows = (await session.execute(select(Resume).where(Resume.applicant_id == applicant.id))).all()
     assert rows == []
+
+
+@pytest.mark.integration
+async def test_get_resume_returns_metadata(
+    async_client: httpx.AsyncClient, session: AsyncSession
+) -> None:
+    applicant = await _make_applicant(session)
+    post = await async_client.post(
+        f"/v1/applicants/{applicant.id}/resumes",
+        files={"file": ("cv.pdf", _TINY_PDF, "application/pdf")},
+    )
+    assert post.status_code == 201, post.text
+    posted = post.json()
+
+    response = await async_client.get(f"/v1/applicants/{applicant.id}/resumes/{posted['id']}")
+
+    assert response.status_code == 200
+    assert response.json() == posted
+
+
+@pytest.mark.integration
+async def test_get_resume_unknown_id_returns_404(
+    async_client: httpx.AsyncClient, session: AsyncSession
+) -> None:
+    applicant = await _make_applicant(session)
+    bogus = uuid.uuid4()
+
+    response = await async_client.get(f"/v1/applicants/{applicant.id}/resumes/{bogus}")
+
+    assert response.status_code == 404
+
+
+@pytest.mark.integration
+async def test_get_resume_from_wrong_applicant_returns_404(
+    async_client: httpx.AsyncClient, session: AsyncSession
+) -> None:
+    """A real resume id queried under a *different* applicant's path must 404.
+
+    Returning 403 would leak the existence of the resume to an unauthorized
+    caller; 404 keeps the surface flat.
+    """
+    owner = await _make_applicant(session)
+    intruder = await _make_applicant(session)
+
+    post = await async_client.post(
+        f"/v1/applicants/{owner.id}/resumes",
+        files={"file": ("cv.pdf", _TINY_PDF, "application/pdf")},
+    )
+    posted = post.json()
+
+    response = await async_client.get(f"/v1/applicants/{intruder.id}/resumes/{posted['id']}")
+
+    assert response.status_code == 404

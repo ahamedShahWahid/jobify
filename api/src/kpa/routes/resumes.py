@@ -111,3 +111,30 @@ async def upload_resume(
     await session.commit()
     await session.refresh(resume)
     return resume
+
+
+@router.get(
+    "/resumes/{resume_id}",
+    response_model=ResumeRead,
+)
+async def get_resume(
+    applicant_id: UUID,
+    resume_id: UUID,
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> Resume:
+    # Apply the same live-applicant check as POST so we don't leak the
+    # resume's existence to callers using an unknown applicant id.
+    await _load_live_applicant(session, applicant_id)
+
+    row = (
+        await session.execute(
+            select(Resume).where(
+                Resume.id == resume_id,
+                Resume.applicant_id == applicant_id,
+                Resume.deleted_at.is_(None),
+            )
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="resume not found")
+    return row
