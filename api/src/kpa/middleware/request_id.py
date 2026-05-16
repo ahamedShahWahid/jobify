@@ -56,7 +56,7 @@ class RequestIdMiddleware:
         async def _send_with_header(message: Message) -> None:
             if message["type"] == "http.response.start":
                 headers_mut = MutableHeaders(scope=message)
-                headers_mut.append(REQUEST_ID_HEADER, request_id)
+                headers_mut[REQUEST_ID_HEADER] = request_id
             await send(message)
 
         await self.app(scope, receive, _send_with_header)

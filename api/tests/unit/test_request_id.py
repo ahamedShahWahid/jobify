@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 
+import pytest
 from fastapi.testclient import TestClient
 
 UUID_V4 = re.compile(
@@ -46,3 +47,35 @@ def test_request_id_rejected_when_wrong_version(client: TestClient) -> None:
     echoed = response.headers["x-request-id"]
     assert echoed != uuid1
     assert UUID_V4.match(echoed)
+
+
+def test_response_has_exactly_one_request_id_header(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Regression guard: middleware must upsert, not append. The 500 error handler
+    sets X-Request-Id explicitly; without upsert, the middleware would double it.
+    """
+    monkeypatch.setenv("KPA_ENV", "local")
+    monkeypatch.setenv("KPA_SERVICE_NAME", "kpa-api")
+    monkeypatch.setenv("KPA_DB_URL", "postgresql+asyncpg://u:p@h:5432/d")
+
+    from fastapi import FastAPI
+    from fastapi.responses import PlainTextResponse
+    from fastapi.testclient import TestClient
+
+    from kpa.middleware.request_id import REQUEST_ID_HEADER, RequestIdMiddleware
+
+    app = FastAPI()
+    app.add_middleware(RequestIdMiddleware)
+
+    @app.get("/preset")
+    def preset() -> PlainTextResponse:
+        response = PlainTextResponse("ok")
+        response.headers[REQUEST_ID_HEADER] = "00000000-0000-4000-8000-000000000000"
+        return response
+
+    with TestClient(app) as c:
+        response = c.get("/preset")
+
+    # httpx exposes multiple values as a comma-joined string; counting commas + 1 = header count
+    assert response.headers.get_list(REQUEST_ID_HEADER) is not None
+    headers = response.headers.get_list(REQUEST_ID_HEADER)
+    assert len(headers) == 1, f"Expected 1 X-Request-Id header, got {len(headers)}: {headers}"

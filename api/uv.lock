@@ -193,6 +193,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
+    { name = "anyio" },
     { name = "asyncpg" },
     { name = "fastapi" },
     { name = "pydantic" },
@@ -215,6 +216,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = ">=1.14,<2" },
+    { name = "anyio", specifier = ">=4,<5" },
     { name = "asyncpg", specifier = ">=0.30,<0.31" },
     { name = "fastapi", specifier = ">=0.115,<0.116" },
     { name = "pydantic", specifier = ">=2.9,<3" },
