@@ -1,3 +1,6 @@
 # macOS Finder metadata. Created any time you open a folder in Finder.
 .DS_Store
 ._*
+
+# Local upload storage (LocalFileStorage default root).
+api/var/
