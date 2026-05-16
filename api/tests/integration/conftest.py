@@ -14,6 +14,7 @@ import os
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 
+import httpx
 import pytest
 import pytest_asyncio
 from alembic import command
@@ -91,14 +92,14 @@ def client(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Iterator[TestClient]:
-    """Test client that shares the savepoint-isolated session with the route handler.
+    """Sync test client for non-async tests.
 
-    Steps:
-      1. Set env vars (including KPA_STORAGE_ROOT pointed at tmp_path).
-      2. Build the app via create_app().
-      3. Override Depends(get_session) so every route handler reuses
-         the test's session (same connection, same savepoint).
-      4. Yield a sync TestClient.
+    Uses TestClient (Starlette sync portal). Suitable only for routes that do
+    NOT exercise asyncpg via a shared ``session`` fixture, because TestClient
+    runs the ASGI app in a separate anyio event loop which conflicts with the
+    asyncpg connection bound to the pytest-asyncio test-function event loop.
+
+    For async tests that share a ``session``, use the ``async_client`` fixture.
     """
     monkeypatch.setenv("KPA_ENV", "local")
     monkeypatch.setenv("KPA_SERVICE_NAME", "kpa-api")
@@ -117,5 +118,43 @@ def client(
 
     with TestClient(app) as c:
         yield c
+
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def async_client(
+    session: AsyncSession,
+    db_url: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> AsyncIterator[httpx.AsyncClient]:
+    """Async HTTP client for async tests that share a ``session``.
+
+    Uses httpx.AsyncClient with ASGITransport so the ASGI app executes in the
+    same event loop as the async test function. This avoids the asyncpg
+    ``Future attached to a different loop`` error that arises when TestClient's
+    blocking portal creates its own event loop.
+    """
+    monkeypatch.setenv("KPA_ENV", "local")
+    monkeypatch.setenv("KPA_SERVICE_NAME", "kpa-api")
+    monkeypatch.setenv("KPA_DB_URL", db_url)
+    monkeypatch.setenv("KPA_STORAGE_ROOT", str(tmp_path))
+
+    from kpa.app_factory import create_app
+    from kpa.db.session import get_session
+
+    app = create_app()
+
+    async def _shared_session() -> AsyncIterator[AsyncSession]:
+        yield session
+
+    app.dependency_overrides[get_session] = _shared_session
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app),  # type: ignore[arg-type]
+        base_url="http://test",
+    ) as ac:
+        yield ac
 
     app.dependency_overrides.clear()

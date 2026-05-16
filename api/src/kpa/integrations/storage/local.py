@@ -6,8 +6,10 @@ layer needs to know about it.
 
 from __future__ import annotations
 
-import asyncio
+import functools
 from pathlib import Path
+
+import anyio.to_thread
 
 
 class LocalFileStorage:
@@ -30,7 +32,7 @@ class LocalFileStorage:
 
     async def save(self, *, key: str, content: bytes, content_type: str) -> None:
         path = self._resolve(key)
-        await asyncio.to_thread(self._write, path, content)
+        await anyio.to_thread.run_sync(functools.partial(self._write, path, content))
 
     @staticmethod
     def _write(path: Path, content: bytes) -> None:
@@ -39,11 +41,11 @@ class LocalFileStorage:
 
     async def read(self, key: str) -> bytes:
         path = self._resolve(key)
-        return await asyncio.to_thread(path.read_bytes)
+        return await anyio.to_thread.run_sync(path.read_bytes)
 
     async def delete(self, key: str) -> None:
         path = self._resolve(key)
-        await asyncio.to_thread(self._unlink, path)
+        await anyio.to_thread.run_sync(functools.partial(self._unlink, path))
 
     @staticmethod
     def _unlink(path: Path) -> None:
