@@ -12,11 +12,14 @@ from __future__ import annotations
 
 import os
 from collections.abc import AsyncIterator, Iterator
+from dataclasses import dataclass
 
 import pytest
 import pytest_asyncio
 from alembic import command
 from alembic.config import Config
+from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -24,7 +27,41 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import NullPool
 
+from kpa.auth.google_verifier import (
+    GoogleClaims,
+    InvalidGoogleTokenError,
+    get_google_verifier,
+)
+
 pytestmark = pytest.mark.integration
+
+
+@dataclass
+class FakeGoogleIdTokenVerifier:
+    """Test double: opaque token strings → canned :class:`GoogleClaims`.
+
+    Use this via the ``google_verifier`` fixture; the integration ``client``
+    and ``async_client`` fixtures override
+    ``app.dependency_overrides[get_google_verifier]`` to return it.
+    """
+
+    canned: dict[str, GoogleClaims]
+
+    async def verify(self, id_token: str) -> GoogleClaims:
+        if id_token in self.canned:
+            return self.canned[id_token]
+        raise InvalidGoogleTokenError()
+
+
+@pytest.fixture
+def google_verifier() -> FakeGoogleIdTokenVerifier:
+    """A fresh fake per test, with no canned tokens.
+
+    Tests populate ``.canned`` to register their tokens, e.g.:
+
+        google_verifier.canned["applicant_a_token"] = GoogleClaims(...)
+    """
+    return FakeGoogleIdTokenVerifier(canned={})
 
 
 DEFAULT_TEST_DB_URL = "postgresql+asyncpg://kpa:kpa@localhost:5432/kpa_test"
@@ -54,6 +91,11 @@ def migrated_db(db_url: str, monkeypatch_session: pytest.MonkeyPatch) -> str:
     monkeypatch_session.setenv("KPA_ENV", "local")
     monkeypatch_session.setenv("KPA_SERVICE_NAME", "kpa-api")
     monkeypatch_session.setenv("KPA_DB_URL", db_url)
+    monkeypatch_session.setenv("KPA_JWT_SECRET", "x" * 32)
+    monkeypatch_session.setenv(
+        "KPA_GOOGLE_OAUTH_CLIENT_IDS",
+        "test.apps.googleusercontent.com",
+    )
     cfg = Config("alembic.ini")
     command.upgrade(cfg, "head")
     return db_url
@@ -80,3 +122,73 @@ async def session(migrated_db: str) -> AsyncIterator[AsyncSession]:
             yield s
         await trans.rollback()
     await engine.dispose()
+
+
+@pytest.fixture
+def client(
+    session: AsyncSession,
+    db_url: str,
+    monkeypatch: pytest.MonkeyPatch,
+    google_verifier: FakeGoogleIdTokenVerifier,
+) -> Iterator[TestClient]:
+    """TestClient wired to the per-test DB session + fake Google verifier."""
+    monkeypatch.setenv("KPA_ENV", "local")
+    monkeypatch.setenv("KPA_SERVICE_NAME", "kpa-api")
+    monkeypatch.setenv("KPA_DB_URL", db_url)
+    monkeypatch.setenv("KPA_JWT_SECRET", "x" * 32)
+    monkeypatch.setenv(
+        "KPA_GOOGLE_OAUTH_CLIENT_IDS",
+        "test.apps.googleusercontent.com",
+    )
+
+    from kpa.app_factory import create_app
+    from kpa.db.session import get_session
+
+    app = create_app()
+
+    async def _shared_session() -> AsyncIterator[AsyncSession]:
+        yield session
+
+    app.dependency_overrides[get_session] = _shared_session
+    app.dependency_overrides[get_google_verifier] = lambda: google_verifier
+
+    with TestClient(app) as c:
+        yield c
+
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def async_client(
+    session: AsyncSession,
+    db_url: str,
+    monkeypatch: pytest.MonkeyPatch,
+    google_verifier: FakeGoogleIdTokenVerifier,
+) -> AsyncIterator[AsyncClient]:
+    """AsyncClient wired to the per-test DB session + fake Google verifier."""
+    monkeypatch.setenv("KPA_ENV", "local")
+    monkeypatch.setenv("KPA_SERVICE_NAME", "kpa-api")
+    monkeypatch.setenv("KPA_DB_URL", db_url)
+    monkeypatch.setenv("KPA_JWT_SECRET", "x" * 32)
+    monkeypatch.setenv(
+        "KPA_GOOGLE_OAUTH_CLIENT_IDS",
+        "test.apps.googleusercontent.com",
+    )
+
+    from kpa.app_factory import create_app
+    from kpa.db.session import get_session
+
+    app = create_app()
+
+    async def _shared_session() -> AsyncIterator[AsyncSession]:
+        yield session
+
+    app.dependency_overrides[get_session] = _shared_session
+    app.dependency_overrides[get_google_verifier] = lambda: google_verifier
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        yield ac
+
+    app.dependency_overrides.clear()

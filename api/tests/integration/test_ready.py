@@ -11,6 +11,11 @@ def test_ready_returns_200_when_db_reachable(db_url: str, monkeypatch: pytest.Mo
     monkeypatch.setenv("KPA_ENV", "local")
     monkeypatch.setenv("KPA_SERVICE_NAME", "kpa-api")
     monkeypatch.setenv("KPA_DB_URL", db_url)
+    monkeypatch.setenv("KPA_JWT_SECRET", "x" * 32)
+    monkeypatch.setenv(
+        "KPA_GOOGLE_OAUTH_CLIENT_IDS",
+        "test.apps.googleusercontent.com",
+    )
 
     from kpa.app_factory import create_app  # import after env is set
 
@@ -27,6 +32,11 @@ def test_ready_returns_503_when_db_unreachable(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setenv(
         "KPA_DB_URL",
         "postgresql+asyncpg://nobody:nobody@127.0.0.1:1/none",  # unreachable
+    )
+    monkeypatch.setenv("KPA_JWT_SECRET", "x" * 32)
+    monkeypatch.setenv(
+        "KPA_GOOGLE_OAUTH_CLIENT_IDS",
+        "test.apps.googleusercontent.com",
     )
 
     from kpa.app_factory import create_app
