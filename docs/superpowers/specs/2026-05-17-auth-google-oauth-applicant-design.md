@@ -181,7 +181,7 @@ Append-only by convention. Rows are never deleted; rotation revokes by setting `
 **Indexes:**
 - `UNIQUE (token_hash)` — primary lookup on refresh. **Not** partial — we *want* to find revoked rows so we can detect reuse and revoke the family.
 - `(family_id) WHERE revoked_at IS NULL` — fast family-wide revocation on reuse.
-- `(user_id) WHERE revoked_at IS NULL AND expires_at > now()` — for the future "active sessions" view.
+- `(user_id) WHERE revoked_at IS NULL` — for the future "active sessions" view ( — query filters `expires_at > now()` residually; `now()` is non-IMMUTABLE so it cannot live in the predicate).
 
 ### Existing tables — no schema changes
 

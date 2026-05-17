@@ -1333,7 +1333,7 @@ class RefreshToken(Base):
         Index(
             "ix_refresh_tokens_user_id_active",
             "user_id",
-            postgresql_where="revoked_at IS NULL AND expires_at > now()",
+            postgresql_where="revoked_at IS NULL",
         ),
         {"schema": "kpa"},
     )
@@ -1571,7 +1571,7 @@ def upgrade() -> None:
         "refresh_tokens",
         ["user_id"],
         schema="kpa",
-        postgresql_where=sa.text("revoked_at IS NULL AND expires_at > now()"),
+        postgresql_where=sa.text("revoked_at IS NULL"),
     )
 
 
