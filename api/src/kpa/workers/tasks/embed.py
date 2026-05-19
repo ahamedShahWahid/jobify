@@ -114,9 +114,7 @@ async def _embed_applicant_async(
         text, content_hash = canonicalize_profile(parsed, full_name=applicant.full_name)
         existing = (
             await session.execute(
-                select(ApplicantEmbedding).where(
-                    ApplicantEmbedding.applicant_id == applicant_id
-                )
+                select(ApplicantEmbedding).where(ApplicantEmbedding.applicant_id == applicant_id)
             )
         ).scalar_one_or_none()
         if existing is not None and existing.canonicalized_text_hash == content_hash:
@@ -161,9 +159,7 @@ async def _embed_applicant_async(
             _log.info("embed.stale-no-parsed-resume", applicant_id=str(applicant_id))
             return
         parsed_now = ParsedResume.model_validate(latest_now.parsed_json)
-        _, content_hash_now = canonicalize_profile(
-            parsed_now, full_name=applicant_now.full_name
-        )
+        _, content_hash_now = canonicalize_profile(parsed_now, full_name=applicant_now.full_name)
         if content_hash_now != content_hash:
             _log.info(
                 "embed.stale-content-aborted",
@@ -204,9 +200,7 @@ async def _embed_applicant_async(
     )
 
 
-async def _load_latest_parsed_resume(
-    session: AsyncSession, applicant_id: UUID
-) -> Resume | None:
+async def _load_latest_parsed_resume(session: AsyncSession, applicant_id: UUID) -> Resume | None:
     """Return the most recently created parsed resume for an applicant.
 
     Used by both Txn1 (gate) and Txn3 (verify) to read the same row twice; the

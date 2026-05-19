@@ -2,6 +2,7 @@
 
 No I/O, no DB, no network.
 """
+
 from __future__ import annotations
 
 from kpa.integrations.embeddings.canonicalize import canonicalize_profile

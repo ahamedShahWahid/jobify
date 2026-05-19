@@ -11,6 +11,7 @@ to the point of use (in ``celery_app.get_embedding_provider()``) so that
 ``google.genai`` and its dependencies are not loaded for worker processes
 that don't consume the ``embed`` queue.
 """
+
 from kpa.integrations.embeddings.base import (
     EmbeddingProvider,
     EmbeddingProviderError,

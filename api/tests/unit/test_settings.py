@@ -377,9 +377,7 @@ def test_embedding_dim_rejects_unsupported_value(monkeypatch: pytest.MonkeyPatch
 
 
 @pytest.mark.parametrize("dim", [128, 256, 512, 768, 1024, 1536, 3072])
-def test_embedding_dim_accepts_supported_values(
-    monkeypatch: pytest.MonkeyPatch, dim: int
-) -> None:
+def test_embedding_dim_accepts_supported_values(monkeypatch: pytest.MonkeyPatch, dim: int) -> None:
     _set_minimum_env(monkeypatch)
     monkeypatch.setenv("KPA_EMBEDDING_DIM", str(dim))
     s = Settings()

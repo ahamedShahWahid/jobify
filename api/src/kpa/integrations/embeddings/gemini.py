@@ -3,6 +3,7 @@
 Task is encoded via prompt prefix (gemini-embedding-2 does NOT accept the
 ``task_type`` parameter; that was a gemini-embedding-001 thing).
 """
+
 from __future__ import annotations
 
 import structlog

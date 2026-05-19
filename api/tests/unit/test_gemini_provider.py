@@ -2,6 +2,7 @@
 
 Uses unittest.mock.AsyncMock to patch genai.Client so no real HTTP calls occur.
 """
+
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -19,6 +20,7 @@ from kpa.integrations.embeddings.gemini import GeminiEmbeddingProvider
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_provider(output_dim: int = 3072) -> tuple[GeminiEmbeddingProvider, AsyncMock]:
     """Return (provider, embed_content_mock).
@@ -63,6 +65,7 @@ def _make_response(
 # Task formatting tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_document_task_formats_with_title_prefix() -> None:
     """DOCUMENT task + explicit title → prompt prefix includes 'title: Alice | text:'."""
@@ -100,6 +103,7 @@ async def test_query_task_formats_with_search_result_prefix() -> None:
 # Error-mapping tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_5xx_maps_to_transient_error() -> None:
     """ServerError (5xx) from the SDK → TransientEmbeddingError."""
@@ -111,7 +115,9 @@ async def test_5xx_maps_to_transient_error() -> None:
     fake_response = MagicMock()
     fake_response.status_code = 500
     fake_response.json.return_value = {
-        "message": "internal error", "status": "INTERNAL", "code": 500
+        "message": "internal error",
+        "status": "INTERNAL",
+        "code": 500,
     }
     embed_mock.side_effect = errors.ServerError(500, fake_response)
 
@@ -129,7 +135,9 @@ async def test_429_maps_to_transient_error() -> None:
     fake_response = MagicMock()
     fake_response.status_code = 429
     fake_response.json.return_value = {
-        "message": "rate limit", "status": "RESOURCE_EXHAUSTED", "code": 429
+        "message": "rate limit",
+        "status": "RESOURCE_EXHAUSTED",
+        "code": 429,
     }
     embed_mock.side_effect = errors.ClientError(429, fake_response)
 
@@ -147,7 +155,9 @@ async def test_other_4xx_maps_to_permanent_error() -> None:
     fake_response = MagicMock()
     fake_response.status_code = 400
     fake_response.json.return_value = {
-        "message": "bad input", "status": "INVALID_ARGUMENT", "code": 400
+        "message": "bad input",
+        "status": "INVALID_ARGUMENT",
+        "code": 400,
     }
     embed_mock.side_effect = errors.ClientError(400, fake_response)
 
@@ -158,6 +168,7 @@ async def test_other_4xx_maps_to_permanent_error() -> None:
 # ---------------------------------------------------------------------------
 # Response validation tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_dim_mismatch_is_permanent_error() -> None:

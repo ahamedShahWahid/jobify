@@ -4,6 +4,7 @@ Stable ordering and normalization is critical: the sha256 of the output is the
 idempotency key on ``applicant_embeddings.canonicalized_text_hash``. A reordering
 of skills or a different rendering of the same content must NOT change the hash.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -21,12 +22,8 @@ def canonicalize_profile(parsed: ParsedResume, *, full_name: str) -> tuple[str, 
     """
     skills = sorted({s.strip().lower() for s in parsed.skills if s and s.strip()})
 
-    experience_lines = sorted(
-        _format_experience(r) for r in parsed.experience
-    )
-    education_lines = sorted(
-        _format_education(e) for e in parsed.education
-    )
+    experience_lines = sorted(_format_experience(r) for r in parsed.experience)
+    education_lines = sorted(_format_education(e) for e in parsed.education)
     certification_names = sorted(
         {c.name.strip() for c in parsed.certifications if c.name and c.name.strip()}
     )

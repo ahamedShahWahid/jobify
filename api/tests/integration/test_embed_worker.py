@@ -53,9 +53,7 @@ def _claims(sub: str, email: str) -> GoogleClaims:
     )
 
 
-async def _signin_as_applicant(
-    client: httpx.AsyncClient, google_verifier
-) -> tuple[str, str]:
+async def _signin_as_applicant(client: httpx.AsyncClient, google_verifier) -> tuple[str, str]:
     """Sign in via the fake Google verifier; return (applicant_id, access_token)."""
     sub = f"google-sub-{uuid.uuid4()}"
     email = f"applicant-{uuid.uuid4()}@example.com"
@@ -85,9 +83,7 @@ async def _cleanup_user_by_email(db_url: str, email: str) -> None:
         await engine.dispose()
 
 
-async def _get_embedding_row_direct(
-    db_url: str, applicant_id: str
-) -> tuple | None:
+async def _get_embedding_row_direct(db_url: str, applicant_id: str) -> tuple | None:
     """Return (model_name, dim, hash_len, input_tokens) or None via a fresh connection."""
     engine = create_async_engine(db_url, poolclass=NullPool)
     try:
@@ -116,9 +112,7 @@ async def _get_resume_row_direct(db_url: str, resume_id: str) -> Resume:
 
         sm = async_sessionmaker(engine, expire_on_commit=False)
         async with sm() as s:
-            return (
-                await s.execute(select(Resume).where(Resume.id == resume_id))
-            ).scalar_one()
+            return (await s.execute(select(Resume).where(Resume.id == resume_id))).scalar_one()
     finally:
         await engine.dispose()
 
@@ -205,9 +199,9 @@ async def test_embed_after_parse_writes_row(
         # Verify parse + embed both ran eagerly via direct DB reads.
         resume_id = resp.json()["id"]
         resume = await _get_resume_row_direct(migrated_db, resume_id)
-        assert resume.parse_status is ResumeParseStatus.PARSED, (
-            f"parse didn't complete; got {resume.parse_status}"
-        )
+        assert (
+            resume.parse_status is ResumeParseStatus.PARSED
+        ), f"parse didn't complete; got {resume.parse_status}"
 
         row = await _get_embedding_row_direct(migrated_db, applicant_id)
         assert row is not None, (
