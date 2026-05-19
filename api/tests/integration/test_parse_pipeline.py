@@ -21,9 +21,12 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
+from kpa.auth.tokens import mint_access_token
 from kpa.db.models import Applicant, Resume, ResumeParseStatus, User, UserRole
 
 pytestmark = pytest.mark.integration
+
+_JWT_SECRET = "x" * 32  # matches KPA_JWT_SECRET set by pipeline_client
 
 
 def _tiny_pdf_with(text_lines: list[str]) -> bytes:
@@ -52,6 +55,7 @@ async def pipeline_client(
     monkeypatch.setenv("KPA_DB_URL", migrated_db)
     monkeypatch.setenv("KPA_REDIS_URL", "redis://localhost:6379/0")
     monkeypatch.setenv("KPA_STORAGE_ROOT", str(tmp_path))
+    monkeypatch.setenv("KPA_JWT_SECRET", _JWT_SECRET)
 
     import kpa.workers.celery_app as _celery_mod
     from kpa.app_factory import create_app
@@ -80,8 +84,13 @@ async def pipeline_client(
     _celery_mod._sessionmaker = None
 
 
-async def _make_applicant_direct(db_url: str, *, email: str) -> str:
-    """Create user + applicant rows via a committed transaction and return applicant id."""
+async def _make_applicant_direct(db_url: str, *, email: str) -> tuple[str, str]:
+    """Create user + applicant rows via a committed transaction.
+
+    Returns (applicant_id, access_token). The token is minted directly using
+    the same secret that pipeline_client sets via KPA_JWT_SECRET, so the
+    app under test will accept it.
+    """
     engine = create_async_engine(db_url, poolclass=NullPool)
     try:
         from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -94,7 +103,13 @@ async def _make_applicant_direct(db_url: str, *, email: str) -> str:
             applicant = Applicant(user_id=user.id, full_name="Pipeline Test")
             s.add(applicant)
             await s.commit()
-            return str(applicant.id)
+            token = mint_access_token(
+                user_id=user.id,
+                role=user.role.value,
+                secret=_JWT_SECRET,
+                ttl_seconds=600,
+            )
+            return str(applicant.id), token
     finally:
         await engine.dispose()
 
@@ -133,7 +148,7 @@ async def test_upload_then_parse_populates_parsed_json(
     """Eager mode: .delay() runs the task body inline; by the time the response
     returns, the row is already parsed."""
     email = "pipeline-happy@ex.com"
-    applicant_id = await _make_applicant_direct(migrated_db, email=email)
+    applicant_id, access = await _make_applicant_direct(migrated_db, email=email)
     pdf = _tiny_pdf_with(
         [
             "John Doe",
@@ -145,8 +160,9 @@ async def test_upload_then_parse_populates_parsed_json(
 
     try:
         resp = await pipeline_client.post(
-            f"/v1/applicants/{applicant_id}/resumes",
+            "/v1/applicants/me/resumes",
             files={"file": ("cv.pdf", io.BytesIO(pdf), "application/pdf")},
+            headers={"Authorization": f"Bearer {access}"},
         )
         assert resp.status_code == 201
         resume_id = resp.json()["id"]
@@ -172,12 +188,12 @@ async def test_upload_of_unsupported_blob_marks_failed(
     """Upload a .docx content-type with random bytes; parser raises
     ParserError('docx_read_error'), task marks the row failed."""
     email = "pipeline-failed@ex.com"
-    applicant_id = await _make_applicant_direct(migrated_db, email=email)
+    applicant_id, access = await _make_applicant_direct(migrated_db, email=email)
     junk = b"\x00" * 200
 
     try:
         resp = await pipeline_client.post(
-            f"/v1/applicants/{applicant_id}/resumes",
+            "/v1/applicants/me/resumes",
             files={
                 "file": (
                     "cv.docx",
@@ -185,6 +201,7 @@ async def test_upload_of_unsupported_blob_marks_failed(
                     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 )
             },
+            headers={"Authorization": f"Bearer {access}"},
         )
         assert resp.status_code == 201
         resume_id = resp.json()["id"]

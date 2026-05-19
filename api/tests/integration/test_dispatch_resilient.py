@@ -7,10 +7,14 @@ import io
 import pytest
 from fpdf import FPDF
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from kpa.auth.tokens import mint_access_token
 from kpa.db.models import Applicant, Resume, ResumeParseStatus, User, UserRole
 
 pytestmark = pytest.mark.integration
+
+_JWT_SECRET = "x" * 32  # matches KPA_JWT_SECRET in the integration fixtures
 
 
 def _tiny_pdf() -> bytes:
@@ -21,14 +25,21 @@ def _tiny_pdf() -> bytes:
     return bytes(pdf.output())
 
 
-async def _make_applicant(session) -> str:
+async def _make_applicant_with_token(session: AsyncSession) -> tuple[str, str]:
+    """Return (applicant_id, access_token) for a fresh applicant."""
     user = User(email="dispatch@ex.com", role=UserRole.APPLICANT)
     session.add(user)
     await session.flush()
     applicant = Applicant(user_id=user.id, full_name="Dispatch Test")
     session.add(applicant)
     await session.commit()
-    return str(applicant.id)
+    token = mint_access_token(
+        user_id=user.id,
+        role=user.role.value,
+        secret=_JWT_SECRET,
+        ttl_seconds=600,
+    )
+    return str(applicant.id), token
 
 
 async def test_upload_returns_201_even_if_broker_dispatch_raises(
@@ -45,12 +56,13 @@ async def test_upload_returns_201_even_if_broker_dispatch_raises(
 
     monkeypatch.setattr(parse_module.parse_resume, "delay", _raise_broker_down)
 
-    applicant_id = await _make_applicant(session)
+    applicant_id, access = await _make_applicant_with_token(session)
     pdf = _tiny_pdf()
 
     resp = await async_client.post(
-        f"/v1/applicants/{applicant_id}/resumes",
+        "/v1/applicants/me/resumes",
         files={"file": ("cv.pdf", io.BytesIO(pdf), "application/pdf")},
+        headers={"Authorization": f"Bearer {access}"},
     )
 
     assert resp.status_code == 201
