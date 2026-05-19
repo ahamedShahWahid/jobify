@@ -162,7 +162,7 @@ uv run --env-file=.env celery -A kpa.workers.celery_app worker \
 - `--pool=solo`: single-concurrency. The MVP pattern; switch to `--pool=prefork` later when load justifies parallelism.
 - `-Q parse`: only consume from the `parse` queue. Future `embed`/`score`/`notify` queues land in their own plans.
 
-Upload a resume in the first terminal; the worker logs `parse.complete` when it's done. Poll `GET /v1/applicants/{aid}/resumes/{rid}` to see `parse_status` transition.
+Upload a resume in the first terminal; the worker logs `parse.complete` when it's done. Poll `GET /v1/applicants/me/resumes/{rid}` (with the same Bearer token used for the upload) to see `parse_status` transition.
 
 ### Skipping the worker for tests
 
@@ -170,30 +170,23 @@ Tests use Celery eager mode (set via `KPA_CELERY_TASK_ALWAYS_EAGER=true` in test
 
 ## Resume uploads
 
-Two endpoints, both nested under an applicant id:
+Two endpoints, both scoped to the caller's own applicant record:
 
 ```
-POST   /v1/applicants/{applicant_id}/resumes
-GET    /v1/applicants/{applicant_id}/resumes/{resume_id}
+POST   /v1/applicants/me/resumes
+GET    /v1/applicants/me/resumes/{resume_id}
 ```
 
 POST accepts `multipart/form-data` with one field `file`. Content-type is checked against `KPA_ALLOWED_RESUME_CONTENT_TYPES`; size against `KPA_MAX_UPLOAD_BYTES`. The file is persisted under `KPA_STORAGE_ROOT` (gitignored `var/` by default); the resume row in `kpa.resumes` lands with `parse_status=pending`. Parsing is a later plan.
 
-There's no auth in this slice — the applicant id is supplied directly in the URL. The `/v1/applicants/me/resumes` alias lands with the auth plan.
+Both routes require an `Authorization: Bearer <access_jwt>` header — the applicant id is derived from the access token (via the `current_user` dependency), not from the URL. Expect `401` for a missing or invalid token (or a soft-deleted user), `403 not_an_applicant` for recruiter/admin roles, and a uniform `404` for unknown or other-user resume ids. Size violations return `413`; disallowed content-types return `415`. Obtain the access token via the Google OAuth sign-in endpoint documented in [Auth](#auth) below.
 
 Quick test from the shell once the server is running:
 
 ```bash
-# Create a user + applicant first via psql (until signup endpoints exist).
-PGPASSWORD=kpa psql -h localhost -U kpa -d kpa <<'SQL'
-INSERT INTO kpa.users (id, email, role) VALUES (gen_random_uuid(), 'demo@example.com', 'applicant');
-INSERT INTO kpa.applicants (id, user_id, full_name)
-SELECT gen_random_uuid(), id, 'Demo' FROM kpa.users WHERE email = 'demo@example.com';
-SELECT id FROM kpa.applicants WHERE full_name = 'Demo';
-SQL
-
-APPLICANT_ID=<paste the id from above>
-curl -s -X POST "http://127.0.0.1:8000/v1/applicants/$APPLICANT_ID/resumes" \
+ACCESS=...   # access JWT from POST /v1/auth/oauth/google — see Auth below
+curl -s -X POST "http://127.0.0.1:8000/v1/applicants/me/resumes" \
+    -H "Authorization: Bearer $ACCESS" \
     -F "file=@/path/to/cv.pdf" | python -m json.tool
 ```
 
@@ -336,7 +329,7 @@ api/
 │   └── routes/
 │       ├── health.py         # GET /health (liveness)
 │       ├── ready.py          # GET /ready (readiness, DB ping)
-│       ├── resumes.py        # /v1/applicants/{aid}/resumes …
+│       ├── resumes.py        # /v1/applicants/me/resumes …
 │       ├── auth.py           # /v1/auth/oauth/google, /refresh, /logout
 │       └── me.py             # GET /v1/me
 └── tests/
