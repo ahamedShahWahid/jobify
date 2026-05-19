@@ -18,7 +18,9 @@ Any other unexpected exception → wrapped → retried up to max_retries.
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING
+import concurrent.futures
+from collections.abc import Callable, Coroutine
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import structlog
@@ -60,16 +62,39 @@ def parse_resume(self, resume_id_str: str) -> None:  # type: ignore[no-untyped-d
     *before* re-raising so Celery's MaxRetriesExceededError doesn't leave the
     row stuck at PARSING. On any other completion path, do nothing (the async
     body owns failed/parsed transitions via _mark_failed and Txn3).
+
+    When invoked in eager mode from within a running event loop (e.g. during
+    integration tests via httpx.AsyncClient), ``asyncio.run()`` would raise
+    RuntimeError because a loop is already running. In that case we delegate
+    to a fresh thread so the inner ``asyncio.run()`` gets a clean loop.
     """
+
+    def _run(coro_factory: Callable[[], Coroutine[Any, Any, None]]) -> None:
+        """Run a coroutine, dispatching to a thread if a loop is running."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        if loop is not None and loop.is_running():
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                fut = pool.submit(asyncio.run, coro_factory())
+                fut.result()
+        else:
+            asyncio.run(coro_factory())
+
     try:
-        asyncio.run(_parse_resume_async(UUID(resume_id_str)))
+        _run(lambda: _parse_resume_async(UUID(resume_id_str)))
     except TransientParserError as exc:
         if self.request.retries >= self.max_retries:
-            asyncio.run(
-                _mark_failed(
+            # Capture the reason string before the except-clause variable goes
+            # out of scope in Python 3, so the helper lambda captures a str
+            # (not the exception object itself).
+            reason = f"max_retries_exceeded: {exc}"
+            _run(
+                lambda: _mark_failed(
                     get_session_maker(),
                     UUID(resume_id_str),
-                    reason=f"max_retries_exceeded: {exc}",
+                    reason=reason,
                 )
             )
         raise
