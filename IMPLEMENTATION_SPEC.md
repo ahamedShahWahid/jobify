@@ -258,7 +258,7 @@ R/W split: a single primary + one read replica via `AbstractRoutingDataSource`-e
    - Extracts text (PDF: `pypdf` → fallback `pdfminer.six`; DOCX: `python-docx`).
    - Calls the parser (see §7) to produce `parsed_json` matching a strict schema (name, contacts, experience[], education[], skills[], certifications[]).
    - Writes `parsed_json`, sets status=`parsed`.
-4. After persisting `parsed_json` and setting `parse_status=parsed`, dispatches `embed_applicant.delay(applicant_id)` from Txn 3 (fire-and-forget under broad except — parse is durable; admin tooling replays missing embeddings if the broker is down). The embedding worker computes the vector asynchronously via the Gemini provider and upserts into `applicant_embeddings`.
+4. After persisting `parsed_json` and setting `parse_status=parsed`, dispatches `embed_applicant.delay(applicant_id)` from Txn 3 (fire-and-forget under broad except — parse is durable if the broker is down). The embedding worker computes the vector asynchronously via the Gemini provider and upserts into `applicant_embeddings`.
 5. Client polls `/resumes/{id}` and is also pushed via FCM when state changes.
 
 Target: parse → first matches surfaced in **≤ 10 min** (BRD MVP criterion). p50 budget: parse 8 s, embed 1 s, score initial 10 jobs 4 s.
@@ -315,7 +315,7 @@ Provider impls (`anthropic`, `bedrock`, `openai`) are selected by env. Each doma
 
 `integrations/embeddings/` is parallel: `EmbeddingProvider.encode(text, task, title) -> vec`. The `EmbeddingProvider.encode()` interface accepts an `EmbeddingTask` enum (`DOCUMENT` / `QUERY`) plus an optional `title` to keep call sites provider-agnostic. Dimension is config-driven via `KPA_EMBEDDING_DIM` (default 1536); the `vector(1536)` in §5 reflects this default and must be migrated if the dimension changes.
 
-> **Note on Gemini provider:** `gemini-embedding-2` does not accept the `task_type` parameter that older Google embedding models used. Task is encoded by prompt prefix in the provider impl (`title: … | text: …` for document side; `task: search result | query: …` for query side). The `EmbeddingProvider.encode()` interface accepts an `EmbeddingTask` enum + optional `title` to keep call sites provider-agnostic.
+> **Note on Gemini provider:** `gemini-embedding-2` does not accept the `task_type` parameter that older Google embedding models used. Task is encoded by prompt prefix in the provider impl (`title: … | text: …` for document side; `task: search result | query: …` for query side).
 
 Cost & latency guardrails:
 - Resume parse: capped at ~6 k input tokens (text is pre-truncated by section); cached on `sha256(text)` so re-parses of the same resume are free.

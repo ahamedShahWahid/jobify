@@ -121,10 +121,19 @@ PG_CONFIG=/opt/homebrew/opt/postgresql@16/bin/pg_config make
 PG_CONFIG=/opt/homebrew/opt/postgresql@16/bin/pg_config make install
 ```
 
-Then grant the `kpa` role permission to create the extension:
+Then create the extension as a Postgres superuser (preferred — keeps the `kpa` role at normal privilege):
 
 ```bash
-psql -d postgres -c "ALTER ROLE kpa SUPERUSER;"  # dev only — granular alternative is to pre-create as superuser
+# Run as a superuser (e.g. the default 'postgres' role):
+psql -U postgres -d kpa -c "CREATE EXTENSION IF NOT EXISTS vector;"
+psql -U postgres -d kpa_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
+```
+
+If you don't have a separate superuser role set up locally, the quickest fallback is to temporarily grant superuser to `kpa` so the Alembic migration can create the extension itself:
+
+```bash
+# dev only — revert after migrations run if desired
+psql -d postgres -c "ALTER ROLE kpa SUPERUSER;"
 psql -d kpa -c "CREATE EXTENSION IF NOT EXISTS vector;"
 psql -d kpa_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
 ```
