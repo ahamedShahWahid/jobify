@@ -17,6 +17,8 @@ def app_with_boom(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     monkeypatch.setenv("KPA_LOG_FORMAT", "text")
     monkeypatch.setenv("KPA_DB_URL", "postgresql+asyncpg://u:p@h:5432/d")
     monkeypatch.setenv("KPA_REDIS_URL", "redis://localhost:6379/0")
+    monkeypatch.setenv("KPA_JWT_SECRET", "x" * 32)
+    monkeypatch.setenv("KPA_GOOGLE_OAUTH_CLIENT_IDS", "test.apps.googleusercontent.com")
 
     app = create_app()
 

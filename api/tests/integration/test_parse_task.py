@@ -235,9 +235,7 @@ async def test_parse_picks_up_row_already_in_parsing_state(
     be re-processed on the retry — not silently skipped."""
     resume_id = await _make_resume_row(sm, status=ResumeParseStatus.PARSING)
     storage = _FakeStorage()
-    parser = _FakeParser(
-        ParsedResume(parser_name="library.v1", raw_text="hi", email="a@b.com")
-    )
+    parser = _FakeParser(ParsedResume(parser_name="library.v1", raw_text="hi", email="a@b.com"))
 
     await _parse_resume_async(resume_id, sm=sm, storage=storage, parser=parser)
 

@@ -381,7 +381,7 @@ Evaluation:
 Indicative endpoint surface (not exhaustive):
 
 ```
-POST   /v1/auth/oauth/{provider}/callback
+POST   /v1/auth/oauth/google        # Google ID token → access + refresh (client-driven)
 POST   /v1/auth/refresh
 POST   /v1/auth/logout
 
@@ -415,6 +415,8 @@ POST   /v1/admin/sources/{id}/run
 GET    /v1/admin/moderation
 GET    /v1/admin/audit
 ```
+
+> *The original `/oauth/{provider}/callback` naming assumed a backend-redirect flow. The applicant Google sign-in plan landed with a client-driven ID-token exchange (see the design doc) and renamed the endpoint accordingly. The `{provider}` namespace is preserved for the Apple Sign-In plan.*
 
 p95 latency budget per BRD: ≤ 400 ms for GETs on the read replica. Hot endpoints (`/v1/feed`, `/v1/jobs/{id}`) get a Redis cache with explicit invalidation on writes.
 
