@@ -27,12 +27,9 @@ pytestmark = pytest.mark.integration  # uses local Postgres for the session
 
 
 @pytest_asyncio.fixture
-async def sm() -> AsyncIterator[async_sessionmaker[AsyncSession]]:
-    """Per-test sessionmaker bound to a fresh asyncpg connection."""
-    import os
-
-    url = os.environ.get("KPA_TEST_DB_URL", "postgresql+asyncpg://kpa:kpa@localhost:5432/kpa_test")
-    engine = create_async_engine(url, poolclass=NullPool)
+async def sm(migrated_db: str) -> AsyncIterator[async_sessionmaker[AsyncSession]]:
+    """Per-test sessionmaker. Consumes `migrated_db` so Alembic head is applied."""
+    engine = create_async_engine(migrated_db, poolclass=NullPool)
     yield async_sessionmaker(engine, expire_on_commit=False)
     await engine.dispose()
 
@@ -159,13 +156,13 @@ async def test_parse_transient_error_propagates_for_celery_retry(
 
 @pytest.mark.parametrize(
     "initial_status",
-    [ResumeParseStatus.PARSED, ResumeParseStatus.FAILED, ResumeParseStatus.PARSING],
+    [ResumeParseStatus.PARSED, ResumeParseStatus.FAILED],
 )
-async def test_parse_idempotent_on_terminal_or_in_progress_status(
+async def test_parse_idempotent_on_terminal_status(
     sm: async_sessionmaker[AsyncSession],
     initial_status: ResumeParseStatus,
 ) -> None:
-    """If the row is already parsed/failed/parsing, the task no-ops."""
+    """If the row is already parsed/failed (terminal), the task no-ops."""
     resume_id = await _make_resume_row(sm, status=initial_status)
     storage = _FakeStorage()
     parser = _FakeParser(ParsedResume(parser_name="library.v1", raw_text="x"))
@@ -229,3 +226,24 @@ async def test_mark_failed_skips_when_status_is_not_parsing(
         assert row is not None
         assert row.parse_status == ResumeParseStatus.PARSED  # unchanged
         assert row.parse_error is None  # unchanged
+
+
+async def test_parse_picks_up_row_already_in_parsing_state(
+    sm: async_sessionmaker[AsyncSession],
+) -> None:
+    """A row left at PARSING (from a prior TransientParserError-and-retry) must
+    be re-processed on the retry — not silently skipped."""
+    resume_id = await _make_resume_row(sm, status=ResumeParseStatus.PARSING)
+    storage = _FakeStorage()
+    parser = _FakeParser(
+        ParsedResume(parser_name="library.v1", raw_text="hi", email="a@b.com")
+    )
+
+    await _parse_resume_async(resume_id, sm=sm, storage=storage, parser=parser)
+
+    async with sm() as session:
+        row = await session.get(Resume, resume_id)
+        assert row is not None
+        assert row.parse_status == ResumeParseStatus.PARSED
+        assert row.parsed_json is not None
+    assert parser.parse_calls == 1

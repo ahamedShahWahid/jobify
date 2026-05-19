@@ -129,14 +129,17 @@ async def _parse_resume_async(
         if resume.parse_status in {
             ResumeParseStatus.PARSED,
             ResumeParseStatus.FAILED,
-            ResumeParseStatus.PARSING,
         }:
+            # Terminal: never re-process a parsed/failed row.
             _log.info(
-                "parse.skip-non-pending",
+                "parse.skip-terminal",
                 resume_id=str(resume_id),
                 status=resume.parse_status.value,
             )
             return
+        # PENDING or PARSING both proceed. PARSING happens when this is a
+        # retry after a TransientParserError — we want the retry to do work,
+        # not no-op. Re-marking parsing is idempotent.
 
         resume.parse_status = ResumeParseStatus.PARSING
         storage_key = resume.storage_key

@@ -4,6 +4,10 @@ Lowercased, unique, sorted. ~200 entries covering languages, frameworks,
 data stores, cloud, infra, tooling, ML/AI. Extend liberally; the parser
 does case-insensitive substring containment, so spelling variants
 (e.g. "node.js" vs "nodejs") should both be listed where common.
+
+# TODO(P3-llm-parser): Replace substring containment with word-boundary
+# detection (regex \\b…\\b or tokenization) to eliminate false positives
+# from short tokens (e.g. single chars, common substrings in framework names).
 """
 
 from __future__ import annotations
@@ -13,7 +17,6 @@ from typing import Final
 SKILLS: Final[tuple[str, ...]] = (
     # --- Languages ---
     "bash",
-    "c",
     "c#",
     "c++",
     "clojure",
@@ -21,7 +24,6 @@ SKILLS: Final[tuple[str, ...]] = (
     "dart",
     "elixir",
     "erlang",
-    "go",
     "golang",
     "groovy",
     "haskell",
@@ -38,7 +40,6 @@ SKILLS: Final[tuple[str, ...]] = (
     "php",
     "powershell",
     "python",
-    "r",
     "ruby",
     "rust",
     "scala",
