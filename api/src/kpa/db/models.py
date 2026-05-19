@@ -15,6 +15,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Annotated, Any
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     CHAR,
     Boolean,
@@ -175,6 +176,33 @@ class Resume(Base):
     )
     parsed_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     parse_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[CreatedAt]
+    updated_at: Mapped[UpdatedAt]
+    deleted_at: Mapped[DeletedAt]
+
+
+class ApplicantEmbedding(Base):
+    """One current vector per applicant. Re-embed UPSERTs in place.
+
+    Embedded text source is the canonicalized profile of the *latest* parsed
+    resume for the applicant. The canonicalized_text_hash column is the
+    idempotency key — re-running the embedding worker on identical content
+    is a no-op.
+    """
+
+    __tablename__ = "applicant_embeddings"
+
+    id: Mapped[UuidPK]
+    applicant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("kpa.applicants.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+    embedding: Mapped[list[float]] = mapped_column(Vector(1536), nullable=False)
+    model_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    canonicalized_text_hash: Mapped[str] = mapped_column(CHAR(64), nullable=False)
+    input_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[CreatedAt]
     updated_at: Mapped[UpdatedAt]
     deleted_at: Mapped[DeletedAt]

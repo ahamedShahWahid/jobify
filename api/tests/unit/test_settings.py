@@ -139,6 +139,7 @@ def _set_minimum_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("KPA_DB_URL", "postgresql+asyncpg://u:p@h:5432/d")
     monkeypatch.setenv("KPA_REDIS_URL", "redis://localhost:6379/0")
     monkeypatch.setenv("KPA_JWT_SECRET", "x" * 32)
+    monkeypatch.setenv("KPA_GEMINI_API_KEY", "test-gemini-key")
     monkeypatch.setenv(
         "KPA_GOOGLE_OAUTH_CLIENT_IDS",
         "abc.apps.googleusercontent.com",
@@ -340,3 +341,44 @@ def test_celery_task_always_eager_defaults_false(monkeypatch: pytest.MonkeyPatch
 
     s = Settings()
     assert s.celery_task_always_eager is False
+
+
+# ---------------------------------------------------------------------------
+# Embedding worker (Gemini) settings
+# ---------------------------------------------------------------------------
+
+
+def test_gemini_api_key_is_required(monkeypatch: pytest.MonkeyPatch) -> None:
+    _set_minimum_env(monkeypatch)
+    monkeypatch.delenv("KPA_GEMINI_API_KEY", raising=False)
+    with pytest.raises(ValidationError):
+        Settings()
+
+
+def test_embedding_model_default_is_gemini_2(monkeypatch: pytest.MonkeyPatch) -> None:
+    _set_minimum_env(monkeypatch)
+    monkeypatch.delenv("KPA_EMBEDDING_MODEL", raising=False)
+    s = Settings()
+    assert s.embedding_model == "gemini-embedding-2"
+
+
+def test_embedding_dim_default_is_1536(monkeypatch: pytest.MonkeyPatch) -> None:
+    _set_minimum_env(monkeypatch)
+    monkeypatch.delenv("KPA_EMBEDDING_DIM", raising=False)
+    s = Settings()
+    assert s.embedding_dim == 1536
+
+
+def test_embedding_dim_rejects_unsupported_value(monkeypatch: pytest.MonkeyPatch) -> None:
+    _set_minimum_env(monkeypatch)
+    monkeypatch.setenv("KPA_EMBEDDING_DIM", "999")
+    with pytest.raises(ValidationError, match="embedding_dim must be one of"):
+        Settings()
+
+
+@pytest.mark.parametrize("dim", [128, 256, 512, 768, 1024, 1536, 3072])
+def test_embedding_dim_accepts_supported_values(monkeypatch: pytest.MonkeyPatch, dim: int) -> None:
+    _set_minimum_env(monkeypatch)
+    monkeypatch.setenv("KPA_EMBEDDING_DIM", str(dim))
+    s = Settings()
+    assert s.embedding_dim == dim

@@ -116,6 +116,21 @@ Per spec §4.2 and the comment in `db/models.py`: SQLAlchemy models are never re
 - **Eager mode + running event loop.** When `KPA_CELERY_TASK_ALWAYS_EAGER=true` and `.delay()` is called from inside an `httpx.AsyncClient` request, the task body's `asyncio.run()` would explode because a loop is already running. `parse.py:72-83` detects this and dispatches to a fresh thread. Tests rely on this — don't simplify it.
 - **Local worker:** `uv run --env-file=.env celery -A kpa.workers.celery_app worker --pool=solo --concurrency=1 -Q parse`. `--pool=solo` is the MVP default; switch to `prefork` only with load justification.
 
+### Embedding worker (Gemini)
+
+- **One vector per applicant** (`applicant_embeddings.applicant_id UNIQUE`). Multi-resume applicants embed the *latest* parsed resume's canonical profile. Older resumes' content isn't reachable from matching.
+- **Idempotency via `canonicalized_text_hash`** on the row. The worker computes the canonical profile text + sha256 in Txn 1, bails if the hash matches the existing row. No provider call, no row write.
+- **3-transaction split** mirrors `parse_resume`: Txn 1 gate; Txn 2 (no DB) Gemini call; Txn 3 re-verify the hash hasn't drifted, then UPSERT via `pg_insert(...).on_conflict_do_update(...)`. Don't collapse.
+- **Dispatched from `parse_resume` Txn 3** post-commit, fire-and-forget. Same broad `except Exception` + `_log.warning("embed.dispatch-failed", exc_info=True)` as the upload-route → parse dispatch. Don't tighten.
+- **Provider task via prompt prefix.** `gemini-embedding-2` does NOT accept the `task_type` param (that was `gemini-embedding-001`). `GeminiEmbeddingProvider.encode()` formats internally; call sites pass `EmbeddingTask.DOCUMENT` / `.QUERY` + optional `title` and stay provider-agnostic.
+- **`embed.py` does not import `GeminiEmbeddingProvider`.** It resolves the provider at runtime via `get_embedding_provider()`, which is the lazy-singleton in `celery_app.py`. `embed.py` imports `EmbeddingTask` etc. from `kpa.integrations.embeddings.base` and `canonicalize_profile` from `kpa.integrations.embeddings.canonicalize`.
+- **The `kpa.integrations.embeddings` package `__init__` deliberately omits `GeminiEmbeddingProvider` from its re-exports** so `google.genai` (heavy dep) is not pulled in when test fixtures or other code imports the package. Code that needs the impl must import from `kpa.integrations.embeddings.gemini` directly.
+- **`from module import name` gotcha for test fixtures.** Because `embed.py` does `from kpa.workers.celery_app import get_embedding_provider`, monkeypatching `celery_app.get_embedding_provider` alone doesn't intercept the worker's call (the local reference in `embed.py` still points at the original). The integration conftest's `patched_embedding_provider` fixture patches two locations and seeds one cache: `celery_app.get_embedding_provider`, `embed.get_embedding_provider` (because `embed.py` imports the function by name and holds a local reference), and the `_embedding_provider` module-level cache (so a previously-cached real provider doesn't bypass the patch). Mirror this pattern in any future fixture that needs to swap a function imported by name across modules.
+- **Pgvector + HNSW + cosine.** Migration 0004 creates the `vector` extension via `CREATE EXTENSION IF NOT EXISTS vector` and the HNSW index using `vector_cosine_ops` (matches §6.3 cosine similarity). Dim is config-driven via `KPA_EMBEDDING_DIM` (default 1536; must match `Vector(N)` in the migration — no runtime assertion yet, mismatch surfaces as a Postgres error on first insert).
+- **No `embed_status` column.** The embedding either exists or doesn't — no intermediate state shown to users. If retry exhaustion leaves no row, the next parse completion re-dispatches.
+- **Test C coverage gap.** Integration tests cover the happy path, idempotency, "no parsed resume" branch, and dispatch resilience. The Txn 3 `content_hash_now != content_hash` race (parsed_json mutated mid-flight) is NOT tested because forcing the race within savepoint isolation is fiddly. Filed for follow-up.
+- **Local worker becomes** `celery ... -Q parse,embed` (single worker, two queues) or run a second worker pinned to `-Q embed`.
+
 ## Test patterns
 
 ### Two-conftest design

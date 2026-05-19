@@ -25,6 +25,8 @@ from kpa.settings import Settings
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
+    from kpa.integrations.embeddings.gemini import GeminiEmbeddingProvider
+
 # Settings is built at import time — one Settings object for the worker process.
 # Tasks read this rather than instantiating Settings repeatedly.
 settings = Settings()
@@ -33,7 +35,7 @@ celery_app = Celery(
     "kpa",
     broker=settings.redis_url,
     backend=settings.redis_url,
-    include=["kpa.workers.tasks.parse"],
+    include=["kpa.workers.tasks.parse", "kpa.workers.tasks.embed"],
 )
 
 celery_app.conf.update(
@@ -44,6 +46,10 @@ celery_app.conf.update(
     task_eager_propagates=True,
     broker_connection_retry_on_startup=True,
     result_expires=3600,  # 1h — most jobs surface state via DB row, not result
+    task_routes={
+        "kpa.parse_resume": {"queue": "parse"},
+        "kpa.embed_applicant": {"queue": "embed"},
+    },
 )
 
 
@@ -88,3 +94,27 @@ def get_session_maker() -> async_sessionmaker[AsyncSession]:
         _engine = create_engine_from_settings(settings, poolclass=NullPool)
         _sessionmaker = make_sessionmaker(_engine)
     return _sessionmaker
+
+
+# --- Per-worker embedding provider ---
+
+_embedding_provider: GeminiEmbeddingProvider | None = None
+
+
+def get_embedding_provider() -> GeminiEmbeddingProvider:
+    """Return the worker's embedding provider, building it lazily.
+
+    Like ``get_session_maker``, the provider is built on first call rather than
+    at module import because eager-mode tests construct the provider on a
+    fresh app and don't fire ``worker_process_init``.
+    """
+    global _embedding_provider
+    if _embedding_provider is None:
+        from kpa.integrations.embeddings.gemini import GeminiEmbeddingProvider
+
+        _embedding_provider = GeminiEmbeddingProvider(
+            api_key=settings.gemini_api_key.get_secret_value(),
+            model=settings.embedding_model,
+            output_dim=settings.embedding_dim,
+        )
+    return _embedding_provider

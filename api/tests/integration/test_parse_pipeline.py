@@ -144,6 +144,7 @@ async def _cleanup(db_url: str, *, emails: list[str]) -> None:
 async def test_upload_then_parse_populates_parsed_json(
     pipeline_client: httpx.AsyncClient,
     migrated_db: str,
+    patched_embedding_provider,
 ) -> None:
     """Eager mode: .delay() runs the task body inline; by the time the response
     returns, the row is already parsed."""
@@ -177,6 +178,31 @@ async def test_upload_then_parse_populates_parsed_json(
         assert row.parsed_json["email"] == "john.doe@example.com"
         assert "python" in row.parsed_json["skills"]
         assert "fastapi" in row.parsed_json["skills"]
+
+        # Verify that the embed worker also ran eagerly and wrote an
+        # applicant_embeddings row. pipeline_client uses its own DB pool so
+        # we verify via a raw SQL query on a fresh engine.
+        from sqlalchemy import text as sql_text
+        from sqlalchemy.ext.asyncio import create_async_engine
+        from sqlalchemy.pool import NullPool
+
+        verify_engine = create_async_engine(migrated_db, poolclass=NullPool)
+        try:
+            async with verify_engine.connect() as conn:
+                result = await conn.execute(
+                    sql_text(
+                        "SELECT model_name, array_length(embedding::real[], 1) "
+                        "FROM kpa.applicant_embeddings WHERE applicant_id = :aid"
+                    ),
+                    {"aid": applicant_id},
+                )
+                emb_row = result.first()
+        finally:
+            await verify_engine.dispose()
+
+        assert emb_row is not None, "no applicant_embeddings row after eager parse+embed"
+        assert emb_row[0] == "fake-test-model"
+        assert emb_row[1] == 1536
     finally:
         await _cleanup(migrated_db, emails=[email])
 

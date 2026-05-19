@@ -25,6 +25,7 @@ def pytest_configure(config: object) -> None:
     os.environ.setdefault("KPA_DB_URL", "postgresql+asyncpg://kpa:kpa@localhost:5432/kpa_test")
     os.environ.setdefault("KPA_REDIS_URL", "redis://localhost:6379/0")
     os.environ.setdefault("KPA_JWT_SECRET", "x" * 32)
+    os.environ.setdefault("KPA_GEMINI_API_KEY", "test-gemini-key")
     os.environ.setdefault(
         "KPA_GOOGLE_OAUTH_CLIENT_IDS",
         "test.apps.googleusercontent.com",
@@ -42,6 +43,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
     monkeypatch.setenv("KPA_DB_URL", "postgresql+asyncpg://u:p@h:5432/d")
     monkeypatch.setenv("KPA_REDIS_URL", "redis://localhost:6379/0")
     monkeypatch.setenv("KPA_JWT_SECRET", "x" * 32)
+    monkeypatch.setenv("KPA_GEMINI_API_KEY", "test-gemini-key")
     monkeypatch.setenv(
         "KPA_GOOGLE_OAUTH_CLIENT_IDS",
         "test.apps.googleusercontent.com",

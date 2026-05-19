@@ -176,6 +176,28 @@ async def _parse_resume_async(
         resume.parse_error = None
         await session.commit()
 
+    # Dispatch async embedding — broker outages MUST NOT fail the parse
+    # because parsed_json is already durable. Admin tooling can replay
+    # missing applicant_embeddings rows after the broker recovers.
+    #
+    # Lazy import: kpa.workers.tasks.embed is autodiscovered by Celery but
+    # we keep the import deferred to dispatch time so that import-time
+    # failures in test collection (where env vars aren't yet set) don't
+    # cascade through this module.
+    try:
+        from kpa.workers.tasks.embed import embed_applicant
+
+        embed_applicant.delay(str(resume.applicant_id))
+    except Exception as exc:
+        _log.warning(
+            "embed.dispatch-failed",
+            applicant_id=str(resume.applicant_id),
+            resume_id=str(resume_id),
+            error_type=type(exc).__name__,
+            error_message=str(exc),
+            exc_info=True,
+        )
+
     _log.info(
         "parse.complete",
         resume_id=str(resume_id),

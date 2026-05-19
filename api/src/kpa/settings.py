@@ -8,13 +8,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Environment = Literal["local", "dev", "staging", "prod"]
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 LogFormat = Literal["text", "json"]
 
+
+_VALID_EMBEDDING_DIMS = frozenset({128, 256, 512, 768, 1024, 1536, 3072})
 
 _DEFAULT_ALLOWED_RESUME_CONTENT_TYPES = [
     "application/pdf",
@@ -96,6 +98,22 @@ class Settings(BaseSettings):
         ),
     )
 
+    # --- Embedding worker (Gemini) ---
+    gemini_api_key: SecretStr = Field(
+        ..., description="Gemini Developer API key for the embedding worker."
+    )
+    embedding_model: str = Field(
+        default="gemini-embedding-2",
+        description="Embedding model identifier.",
+    )
+    embedding_dim: int = Field(
+        default=1536,
+        description=(
+            "Matryoshka output dimension. Must be in"
+            f" {sorted(_VALID_EMBEDDING_DIMS)} and match the Vector(N) in the migration."
+        ),
+    )
+
     # --- Background workers (Celery + Redis) ---
     redis_url: str = Field(
         ...,
@@ -156,6 +174,15 @@ class Settings(BaseSettings):
         if len(v.encode("utf-8")) < 32:
             raise ValueError(
                 "jwt_secret must be at least 32 bytes (use a cryptographically random secret)"
+            )
+        return v
+
+    @field_validator("embedding_dim")
+    @classmethod
+    def _enforce_valid_embedding_dim(cls, v: int) -> int:
+        if v not in _VALID_EMBEDDING_DIMS:
+            raise ValueError(
+                f"embedding_dim must be one of {sorted(_VALID_EMBEDDING_DIMS)}, got {v}"
             )
         return v
 

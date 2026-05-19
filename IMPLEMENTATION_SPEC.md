@@ -223,9 +223,9 @@ Core tables (abridged — full DDL in alembic migrations):
 | `employers` | Employer org | id, name, gst, verified_at |
 | `recruiters` | Recruiter user ↔ employer | user_id, employer_id, role |
 | `resumes` | Uploaded resume + parse | id, applicant_id, s3_key, parse_status, parsed_json, parse_f1_estimate |
-| `applicant_embeddings` | One embedding per resume version | applicant_id, resume_id, vector vector(1024), model, created_at |
+| `applicant_embeddings` | One embedding per resume version | applicant_id, resume_id, embedding vector(1536), model, created_at |
 | `jobs` | Job posting | id, employer_id, title, description, locations[], min_exp, max_exp, ctc_min, ctc_max, status, posted_at |
-| `job_embeddings` | One per job version | job_id, vector vector(1024), model |
+| `job_embeddings` | One per job version | job_id, embedding vector(1536), model |
 | `matches` | Applicant × Job score | applicant_id, job_id, vector_score, structured_score, total_score, explanation, surfaced_at |
 | `applications` | Applicant-initiated | applicant_id, job_id, status, stage, source, created_at |
 | `notifications` | Outbox | id, user_id, channel, payload, status, attempts, send_after |
@@ -234,6 +234,8 @@ Core tables (abridged — full DDL in alembic migrations):
 | `audit_logs` | Append-only | actor_user_id, action, target_type, target_id, before_hash, after_hash, ts |
 | `ingest_sources` | Approved source registry | id, name, kind(direct/api/feed), enabled, last_run_at |
 | `ingest_runs` | One row per crawl/fetch | source_id, started_at, items_seen, items_kept, error_count |
+
+<!-- Dim 1536 chosen per design doc `docs/superpowers/specs/2026-05-19-embedding-worker-design.md` (Gemini embedding-2's medium recommended dim). -->
 
 Indexes worth calling out:
 - `applicant_embeddings(vector)` and `job_embeddings(vector)`: HNSW (`vector_cosine_ops`), `m=16`, `ef_construction=64`. Recall/latency tuned in load test before launch.
@@ -255,10 +257,9 @@ R/W split: a single primary + one read replica via `AbstractRoutingDataSource`-e
    - Pulls the file from S3.
    - Extracts text (PDF: `pypdf` → fallback `pdfminer.six`; DOCX: `python-docx`).
    - Calls the parser (see §7) to produce `parsed_json` matching a strict schema (name, contacts, experience[], education[], skills[], certifications[]).
-   - Computes an embedding over the canonicalized profile text (see §7).
-   - Writes `parsed_json`, sets status=`parsed`, inserts into `applicant_embeddings`.
-   - Triggers an initial match pass (`score_for_applicant.delay(applicant_id)`).
-4. Client polls `/resumes/{id}` and is also pushed via FCM when state changes.
+   - Writes `parsed_json`, sets status=`parsed`.
+4. After persisting `parsed_json` and setting `parse_status=parsed`, dispatches `embed_applicant.delay(applicant_id)` from Txn 3 (fire-and-forget under broad except — parse is durable if the broker is down). The embedding worker computes the vector asynchronously via the Gemini provider and upserts into `applicant_embeddings`.
+5. Client polls `/resumes/{id}` and is also pushed via FCM when state changes.
 
 Target: parse → first matches surfaced in **≤ 10 min** (BRD MVP criterion). p50 budget: parse 8 s, embed 1 s, score initial 10 jobs 4 s.
 
@@ -312,7 +313,9 @@ class LLMProvider(Protocol):
 
 Provider impls (`anthropic`, `bedrock`, `openai`) are selected by env. Each domain call (parse, explain) goes through a small prompt module versioned in-repo so we can A/B prompts without changing call sites.
 
-`integrations/embeddings/` is parallel: `EmbeddingProvider.encode(text) -> vec`. Dimension is config-driven; the `vector(1024)` in §5 reflects the current default and must be migrated if dimension changes.
+`integrations/embeddings/` is parallel: `EmbeddingProvider.encode(text, task, title) -> vec`. The `EmbeddingProvider.encode()` interface accepts an `EmbeddingTask` enum (`DOCUMENT` / `QUERY`) plus an optional `title` to keep call sites provider-agnostic. Dimension is config-driven via `KPA_EMBEDDING_DIM` (default 1536); the `vector(1536)` in §5 reflects this default and must be migrated if the dimension changes.
+
+> **Note on Gemini provider:** `gemini-embedding-2` does not accept the `task_type` parameter that older Google embedding models used. Task is encoded by prompt prefix in the provider impl (`title: … | text: …` for document side; `task: search result | query: …` for query side).
 
 Cost & latency guardrails:
 - Resume parse: capped at ~6 k input tokens (text is pre-truncated by section); cached on `sha256(text)` so re-parses of the same resume are free.
