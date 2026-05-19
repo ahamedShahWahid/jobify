@@ -32,7 +32,6 @@ def upgrade() -> None:
             postgresql.UUID(as_uuid=True),
             primary_key=True,
             server_default=sa.text("gen_random_uuid()"),
-            nullable=False,
         ),
         sa.Column(
             "applicant_id",
@@ -48,19 +47,21 @@ def upgrade() -> None:
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
-            server_default=sa.func.now(),
+            server_default=sa.text("now()"),
             nullable=False,
         ),
         sa.Column(
             "updated_at",
             sa.DateTime(timezone=True),
-            server_default=sa.func.now(),
+            server_default=sa.text("now()"),
             nullable=False,
         ),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
         schema="kpa",
     )
     # HNSW + cosine ops because §6.3 specifies cosine similarity for matching.
+    # HNSW at pgvector defaults (m=16, ef_construction=64) — fine for MVP scale.
+    # Tune when applicant count exceeds ~100k or recall/latency targets drift.
     op.execute(
         "CREATE INDEX ix_applicant_embeddings_hnsw "
         "ON kpa.applicant_embeddings USING hnsw (embedding vector_cosine_ops)"
