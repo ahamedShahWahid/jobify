@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kpa.db.models import Applicant, Employer, Job, JobEmbedding, JobStatus, User, UserRole
+from kpa.db.models import Applicant, Employer, Job, JobEmbedding, JobStatus, Match, User, UserRole
 
 
 @pytest.mark.integration
@@ -256,3 +256,130 @@ async def test_job_embedding_cascades_on_job_hard_delete(session: AsyncSession) 
         await session.execute(select(JobEmbedding).where(JobEmbedding.job_id == job.id))
     ).all()
     assert remaining == []
+
+
+@pytest.mark.integration
+async def test_create_match(session: AsyncSession) -> None:
+    user = User(email="m@example.com", role=UserRole.APPLICANT)
+    session.add(user)
+    await session.flush()
+    applicant = Applicant(user_id=user.id, full_name="M Test")
+    session.add(applicant)
+    await session.flush()
+    employer = Employer(name="MatchCo", name_norm="matchco")
+    session.add(employer)
+    await session.flush()
+    job = Job(
+        employer_id=employer.id,
+        title="T",
+        description="x",
+        min_exp_years=1,
+        max_exp_years=3,
+    )
+    session.add(job)
+    await session.flush()
+
+    m = Match(
+        applicant_id=applicant.id,
+        job_id=job.id,
+        vector_score=0.8,
+        structured_score=0.6,
+        total_score=0.72,
+        score_components={"location": 1.0, "exp": 0.5, "ctc": 0.3},
+        model_versions={"applicant_model": "gemini-embedding-2", "vector_weight": 0.6},
+    )
+    session.add(m)
+    await session.commit()
+
+    loaded = (
+        await session.execute(select(Match).where(Match.applicant_id == applicant.id))
+    ).scalar_one()
+    assert float(loaded.total_score) == pytest.approx(0.72)
+    assert loaded.score_components["location"] == 1.0
+    assert loaded.surfaced_at is None
+
+
+@pytest.mark.integration
+async def test_match_total_score_check_constraint(session: AsyncSession) -> None:
+    user = User(email="m2@example.com", role=UserRole.APPLICANT)
+    session.add(user)
+    await session.flush()
+    applicant = Applicant(user_id=user.id, full_name="M2 Test")
+    session.add(applicant)
+    await session.flush()
+    employer = Employer(name="MatchCo2", name_norm="matchco2")
+    session.add(employer)
+    await session.flush()
+    job = Job(
+        employer_id=employer.id,
+        title="T",
+        description="x",
+        min_exp_years=1,
+        max_exp_years=3,
+    )
+    session.add(job)
+    await session.flush()
+
+    session.add(
+        Match(
+            applicant_id=applicant.id,
+            job_id=job.id,
+            vector_score=0.5,
+            structured_score=0.5,
+            total_score=1.5,  # > 1, should violate CHECK
+            score_components={},
+            model_versions={},
+        )
+    )
+    with pytest.raises(IntegrityError):
+        await session.commit()
+    await session.rollback()
+
+
+@pytest.mark.integration
+async def test_match_applicant_job_partial_unique(session: AsyncSession) -> None:
+    user = User(email="m3@example.com", role=UserRole.APPLICANT)
+    session.add(user)
+    await session.flush()
+    applicant = Applicant(user_id=user.id, full_name="M3 Test")
+    session.add(applicant)
+    await session.flush()
+    employer = Employer(name="MatchCo3", name_norm="matchco3")
+    session.add(employer)
+    await session.flush()
+    job = Job(
+        employer_id=employer.id,
+        title="T",
+        description="x",
+        min_exp_years=1,
+        max_exp_years=3,
+    )
+    session.add(job)
+    await session.flush()
+
+    session.add(
+        Match(
+            applicant_id=applicant.id,
+            job_id=job.id,
+            vector_score=0.5,
+            structured_score=0.5,
+            total_score=0.5,
+            score_components={},
+            model_versions={},
+        )
+    )
+    await session.commit()
+    session.add(
+        Match(
+            applicant_id=applicant.id,
+            job_id=job.id,  # same pair
+            vector_score=0.6,
+            structured_score=0.6,
+            total_score=0.6,
+            score_components={},
+            model_versions={},
+        )
+    )
+    with pytest.raises(IntegrityError):
+        await session.commit()
+    await session.rollback()
