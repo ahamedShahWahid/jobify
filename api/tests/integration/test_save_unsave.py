@@ -69,9 +69,7 @@ def _token_headers(user: User) -> dict[str, str]:
 
 
 @pytest.mark.integration
-async def test_save_creates_saved_job_201(
-    session: AsyncSession, async_client: AsyncClient
-) -> None:
+async def test_save_creates_saved_job_201(session: AsyncSession, async_client: AsyncClient) -> None:
     user, _ = await _make_applicant(session, email="save-201@example.com")
     job, _ = await _make_job_and_employer(session, employer_name="Save201Co")
     await session.commit()
@@ -183,9 +181,7 @@ async def test_save_404_for_closed_or_missing_job(
         employer_name="Save404ClosedCo",
         status_value=JobStatus.CLOSED,
     )
-    soft_deleted_job, _ = await _make_job_and_employer(
-        session, employer_name="Save404SoftDelCo"
-    )
+    soft_deleted_job, _ = await _make_job_and_employer(session, employer_name="Save404SoftDelCo")
     soft_deleted_job.deleted_at = datetime.now(UTC)
     await session.commit()
 
@@ -260,9 +256,7 @@ async def test_list_saved_jobs_excludes_unsaved(
 
 
 @pytest.mark.integration
-async def test_list_saved_jobs_pagination(
-    session: AsyncSession, async_client: AsyncClient
-) -> None:
+async def test_list_saved_jobs_pagination(session: AsyncSession, async_client: AsyncClient) -> None:
     user, _ = await _make_applicant(session, email="saved-page@example.com")
     jobs = []
     for i in range(5):

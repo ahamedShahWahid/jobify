@@ -101,9 +101,7 @@ def decode_cursor_apps(cursor: str) -> tuple[datetime, uuid.UUID]:
     try:
         raw = base64.urlsafe_b64decode(cursor.encode("ascii"))
         payload = json.loads(raw)
-        return datetime.fromisoformat(payload["created_at"]), uuid.UUID(
-            payload["application_id"]
-        )
+        return datetime.fromisoformat(payload["created_at"]), uuid.UUID(payload["application_id"])
     except (ValueError, KeyError, TypeError, json.JSONDecodeError, binascii.Error) as exc:
         raise ValueError(f"invalid_cursor: {exc}") from exc
 
@@ -215,9 +213,7 @@ async def apply_to_job(
         await session.commit()
         # Re-fetch to get DB-resolved timestamps.
         refreshed = (
-            await session.execute(
-                select(Application).where(Application.id == existing.id)
-            )
+            await session.execute(select(Application).where(Application.id == existing.id))
         ).scalar_one()
         return Response(
             content=ApplicationRead.model_validate(refreshed).model_dump_json(),
@@ -297,9 +293,7 @@ async def patch_application(
         )
         await session.commit()
         refreshed = (
-            await session.execute(
-                select(Application).where(Application.id == application.id)
-            )
+            await session.execute(select(Application).where(Application.id == application.id))
         ).scalar_one()
         return ApplicationRead.model_validate(refreshed)
 
@@ -366,10 +360,7 @@ async def list_applications(
         #                OR (created_at == cursor_created_at AND id < cursor_app_id)
         stmt = stmt.where(
             (Application.created_at < cursor_created_at)
-            | (
-                (Application.created_at == cursor_created_at)
-                & (Application.id < cursor_app_id)
-            )
+            | ((Application.created_at == cursor_created_at) & (Application.id < cursor_app_id))
         )
 
     rows = (await session.execute(stmt)).all()

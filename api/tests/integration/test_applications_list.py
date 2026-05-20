@@ -88,7 +88,9 @@ async def test_list_returns_my_applications_only(
     user_a, _ = await _make_applicant(session, email="list-mine-a@example.com")
     user_b, _ = await _make_applicant(session, email="list-mine-b@example.com")
     job, _ = await _make_job_and_employer(session, employer_name="ListMineCo")
-    job2, _ = await _make_job_and_employer(session, title="Other Job", employer_name="ListMineOtherCo")
+    job2, _ = await _make_job_and_employer(
+        session, title="Other Job", employer_name="ListMineOtherCo"
+    )
     await session.commit()
 
     # user_a applies to job; user_b applies to job2.
@@ -186,9 +188,7 @@ async def test_list_pagination(session: AsyncSession, async_client: AsyncClient)
 
 
 @pytest.mark.integration
-async def test_list_etag_round_trip(
-    session: AsyncSession, async_client: AsyncClient
-) -> None:
+async def test_list_etag_round_trip(session: AsyncSession, async_client: AsyncClient) -> None:
     user, _ = await _make_applicant(session, email="list-etag@example.com")
     job, _ = await _make_job_and_employer(session, employer_name="ListEtagCo")
     await session.commit()
@@ -290,9 +290,7 @@ async def test_patch_other_users_application_returns_404(
     await session.commit()
 
     # user_a applies.
-    r1 = await async_client.post(
-        f"/v1/jobs/{job.id}/apply", headers=_token_headers(user_a)
-    )
+    r1 = await async_client.post(f"/v1/jobs/{job.id}/apply", headers=_token_headers(user_a))
     assert r1.status_code == 201
     app_id = r1.json()["id"]
 

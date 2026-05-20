@@ -85,9 +85,7 @@ def decode_cursor_saved(cursor: str) -> tuple[datetime, uuid.UUID]:
     try:
         raw = base64.urlsafe_b64decode(cursor.encode("ascii"))
         payload = json.loads(raw)
-        return datetime.fromisoformat(payload["created_at"]), uuid.UUID(
-            payload["saved_job_id"]
-        )
+        return datetime.fromisoformat(payload["created_at"]), uuid.UUID(payload["saved_job_id"])
     except (ValueError, KeyError, TypeError, json.JSONDecodeError, binascii.Error) as exc:
         raise ValueError(f"invalid_cursor: {exc}") from exc
 
@@ -297,10 +295,7 @@ async def list_saved_jobs(
         #                OR (created_at == cursor_created_at AND id < cursor_saved_id)
         stmt = stmt.where(
             (SavedJob.created_at < cursor_created_at)
-            | (
-                (SavedJob.created_at == cursor_created_at)
-                & (SavedJob.id < cursor_saved_id)
-            )
+            | ((SavedJob.created_at == cursor_created_at) & (SavedJob.id < cursor_saved_id))
         )
 
     rows = (await session.execute(stmt)).all()

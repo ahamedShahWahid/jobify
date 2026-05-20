@@ -158,9 +158,7 @@ async def test_apply_reapply_after_withdraw_updates_same_row_to_applied(
 
 
 @pytest.mark.integration
-async def test_apply_404_for_unknown_job(
-    session: AsyncSession, async_client: AsyncClient
-) -> None:
+async def test_apply_404_for_unknown_job(session: AsyncSession, async_client: AsyncClient) -> None:
     user, _ = await _make_applicant(session, email="apply-404job@example.com")
     await session.commit()
 
@@ -173,9 +171,7 @@ async def test_apply_404_for_unknown_job(
 
 
 @pytest.mark.integration
-async def test_apply_404_for_closed_job(
-    session: AsyncSession, async_client: AsyncClient
-) -> None:
+async def test_apply_404_for_closed_job(session: AsyncSession, async_client: AsyncClient) -> None:
     user, _ = await _make_applicant(session, email="apply-closed@example.com")
     job, _ = await _make_job_and_employer(
         session,
@@ -210,9 +206,7 @@ async def test_apply_404_for_soft_deleted_job(
 
 
 @pytest.mark.integration
-async def test_apply_401_missing_token(
-    session: AsyncSession, async_client: AsyncClient
-) -> None:
+async def test_apply_401_missing_token(session: AsyncSession, async_client: AsyncClient) -> None:
     job, _ = await _make_job_and_employer(session, employer_name="Apply401Co")
     await session.commit()
 
@@ -221,9 +215,7 @@ async def test_apply_401_missing_token(
 
 
 @pytest.mark.integration
-async def test_apply_403_recruiter_token(
-    session: AsyncSession, async_client: AsyncClient
-) -> None:
+async def test_apply_403_recruiter_token(session: AsyncSession, async_client: AsyncClient) -> None:
     recruiter = User(email="apply-recruiter@example.com", role=UserRole.RECRUITER)
     session.add(recruiter)
     job, _ = await _make_job_and_employer(session, employer_name="Apply403Co")
