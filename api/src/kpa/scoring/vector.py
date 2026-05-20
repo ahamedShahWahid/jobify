@@ -17,9 +17,9 @@ def cosine_similarity(a: list[float], b: list[float]) -> float:
     nb = math.sqrt(sum(x * x for x in b))
     if na == 0.0 or nb == 0.0:
         return 0.0
-    return dot / (na * nb)
+    return float(dot / (na * nb))
 
 
 def vector_score(a: list[float], b: list[float]) -> float:
     """Cosine clipped to [0, 1]. Negative similarity → 0 (no anti-signal)."""
-    return max(0.0, cosine_similarity(a, b))
+    return float(max(0.0, cosine_similarity(a, b)))
