@@ -21,7 +21,9 @@ import asyncio
 import json
 import re
 import sys
+import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Annotated
 
@@ -33,6 +35,12 @@ from pydantic import (
     StringConstraints,
     model_validator,
 )
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from kpa.db.models import Employer, Job, JobStatus
+from kpa.db.session import create_engine_from_settings, make_sessionmaker
+from kpa.settings import Settings
 
 _log = structlog.get_logger(__name__)
 
@@ -147,7 +155,135 @@ def _load_and_validate(path: Path) -> SeedPayload:
 
 
 async def _apply(payload: SeedPayload, *, dry_run: bool) -> SeedReport:
-    raise NotImplementedError("loader landed in a later task")
+    settings = Settings()
+    engine = create_engine_from_settings(settings)
+    sessionmaker = make_sessionmaker(engine)
+    report = SeedReport(dry_run=dry_run)
+    try:
+        async with sessionmaker() as session:
+            await _apply_in_session(session, payload, report)
+            if dry_run:
+                await session.rollback()
+            else:
+                await session.commit()
+    finally:
+        await engine.dispose()
+    return report
+
+
+async def _apply_in_session(
+    session: AsyncSession, payload: SeedPayload, report: SeedReport
+) -> None:
+    """Body of the loader. Separated so integration tests can run it inside
+    the savepoint-bound session without going through engine construction."""
+    name_to_employer_id: dict[str, uuid.UUID] = {}
+    for emp_raw in payload.employers:
+        employer_id = await _upsert_employer(session, emp_raw, report)
+        name_to_employer_id[emp_raw.name] = employer_id
+    await session.flush()
+    for job_raw in payload.jobs:
+        await _upsert_job(
+            session, job_raw, name_to_employer_id[job_raw.employer_name], report
+        )
+    await session.flush()
+
+
+async def _upsert_employer(
+    session: AsyncSession, raw: EmployerInput, report: SeedReport
+) -> uuid.UUID:
+    norm = normalize_name(raw.name)
+    existing = (
+        await session.execute(
+            select(Employer).where(
+                Employer.name_norm == norm,
+                Employer.deleted_at.is_(None),
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is None:
+        verified_at = datetime.now(UTC) if raw.verified else None
+        employer = Employer(
+            name=raw.name,
+            name_norm=norm,
+            gst=raw.gst,
+            verified_at=verified_at,
+        )
+        session.add(employer)
+        await session.flush()
+        report.employers_inserted += 1
+        _log.info("seed.employer.inserted", name=raw.name, id=str(employer.id))
+        return employer.id
+    # Update: gst is overwritten if JSON has a value; verified_at is set only
+    # if currently NULL and JSON says verified=true (preserve original time).
+    changed = False
+    if raw.gst is not None and existing.gst != raw.gst:
+        existing.gst = raw.gst
+        changed = True
+    if raw.verified and existing.verified_at is None:
+        existing.verified_at = datetime.now(UTC)
+        changed = True
+    if changed:
+        report.employers_updated += 1
+        _log.info("seed.employer.updated", name=raw.name, id=str(existing.id))
+    return existing.id
+
+
+async def _upsert_job(
+    session: AsyncSession,
+    raw: JobInput,
+    employer_id: uuid.UUID,
+    report: SeedReport,
+) -> None:
+    title_lc = raw.title.strip().lower()
+    existing = (
+        await session.execute(
+            select(Job).where(
+                Job.employer_id == employer_id,
+                Job.deleted_at.is_(None),
+            )
+        )
+    ).scalars().all()
+    match = next((j for j in existing if j.title.lower() == title_lc), None)
+    posted_at = datetime.now(UTC) - timedelta(days=raw.posted_days_ago)
+    status = JobStatus(raw.status)
+    if match is None:
+        job = Job(
+            employer_id=employer_id,
+            title=raw.title.strip(),
+            description=raw.description,
+            locations=list(raw.locations),
+            min_exp_years=raw.min_exp_years,
+            max_exp_years=raw.max_exp_years,
+            ctc_min=raw.ctc_min,
+            ctc_max=raw.ctc_max,
+            status=status,
+            posted_at=posted_at,
+        )
+        session.add(job)
+        await session.flush()
+        report.jobs_inserted += 1
+        _log.info(
+            "seed.job.inserted",
+            employer_id=str(employer_id),
+            title=job.title,
+            id=str(job.id),
+        )
+        return
+    match.description = raw.description
+    match.locations = list(raw.locations)
+    match.min_exp_years = raw.min_exp_years
+    match.max_exp_years = raw.max_exp_years
+    match.ctc_min = raw.ctc_min
+    match.ctc_max = raw.ctc_max
+    match.status = status
+    match.posted_at = posted_at
+    report.jobs_updated += 1
+    _log.info(
+        "seed.job.updated",
+        employer_id=str(employer_id),
+        title=match.title,
+        id=str(match.id),
+    )
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -180,10 +316,6 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     try:
         report = asyncio.run(_apply(payload, dry_run=args.dry_run))
-    except NotImplementedError:
-        # Stub until Task 7; CLI is still usable for --dry-run validation only.
-        _log.warning("seed.loader-not-implemented")
-        return 0
     except Exception as exc:
         _log.error("seed.db-failed", error=str(exc))
         return 3
