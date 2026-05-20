@@ -24,6 +24,9 @@ dependencies = [
     "uvicorn[standard]>=0.32,<0.33",
 ]
 
+[project.scripts]
+kpa-seed-jobs = "kpa.scripts.seed_jobs:main"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3,<9",
