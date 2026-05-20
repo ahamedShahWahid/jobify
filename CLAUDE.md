@@ -152,6 +152,16 @@ Per spec §4.2 and the comment in `db/models.py`: SQLAlchemy models are never re
 - **`TransientScoringError`** wraps UPSERT failures for autoretry. Permanent issues (missing entities) are logged and return without raising.
 - **Threshold (0.55) and vector weight (0.6) are env-driven.** `KPA_MATCH_SURFACE_THRESHOLD` and `KPA_MATCH_VECTOR_WEIGHT`. Per-rule structured weights are equal (1/3 each); promote to a config table once labeled feedback exists.
 
+### Feed and job detail routes
+
+- **`/v1/feed` filters on `matches.surfaced_at IS NOT NULL` AND `jobs.status='open'` AND both sides `deleted_at IS NULL`.** The query uses `ix_matches_applicant_surfaced (applicant_id, total_score DESC) WHERE deleted_at IS NULL AND surfaced_at IS NOT NULL` for both the seek and the order.
+- **Cursor is opaque base64 of `{score, match_id}`.** Pure decoding — no server state, no expiry. Tuple comparison `(total_score, id) < (cursor_score, cursor_id)` maps cleanly to the index. Malformed cursor → `400 invalid_cursor`.
+- **`peek-one + 1`**: query `LIMIT limit + 1`; trim to `limit` and set `next_cursor` if the extra row was present. Avoids a separate "is there more?" query.
+- **ETag is weak.** `W/"<sha256(applicant_id + max(updated_at) + count)>"`. JSONB re-serialization order may change the body bytes without changing the data — weak ETag is semantically correct.
+- **`/v1/jobs/{id}` returns the match unconditionally** when a row exists, regardless of `surfaced_at`. Pasting a URL shows the score even if the match didn't make the feed.
+- **Uniform 404 across unknown / closed / soft-deleted.** Same rationale as the resumes route — distinguishing leaks existence.
+- **`_require_applicant`** is duplicated inline in `routes/feed.py` and `routes/jobs.py` rather than extracted to a shared module. The `routes/resumes.py` version has different downstream error semantics (`500 applicant_missing` is load-bearing there); copying keeps each route module standalone.
+
 ## Test patterns
 
 ### Two-conftest design
