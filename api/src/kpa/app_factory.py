@@ -14,7 +14,7 @@ from kpa.integrations.storage import LocalFileStorage
 from kpa.middleware.error_handler import register_error_handlers
 from kpa.middleware.request_id import RequestIdMiddleware
 from kpa.observability.logging import configure_logging
-from kpa.routes import auth, feed, health, jobs, me, ready, resumes
+from kpa.routes import applications, auth, feed, health, jobs, me, ready, resumes
 from kpa.settings import Settings
 
 
@@ -47,6 +47,7 @@ def create_app() -> FastAPI:
     app.include_router(me.router)
     app.include_router(feed.router)
     app.include_router(jobs.router)
+    app.include_router(applications.router)
 
     @app.on_event("shutdown")
     async def _close_engine() -> None:
