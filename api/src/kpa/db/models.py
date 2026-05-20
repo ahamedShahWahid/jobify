@@ -441,3 +441,34 @@ class Job(Base):
         ),
         {"schema": "kpa"},
     )
+
+
+class JobEmbedding(Base):
+    """One current vector per job. Re-embed UPSERTs in place.
+
+    Embedded text source is `canonicalize_job(job, employer_name=...)` — title,
+    description, employer name, sorted locations, experience band. CTC and
+    status are deliberately excluded (CTC is noisy numeric signal; status is
+    scored at the structured layer, not the vector layer).
+
+    The ``canonicalized_text_hash`` column is the idempotency key — re-running
+    the embedding worker on identical content is a no-op (the Txn 1 gate
+    short-circuits without a provider call).
+    """
+
+    __tablename__ = "job_embeddings"
+
+    id: Mapped[UuidPK]
+    job_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("kpa.jobs.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+    embedding: Mapped[list[float]] = mapped_column(Vector(1536), nullable=False)
+    model_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    canonicalized_text_hash: Mapped[str] = mapped_column(CHAR(64), nullable=False)
+    input_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[CreatedAt]
+    updated_at: Mapped[UpdatedAt]
+    deleted_at: Mapped[DeletedAt]
