@@ -83,9 +83,7 @@ async def test_create_employer_and_job(session: AsyncSession) -> None:
     session.add(job)
     await session.commit()
 
-    loaded = (
-        await session.execute(select(Job).where(Job.employer_id == employer.id))
-    ).scalar_one()
+    loaded = (await session.execute(select(Job).where(Job.employer_id == employer.id))).scalar_one()
     assert loaded.title == "Backend Engineer"
     assert loaded.status == JobStatus.OPEN
     assert loaded.locations == ["Bangalore", "Remote"]
@@ -102,7 +100,7 @@ async def test_exp_years_check_constraint(session: AsyncSession) -> None:
             title="Bad",
             description="...",
             min_exp_years=8,
-            max_exp_years=3,        # < min
+            max_exp_years=3,  # < min
         )
     )
     with pytest.raises(IntegrityError):
@@ -123,7 +121,7 @@ async def test_ctc_check_constraint(session: AsyncSession) -> None:
             min_exp_years=1,
             max_exp_years=2,
             ctc_min=2000000,
-            ctc_max=1000000,        # < min
+            ctc_max=1000000,  # < min
         )
     )
     with pytest.raises(IntegrityError):

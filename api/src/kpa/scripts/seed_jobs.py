@@ -50,12 +50,8 @@ _DEFAULT_FIXTURE_PATH = Path(__file__).resolve().parents[3] / "data" / "sample_j
 # --- Pydantic input models ---------------------------------------------------
 
 NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
-Name = Annotated[
-    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
-]
-Location = Annotated[
-    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)
-]
+Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
+Location = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
 GST = Annotated[str, StringConstraints(strip_whitespace=True, min_length=15, max_length=15)]
 
 
@@ -71,9 +67,7 @@ class JobInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     employer_name: Name
-    title: Annotated[
-        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
-    ]
+    title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
     description: NonEmptyStr
     locations: list[Location] = Field(default_factory=list, max_length=10)
     min_exp_years: int = Field(ge=0, le=50)
@@ -87,11 +81,7 @@ class JobInput(BaseModel):
     def _validate_ranges(self) -> JobInput:
         if self.max_exp_years < self.min_exp_years:
             raise ValueError("max_exp_years must be >= min_exp_years")
-        if (
-            self.ctc_max is not None
-            and self.ctc_min is not None
-            and self.ctc_max < self.ctc_min
-        ):
+        if self.ctc_max is not None and self.ctc_min is not None and self.ctc_max < self.ctc_min:
             raise ValueError("ctc_max must be >= ctc_min")
         if self.status not in {"open", "closed"}:
             raise ValueError("status must be 'open' or 'closed'")
@@ -112,9 +102,7 @@ class SeedPayload(BaseModel):
         employer_names = {e.name for e in self.employers}
         for job in self.jobs:
             if job.employer_name not in employer_names:
-                raise ValueError(
-                    f"job references unknown employer: {job.employer_name!r}"
-                )
+                raise ValueError(f"job references unknown employer: {job.employer_name!r}")
         return self
 
 
@@ -149,6 +137,7 @@ class SeedReport:
 
 # --- IO + entry --------------------------------------------------------------
 
+
 def _load_and_validate(path: Path) -> SeedPayload:
     raw = json.loads(path.read_text())
     return SeedPayload.model_validate(raw)
@@ -182,9 +171,7 @@ async def _apply_in_session(
         name_to_employer_id[emp_raw.name] = employer_id
     await session.flush()
     for job_raw in payload.jobs:
-        await _upsert_job(
-            session, job_raw, name_to_employer_id[job_raw.employer_name], report
-        )
+        await _upsert_job(session, job_raw, name_to_employer_id[job_raw.employer_name], report)
     await session.flush()
 
 
@@ -236,13 +223,17 @@ async def _upsert_job(
 ) -> None:
     title_lc = raw.title.strip().lower()
     existing = (
-        await session.execute(
-            select(Job).where(
-                Job.employer_id == employer_id,
-                Job.deleted_at.is_(None),
+        (
+            await session.execute(
+                select(Job).where(
+                    Job.employer_id == employer_id,
+                    Job.deleted_at.is_(None),
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     match = next((j for j in existing if j.title.lower() == title_lc), None)
     posted_at = datetime.now(UTC) - timedelta(days=raw.posted_days_ago)
     status = JobStatus(raw.status)

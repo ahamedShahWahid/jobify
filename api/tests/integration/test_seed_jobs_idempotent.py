@@ -23,16 +23,11 @@ from kpa.scripts.seed_jobs import (
     _apply_in_session,
 )
 
-
-SAMPLE_JOBS_PATH = (
-    Path(__file__).resolve().parents[2] / "data" / "sample_jobs.json"
-)
+SAMPLE_JOBS_PATH = Path(__file__).resolve().parents[2] / "data" / "sample_jobs.json"
 
 
 def _payload(employers: list[dict], jobs: list[dict]) -> SeedPayload:
-    return SeedPayload.model_validate(
-        {"version": 1, "employers": employers, "jobs": jobs}
-    )
+    return SeedPayload.model_validate({"version": 1, "employers": employers, "jobs": jobs})
 
 
 def _employer_dict(name: str = "Acme", **kw) -> dict:
@@ -65,9 +60,7 @@ async def test_seed_creates_employers_and_jobs(session: AsyncSession) -> None:
         await session.execute(select(Employer).where(Employer.name_norm == "acme"))
     ).scalar_one()
     assert employer.name == "Acme"
-    job = (
-        await session.execute(select(Job).where(Job.employer_id == employer.id))
-    ).scalar_one()
+    job = (await session.execute(select(Job).where(Job.employer_id == employer.id))).scalar_one()
     assert job.title == "Engineer"
 
 
@@ -76,9 +69,7 @@ async def test_seed_is_idempotent(session: AsyncSession) -> None:
     payload = _payload([_employer_dict()], [_job_dict()])
     await _apply_in_session(session, payload, SeedReport())
     await _apply_in_session(session, payload, SeedReport())
-    employers = (
-        await session.execute(select(func.count()).select_from(Employer))
-    ).scalar_one()
+    employers = (await session.execute(select(func.count()).select_from(Employer))).scalar_one()
     jobs = (await session.execute(select(func.count()).select_from(Job))).scalar_one()
     assert employers == 1
     assert jobs == 1
@@ -86,7 +77,7 @@ async def test_seed_is_idempotent(session: AsyncSession) -> None:
 
 @pytest.mark.integration
 async def test_seed_updates_existing_employer_fields(session: AsyncSession) -> None:
-    session.add(Employer(name="Acme", name_norm="acme"))   # gst NULL, verified_at NULL
+    session.add(Employer(name="Acme", name_norm="acme"))  # gst NULL, verified_at NULL
     await session.flush()
     payload = _payload(
         [_employer_dict(gst="27AABCU9603R1Z2", verified=True)],
@@ -114,7 +105,7 @@ async def test_seed_preserves_existing_employer_name(session: AsyncSession) -> N
     employer = (
         await session.execute(select(Employer).where(Employer.name_norm == "acme co"))
     ).scalar_one()
-    assert employer.name == "Acme Co"   # not trampled
+    assert employer.name == "Acme Co"  # not trampled
 
 
 @pytest.mark.integration
@@ -151,16 +142,13 @@ async def test_seed_updates_existing_job(session: AsyncSession) -> None:
 
     payload = _payload(
         [_employer_dict()],
-        [_job_dict(description="new", locations=["Bangalore"], min_exp_years=2,
-                   max_exp_years=4)],
+        [_job_dict(description="new", locations=["Bangalore"], min_exp_years=2, max_exp_years=4)],
     )
     report = SeedReport()
     await _apply_in_session(session, payload, report)
     assert report.jobs_updated == 1
 
-    refreshed = (
-        await session.execute(select(Job).where(Job.id == original_id))
-    ).scalar_one()
+    refreshed = (await session.execute(select(Job).where(Job.id == original_id))).scalar_one()
     assert refreshed.description == "new"
     assert refreshed.locations == ["Bangalore"]
     assert refreshed.min_exp_years == 2
@@ -175,9 +163,7 @@ async def test_dry_run_in_session_does_not_persist(session: AsyncSession) -> Non
     but the row count *during* the test should reflect inserts."""
     payload = _payload([_employer_dict()], [_job_dict()])
     await _apply_in_session(session, payload, SeedReport())
-    employers = (
-        await session.execute(select(func.count()).select_from(Employer))
-    ).scalar_one()
+    employers = (await session.execute(select(func.count()).select_from(Employer))).scalar_one()
     assert employers == 1
 
 

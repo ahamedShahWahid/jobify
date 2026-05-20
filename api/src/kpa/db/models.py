@@ -357,9 +357,7 @@ class Employer(Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     name_norm: Mapped[str] = mapped_column(String(200), nullable=False)
     gst: Mapped[str | None] = mapped_column(String(15), nullable=True)
-    verified_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[CreatedAt]
     updated_at: Mapped[UpdatedAt]
     deleted_at: Mapped[DeletedAt]
