@@ -355,6 +355,27 @@ ACCESS=...   # from a real Google sign-in
 curl -s http://127.0.0.1:8000/v1/me -H "Authorization: Bearer $ACCESS" | python -m json.tool
 ```
 
+## Endpoints
+
+### `GET /v1/feed`
+
+Returns the surfaced ranked matches for the current applicant.
+
+```
+GET /v1/feed?limit=20&cursor=<opaque base64>
+Authorization: Bearer <access_token>
+```
+
+Response: `{ items: FeedItemRead[], next_cursor: string | null }`. Each item carries
+the match score breakdown, the full job record, and the employer summary.
+ETag-cached (weak). Cursor pagination over `(total_score DESC, id DESC)`.
+
+### `GET /v1/jobs/{id}`
+
+Returns a single open job plus the current applicant's match against it (if any).
+Uniform 404 across unknown / closed / soft-deleted ids (same rationale as
+`/v1/applicants/me/resumes/{id}`).
+
 ## Project layout
 
 ```
