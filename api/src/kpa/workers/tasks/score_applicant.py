@@ -27,6 +27,7 @@ from sqlalchemy.sql import func
 from kpa.db.models import (
     Applicant,
     ApplicantEmbedding,
+    Employer,
     Job,
     JobEmbedding,
     JobStatus,
@@ -98,21 +99,24 @@ async def _score_applicant_async(
 
         job_rows = (
             await session.execute(
-                select(Job, JobEmbedding)
+                select(Job, JobEmbedding, Employer.name)
                 .join(JobEmbedding, JobEmbedding.job_id == Job.id)
+                .join(Employer, Employer.id == Job.employer_id)
                 .where(
                     Job.status == JobStatus.OPEN,
                     Job.deleted_at.is_(None),
                     JobEmbedding.deleted_at.is_(None),
+                    Employer.deleted_at.is_(None),
                 )
             )
         ).all()
         # Detach all entities from this session before closing — we read scalars in compute step.
         scored_inputs = []
-        for job, job_emb in job_rows:
+        for job, job_emb, employer_name in job_rows:
             scored_inputs.append(
                 (
                     job.id,
+                    job.title,
                     list(job.locations or []),
                     job.min_exp_years,
                     job.max_exp_years,
@@ -120,6 +124,7 @@ async def _score_applicant_async(
                     job.ctc_max,
                     list(job_emb.embedding),
                     job_emb.model_name,
+                    employer_name,
                 )
             )
         applicant_emb_vec = list(applicant_emb.embedding)
@@ -133,9 +138,12 @@ async def _score_applicant_async(
         return
 
     # --- (no DB) compute ---
-    scores: list[tuple[UUID, Any, Any]] = []
+    from kpa.scoring.explain import templated_explanation
+
+    scores: list[tuple[UUID, Any, str, dict[str, str]]] = []
     for (
         job_id,
+        job_title,
         job_locs,
         job_min_exp,
         job_max_exp,
@@ -143,6 +151,7 @@ async def _score_applicant_async(
         job_ctc_max,
         job_emb_vec,
         job_emb_model,
+        employer_name,
     ) in scored_inputs:
         ms = score_match(
             applicant_embedding=applicant_emb_vec,
@@ -158,12 +167,27 @@ async def _score_applicant_async(
             vector_weight=_settings.match_vector_weight,
             threshold=_settings.match_surface_threshold,
         )
-        scores.append((job_id, ms, job_emb_model))
+        explanation = templated_explanation(
+            components=ms.components,
+            vector=ms.vector,
+            structured=ms.structured,
+            total=ms.total,
+            threshold=_settings.match_surface_threshold,
+            job_title=job_title,
+            job_locations=job_locs,
+            job_min_exp_years=job_min_exp,
+            job_max_exp_years=job_max_exp,
+            job_ctc_max=job_ctc_max,
+            employer_name=employer_name,
+            applicant_expected_ctc=applicant_ctc,
+            applicant_locations=applicant_locs,
+        )
+        scores.append((job_id, ms, job_emb_model, explanation))
 
     # --- Txn 2: UPSERT each row ---
     async with sm() as session:
         try:
-            for job_id, ms, job_emb_model in scores:
+            for job_id, ms, job_emb_model, explanation in scores:
                 model_versions = {
                     "applicant_model": applicant_emb_model,
                     "job_model": job_emb_model,
@@ -181,6 +205,7 @@ async def _score_applicant_async(
                         score_components=ms.components,
                         model_versions=model_versions,
                         surfaced_at=func.now() if ms.crosses_threshold else None,
+                        explanation=explanation,
                     )
                     .on_conflict_do_update(
                         index_elements=["applicant_id", "job_id"],
@@ -198,6 +223,7 @@ async def _score_applicant_async(
                                     else_=None,
                                 ),
                             ),
+                            "explanation": explanation,
                             "updated_at": func.now(),
                         },
                     )

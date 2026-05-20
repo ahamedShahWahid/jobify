@@ -20,6 +20,7 @@ from sqlalchemy.sql import func
 from kpa.db.models import (
     Applicant,
     ApplicantEmbedding,
+    Employer,
     Job,
     JobEmbedding,
     Match,
@@ -74,19 +75,21 @@ async def _score_job_async(
     async with sm() as session:
         job_row = (
             await session.execute(
-                select(Job, JobEmbedding)
+                select(Job, JobEmbedding, Employer.name)
                 .join(JobEmbedding, JobEmbedding.job_id == Job.id)
+                .join(Employer, Employer.id == Job.employer_id)
                 .where(
                     Job.id == job_id,
                     Job.deleted_at.is_(None),
                     JobEmbedding.deleted_at.is_(None),
+                    Employer.deleted_at.is_(None),
                 )
             )
         ).first()
         if job_row is None:
             _log.info("score.job-skipped", job_id=str(job_id))
             return
-        job, job_emb = job_row
+        job, job_emb, employer_name = job_row
 
         app_rows = (
             await session.execute(
@@ -113,18 +116,22 @@ async def _score_job_async(
             )
         job_emb_vec = list(job_emb.embedding)
         job_emb_model = job_emb.model_name
+        job_title = job.title
         job_locs = list(job.locations or [])
         job_min_exp = job.min_exp_years
         job_max_exp = job.max_exp_years
         job_ctc_min = job.ctc_min
         job_ctc_max = job.ctc_max
+        job_employer_name = employer_name
 
     if not scored_inputs:
         _log.info("score.no-scoreable-applicants", job_id=str(job_id))
         return
 
     # --- (no DB) compute ---
-    scores: list[tuple[UUID, Any, str]] = []
+    from kpa.scoring.explain import templated_explanation
+
+    scores: list[tuple[UUID, Any, str, dict[str, str]]] = []
     for (
         applicant_id,
         applicant_locs,
@@ -147,12 +154,27 @@ async def _score_job_async(
             vector_weight=_settings.match_vector_weight,
             threshold=_settings.match_surface_threshold,
         )
-        scores.append((applicant_id, ms, applicant_emb_model))
+        explanation = templated_explanation(
+            components=ms.components,
+            vector=ms.vector,
+            structured=ms.structured,
+            total=ms.total,
+            threshold=_settings.match_surface_threshold,
+            job_title=job_title,
+            job_locations=job_locs,
+            job_min_exp_years=job_min_exp,
+            job_max_exp_years=job_max_exp,
+            job_ctc_max=job_ctc_max,
+            employer_name=job_employer_name,
+            applicant_expected_ctc=applicant_ctc,
+            applicant_locations=applicant_locs,
+        )
+        scores.append((applicant_id, ms, applicant_emb_model, explanation))
 
     # --- Txn 2: UPSERT each row ---
     async with sm() as session:
         try:
-            for applicant_id, ms, applicant_emb_model in scores:
+            for applicant_id, ms, applicant_emb_model, explanation in scores:
                 model_versions = {
                     "applicant_model": applicant_emb_model,
                     "job_model": job_emb_model,
@@ -170,6 +192,7 @@ async def _score_job_async(
                         score_components=ms.components,
                         model_versions=model_versions,
                         surfaced_at=func.now() if ms.crosses_threshold else None,
+                        explanation=explanation,
                     )
                     .on_conflict_do_update(
                         index_elements=["applicant_id", "job_id"],
@@ -187,6 +210,7 @@ async def _score_job_async(
                                     else_=None,
                                 ),
                             ),
+                            "explanation": explanation,
                             "updated_at": func.now(),
                         },
                     )
