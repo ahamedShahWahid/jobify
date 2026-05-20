@@ -33,6 +33,8 @@ from kpa.db.models import (
     Employer,
     Job,
     JobStatus,
+    Notification,
+    NotificationChannel,
     User,
     UserRole,
 )
@@ -167,18 +169,22 @@ async def apply_to_job(
     """
     applicant = await _require_applicant(user, session)
 
-    # Load the job — must be open and not soft-deleted.
-    job = (
+    # Load the job + employer in one JOIN — must be open and not soft-deleted.
+    job_employer = (
         await session.execute(
-            select(Job).where(
+            select(Job, Employer)
+            .join(Employer, Employer.id == Job.employer_id)
+            .where(
                 Job.id == job_id,
                 Job.status == JobStatus.OPEN,
                 Job.deleted_at.is_(None),
+                Employer.deleted_at.is_(None),
             )
         )
-    ).scalar_one_or_none()
-    if job is None:
+    ).first()
+    if job_employer is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="job_not_found")
+    job, employer = job_employer
 
     # Look up existing live application for this (applicant, job) pair.
     existing = (
@@ -193,13 +199,14 @@ async def apply_to_job(
 
     if existing is not None:
         if existing.status == ApplicationStatus.APPLIED:
-            # Already applied — idempotent 200.
+            # Already applied — idempotent 200. No notification.
             return Response(
                 content=ApplicationRead.model_validate(existing).model_dump_json(),
                 status_code=status.HTTP_200_OK,
                 media_type="application/json",
             )
         # existing.status == WITHDRAWN — update back to applied, refresh created_at.
+        # Per spec Decision #8: re-apply after withdraw does NOT insert notifications.
         await session.execute(
             update(Application)
             .where(Application.id == existing.id)
@@ -221,7 +228,7 @@ async def apply_to_job(
             media_type="application/json",
         )
 
-    # No existing row — INSERT.
+    # No existing row — INSERT with notifications (same transaction, same commit).
     new_application = Application(
         applicant_id=applicant.id,
         job_id=job_id,
@@ -229,6 +236,32 @@ async def apply_to_job(
         source=body.source,
     )
     session.add(new_application)
+    # Flush to get the application id before building notification payload.
+    await session.flush()
+
+    notification_payload = {
+        "kind": "application_received",
+        "application_id": str(new_application.id),
+        "job_id": str(job.id),
+        "job_title": job.title,
+        "employer_name": employer.name,
+    }
+    session.add(
+        Notification(
+            user_id=user.id,
+            kind="application_received",
+            channel=NotificationChannel.EMAIL,
+            payload=notification_payload,
+        )
+    )
+    session.add(
+        Notification(
+            user_id=user.id,
+            kind="application_received",
+            channel=NotificationChannel.IN_APP,
+            payload=notification_payload,
+        )
+    )
     await session.commit()
     await session.refresh(new_application)
     return ApplicationRead.model_validate(new_application)

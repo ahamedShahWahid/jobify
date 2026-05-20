@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
     from kpa.integrations.embeddings.gemini import GeminiEmbeddingProvider
+    from kpa.integrations.notifications.base import EmailChannel
 
 # Settings is built at import time — one Settings object for the worker process.
 # Tasks read this rather than instantiating Settings repeatedly.
@@ -41,6 +42,7 @@ celery_app = Celery(
         "kpa.workers.tasks.embed_job",
         "kpa.workers.tasks.score_applicant",
         "kpa.workers.tasks.score_job",
+        "kpa.workers.tasks.sweep_notifications",
     ],
 )
 
@@ -58,6 +60,7 @@ celery_app.conf.update(
         "kpa.embed_job": {"queue": "embed"},
         "kpa.score_applicant": {"queue": "score"},
         "kpa.score_job": {"queue": "score"},
+        "kpa.sweep_notifications": {"queue": "notify"},
     },
 )
 
@@ -127,3 +130,31 @@ def get_embedding_provider() -> GeminiEmbeddingProvider:
             output_dim=settings.embedding_dim,
         )
     return _embedding_provider
+
+
+# --- Per-worker email channel ---
+
+_email_channel: EmailChannel | None = None
+
+
+def get_email_channel() -> EmailChannel:
+    """Return the worker's email channel adapter, building it lazily.
+
+    Reads ``settings.email_channel`` to choose the implementation:
+    - ``"logging"`` — ``LoggingEmailChannel`` (stub; no email is actually sent).
+    - ``"ses"``     — raises ``NotImplementedError`` (deferred until deploy target is picked).
+
+    Like ``get_embedding_provider``, the channel is built on first call so that
+    eager-mode tests can monkeypatch before the factory is invoked.
+    """
+    global _email_channel
+    if _email_channel is None:
+        if settings.email_channel == "logging":
+            from kpa.integrations.notifications.logging_email import LoggingEmailChannel
+
+            _email_channel = LoggingEmailChannel()
+        elif settings.email_channel == "ses":
+            raise NotImplementedError("SES email channel is not yet implemented")
+        else:
+            raise ValueError(f"unknown email_channel: {settings.email_channel!r}")
+    return _email_channel

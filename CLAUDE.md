@@ -170,6 +170,15 @@ Per spec §4.2 and the comment in `db/models.py`: SQLAlchemy models are never re
 - **The score worker's Txn 1 now loads `Employer.name`** alongside `Job` + `JobEmbedding`. The applicant-side adds an `Employer` JOIN; the job-side already had implicit employer access.
 - **No new worker, no new queue, no new env vars.** When LLM provider lands, a `MatchExplainer` Protocol with `templated` and `llm` impls will route via an env var; the score worker call site doesn't change.
 
+### Notifications outbox
+
+- **Outbox pattern.** Writers insert `notifications` rows on the triggering event (e.g., `apply`); a `sweep_notifications` Celery beat task claims rows via `SELECT FOR UPDATE SKIP LOCKED` and dispatches to channel adapters. Idempotency is per `notifications.id` — the row is the unit of work.
+- **Email channel is `LoggingEmailChannel` stub.** It logs a structured `email.sent` event to stdout and marks the row `sent`. The real SES adapter is deferred until the deploy target is picked (P5). To swap: implement `EmailChannel` Protocol in `kpa/integrations/email/ses.py` and set `KPA_EMAIL_CHANNEL=ses`.
+- **Retry / backoff.** `sweep_notifications` retries up to 5 times. Back-off: `min(60 * 2^(attempt - 1), 3600) + jitter(0, 30)` seconds, written to `send_after`. On final exhaustion the row is marked `failed` and left for admin triage.
+- **Apply trigger inserts TWO rows.** A successful 201 from `POST /v1/jobs/{id}/apply` inserts one `email` row and one `in_app` row. Idempotent re-applies (already `applied`) and re-applies after withdraw (`withdrawn → applied`) do **not** insert new notification rows.
+- **`GET /v1/notifications` excludes `FAILED` rows.** The inbox endpoint filters `status != 'failed'`. Surfacing admin-only failure state to users is deferred; if needed, a staff endpoint will expose it separately.
+- **Per-user channel preferences / consents deferred to P4.** Currently all channels are enabled for all users. When P4 lands, the sweep must gate dispatch on the user's consent record.
+
 ### Applications + saved jobs routes
 
 - **Re-apply after withdraw UPDATEs the same row back to `status='applied'`** (approach b from the design doc). The partial-UNIQUE index is on `(applicant_id, job_id) WHERE deleted_at IS NULL`. Withdrawal does NOT soft-delete the row — it changes status. A second INSERT against the same live unique pair would fail; instead the route UPDATEs the existing row and refreshes `created_at`. This preserves row id stability (cursor format `{created_at, application_id}` stays valid across re-applies).

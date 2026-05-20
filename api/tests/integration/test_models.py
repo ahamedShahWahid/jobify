@@ -18,6 +18,9 @@ from kpa.db.models import (
     JobEmbedding,
     JobStatus,
     Match,
+    Notification,
+    NotificationChannel,
+    NotificationStatus,
     SavedJob,
     User,
     UserRole,
@@ -528,3 +531,61 @@ async def test_saved_job_partial_unique_on_live_rows(session: AsyncSession) -> N
     with pytest.raises(IntegrityError):
         await session.commit()
     await session.rollback()
+
+
+# ---------------------------------------------------------------------------
+# Notification model tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+async def test_create_notification_round_trip(session: AsyncSession) -> None:
+    """Insert a Notification and reload it; verify defaults are applied."""
+    user = User(email="notif1@example.com", role=UserRole.APPLICANT)
+    session.add(user)
+    await session.flush()
+
+    notif = Notification(
+        user_id=user.id,
+        kind="application_received",
+        channel=NotificationChannel.EMAIL,
+        payload={"kind": "application_received", "job_id": "abc"},
+    )
+    session.add(notif)
+    await session.commit()
+
+    loaded = (
+        await session.execute(select(Notification).where(Notification.user_id == user.id))
+    ).scalar_one()
+    assert loaded.status == NotificationStatus.PENDING
+    assert loaded.attempts == 0
+    assert loaded.sent_at is None
+    assert loaded.read_at is None
+    assert loaded.deleted_at is None
+    assert loaded.payload["kind"] == "application_received"
+
+
+@pytest.mark.integration
+async def test_notification_user_fk_cascades(session: AsyncSession) -> None:
+    """Hard-deleting a user must cascade-delete all their notifications."""
+    user = User(email="notif2@example.com", role=UserRole.APPLICANT)
+    session.add(user)
+    await session.flush()
+
+    session.add(
+        Notification(
+            user_id=user.id,
+            kind="application_received",
+            channel=NotificationChannel.IN_APP,
+            payload={"kind": "application_received"},
+        )
+    )
+    await session.commit()
+
+    await session.delete(user)
+    await session.commit()
+
+    remaining = (
+        await session.execute(select(Notification).where(Notification.user_id == user.id))
+    ).all()
+    assert remaining == []

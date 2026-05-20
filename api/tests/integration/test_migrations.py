@@ -223,3 +223,52 @@ async def test_saved_jobs_has_partial_unique_on_applicant_job(
     assert row is not None
     assert "UNIQUE INDEX" in row[0]
     assert "deleted_at IS NULL" in row[0]
+
+
+# ---------------------------------------------------------------------------
+# Migration 0011 — notifications table
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+async def test_migrated_db_has_notifications_table(session: AsyncSession) -> None:
+    result = await session.execute(
+        text("""
+        SELECT table_name FROM information_schema.tables
+        WHERE table_schema = 'kpa'
+        ORDER BY table_name
+    """)
+    )
+    names = {row[0] for row in result}
+    assert "notifications" in names
+
+
+@pytest.mark.integration
+async def test_notifications_has_sweeper_partial_index(session: AsyncSession) -> None:
+    """ix_notifications_status_send_after_live must exist with the right predicate."""
+    result = await session.execute(
+        text("""
+        SELECT indexdef FROM pg_indexes
+        WHERE schemaname = 'kpa'
+          AND tablename = 'notifications'
+          AND indexname = 'ix_notifications_status_send_after_live'
+    """)
+    )
+    row = result.first()
+    assert row is not None, "sweeper partial index not found"
+    indexdef = row[0]
+    assert "deleted_at IS NULL" in indexdef
+
+
+@pytest.mark.integration
+async def test_notifications_has_user_inbox_partial_index(session: AsyncSession) -> None:
+    """ix_notifications_user_id_created_at_live must exist."""
+    result = await session.execute(
+        text("""
+        SELECT indexname FROM pg_indexes
+        WHERE schemaname = 'kpa'
+          AND tablename = 'notifications'
+    """)
+    )
+    names = {row[0] for row in result}
+    assert "ix_notifications_user_id_created_at_live" in names

@@ -327,7 +327,7 @@ async def concurrent_async_client(
     async with cleanup_engine.connect() as conn:
         await conn.execute(
             text(
-                "TRUNCATE kpa.applications, kpa.saved_jobs,"
+                "TRUNCATE kpa.notifications, kpa.applications, kpa.saved_jobs,"
                 " kpa.matches, kpa.applicant_embeddings, kpa.job_embeddings,"
                 " kpa.jobs, kpa.employers, kpa.resumes,"
                 " kpa.refresh_tokens, kpa.oauth_identities,"

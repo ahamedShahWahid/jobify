@@ -130,6 +130,20 @@ class Settings(BaseSettings):
         description="Weight on the vector score component. Structured weight is 1 - this.",
     )
 
+    # --- Notifications ---
+    email_channel: str = Field(
+        default="logging",
+        alias="KPA_EMAIL_CHANNEL",
+        description="Email channel backend. logging = stub (dev/MVP); ses = real AWS SES (prod).",
+    )
+    notify_batch_size: int = Field(
+        default=50,
+        ge=1,
+        le=1000,
+        alias="KPA_NOTIFY_BATCH_SIZE",
+        description="Max notifications the sweeper claims in one pass.",
+    )
+
     # --- Background workers (Celery + Redis) ---
     redis_url: str = Field(
         ...,
@@ -200,6 +214,13 @@ class Settings(BaseSettings):
             raise ValueError(
                 f"embedding_dim must be one of {sorted(_VALID_EMBEDDING_DIMS)}, got {v}"
             )
+        return v
+
+    @field_validator("email_channel")
+    @classmethod
+    def _enforce_valid_email_channel(cls, v: str) -> str:
+        if v not in ("logging", "ses"):
+            raise ValueError(f"email_channel must be 'logging' or 'ses', got {v!r}")
         return v
 
     @field_validator("google_oauth_client_ids", mode="before")

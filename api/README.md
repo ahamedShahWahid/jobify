@@ -315,6 +315,8 @@ All settings are read from environment variables prefixed `KPA_`:
 | `KPA_GEMINI_API_KEY` | yes    | —       | Gemini Developer API key for the embedding worker |
 | `KPA_EMBEDDING_MODEL` | no   | `gemini-embedding-2` | Embedding model identifier |
 | `KPA_EMBEDDING_DIM` | no     | `1536`  | Matryoshka output dim — must be in {128,256,512,768,1024,1536,3072} and match the migration's Vector(N) |
+| `KPA_EMAIL_CHANNEL` | no     | `logging` | Email adapter: `logging` (stdout stub, default) or `ses` (deferred until deploy target picked) |
+| `KPA_NOTIFY_BATCH_SIZE` | no | `50`   | Max notifications claimed per `sweep_notifications` task run |
 
 The service refuses to boot if required variables are missing or invalid.
 
@@ -411,6 +413,22 @@ job was previously saved (idempotent).
 List the current applicant's saved jobs (includes entries for closed jobs — no status filter
 applied to the job at list time). Cursor-paginated, ETag-cached. Same rich shape as
 `/v1/applications`.
+
+### `GET /v1/notifications`
+
+Returns the current applicant's in-app notification inbox, newest first. `FAILED` rows are
+excluded from this endpoint (admin-only visibility). Cursor-paginated over `(created_at DESC,
+id DESC)`.
+
+```
+GET /v1/notifications?limit=20&cursor=<opaque>
+Authorization: Bearer <access_token>
+```
+
+### `POST /v1/notifications/{id}/read`
+
+Mark a single notification as read. Idempotent — marking an already-read notification returns
+200 with the existing row unchanged. Uniform 404 across unknown and other-user notification ids.
 
 ## Project layout
 

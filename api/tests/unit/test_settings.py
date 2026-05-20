@@ -408,3 +408,29 @@ def test_match_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     s = Settings()
     assert s.match_surface_threshold == 0.55
     assert s.match_vector_weight == 0.6
+
+
+# ---------------------------------------------------------------------------
+# Notifications settings (from P3.1)
+# ---------------------------------------------------------------------------
+
+
+def test_email_channel_default_is_logging(monkeypatch: pytest.MonkeyPatch) -> None:
+    _set_minimum_env(monkeypatch)
+    monkeypatch.delenv("KPA_EMAIL_CHANNEL", raising=False)
+    s = Settings()
+    assert s.email_channel == "logging"
+
+
+def test_email_channel_invalid_value_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    _set_minimum_env(monkeypatch)
+    monkeypatch.setenv("KPA_EMAIL_CHANNEL", "sendgrid")
+    with pytest.raises(ValidationError, match="email_channel"):
+        Settings()
+
+
+def test_notify_batch_size_out_of_range_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    _set_minimum_env(monkeypatch)
+    monkeypatch.setenv("KPA_NOTIFY_BATCH_SIZE", "0")
+    with pytest.raises(ValidationError):
+        Settings()

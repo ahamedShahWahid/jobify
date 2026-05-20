@@ -577,6 +577,93 @@ class SavedJob(Base):
     )
 
 
+class NotificationStatus(StrEnum):
+    PENDING = "pending"
+    DISPATCHING = "dispatching"
+    SENT = "sent"
+    FAILED = "failed"
+
+
+class NotificationChannel(StrEnum):
+    EMAIL = "email"
+    IN_APP = "in_app"
+
+
+class Notification(Base):
+    """Outbox notification row — see spec §6.4 and the P3.1 design doc.
+
+    One row per (user_id, channel, kind) delivery attempt. Sweeper moves rows
+    through the ``pending → dispatching → sent | failed`` state machine.
+    ``send_after`` is the earliest time the sweeper will pick up the row;
+    on retry it is pushed forward by the exponential-backoff formula.
+    ``read_at`` is set by the mark-read endpoint (in-app rows only).
+    """
+
+    __tablename__ = "notifications"
+
+    id: Mapped[UuidPK]
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("kpa.users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    channel: Mapped[NotificationChannel] = mapped_column(
+        SAEnum(
+            NotificationChannel,
+            name="notification_channel",
+            schema="kpa",
+            native_enum=True,
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        nullable=False,
+    )
+    status: Mapped[NotificationStatus] = mapped_column(
+        SAEnum(
+            NotificationStatus,
+            name="notification_status",
+            schema="kpa",
+            native_enum=True,
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        nullable=False,
+        default=NotificationStatus.PENDING,
+        server_default=NotificationStatus.PENDING.value,
+    )
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    send_after: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[CreatedAt]
+    updated_at: Mapped[UpdatedAt]
+    deleted_at: Mapped[DeletedAt]
+
+    __table_args__ = (
+        # Sweeper query path: pending/dispatching rows due for delivery.
+        # Raw SQL via op.execute in the migration because op.create_index
+        # can't express multi-value IN predicates cleanly.
+        Index(
+            "ix_notifications_status_send_after_live",
+            "status",
+            "send_after",
+            postgresql_where="deleted_at IS NULL AND status IN ('pending', 'dispatching')",
+        ),
+        # User inbox query path: all live rows for a user, newest first.
+        # Raw SQL via op.execute because op.create_index doesn't support DESC ordering.
+        Index(
+            "ix_notifications_user_id_created_at_live",
+            "user_id",
+            text("created_at DESC"),
+            postgresql_where="deleted_at IS NULL",
+        ),
+        {"schema": "kpa"},
+    )
+
+
 class Match(Base):
     """Hybrid applicant x job match score -- see spec §6.3 and the P2.2 design doc.
 
