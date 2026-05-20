@@ -114,6 +114,22 @@ class Settings(BaseSettings):
         ),
     )
 
+    # --- Scoring ---
+    match_surface_threshold: float = Field(
+        default=0.55,
+        ge=0.0,
+        le=1.0,
+        alias="KPA_MATCH_SURFACE_THRESHOLD",
+        description="Total score >= this value marks a match as surfaced (visible in the feed).",
+    )
+    match_vector_weight: float = Field(
+        default=0.6,
+        ge=0.0,
+        le=1.0,
+        alias="KPA_MATCH_VECTOR_WEIGHT",
+        description="Weight on the vector score component. Structured weight is 1 - this.",
+    )
+
     # --- Background workers (Celery + Redis) ---
     redis_url: str = Field(
         ...,

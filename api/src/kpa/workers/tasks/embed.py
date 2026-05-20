@@ -198,6 +198,21 @@ async def _embed_applicant_async(
         model_name=result.model_name,
         input_tokens=result.input_tokens,
     )
+    _dispatch_score(applicant_id)
+
+
+def _dispatch_score(applicant_id: UUID) -> None:
+    """Fire score_applicant.delay(...) post-embed, fire-and-forget.
+
+    Broker outage MUST NOT propagate — the embedding is durable. Same broad-except
+    + warning-log pattern as the upload route → parse worker dispatch.
+    """
+    from kpa.workers.tasks.score_applicant import score_applicant
+
+    try:
+        score_applicant.delay(str(applicant_id))
+    except Exception:
+        _log.warning("score.dispatch-failed", applicant_id=str(applicant_id), exc_info=True)
 
 
 async def _load_latest_parsed_resume(session: AsyncSession, applicant_id: UUID) -> Resume | None:

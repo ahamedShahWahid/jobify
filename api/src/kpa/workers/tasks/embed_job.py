@@ -181,6 +181,17 @@ async def _embed_job_async(
         model_name=result.model_name,
         input_tokens=result.input_tokens,
     )
+    _dispatch_score(job_id)
+
+
+def _dispatch_score(job_id: UUID) -> None:
+    """Fire score_job.delay(...) post-embed, fire-and-forget."""
+    from kpa.workers.tasks.score_job import score_job
+
+    try:
+        score_job.delay(str(job_id))
+    except Exception:
+        _log.warning("score.dispatch-failed", job_id=str(job_id), exc_info=True)
 
 
 async def _load_job_with_employer(session: AsyncSession, job_id: UUID) -> tuple[Job, str] | None:

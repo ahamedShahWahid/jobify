@@ -363,3 +363,61 @@ async def test_dispatch_resilient_to_embed_broker_failure(
     finally:
         for claims in google_verifier.canned.values():
             await _cleanup_user_by_email(migrated_db, claims.email)
+
+
+@pytest.mark.integration
+async def test_embed_applicant_dispatches_score_applicant(
+    session,
+    patched_embedding_provider,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """After embed_applicant Txn 3 commits, score_applicant.delay is called."""
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+
+    from kpa.db.models import Applicant, Resume, ResumeParseStatus, User, UserRole
+
+    calls: list[str] = []
+
+    def _spy(applicant_id_str: str) -> None:
+        calls.append(applicant_id_str)
+
+    monkeypatch.setattr("kpa.workers.tasks.score_applicant.score_applicant.delay", _spy)
+
+    user = User(email="dispatch@example.com", role=UserRole.APPLICANT)
+    session.add(user)
+    await session.flush()
+    applicant = Applicant(user_id=user.id, full_name="D Test")
+    session.add(applicant)
+    await session.flush()
+    session.add(
+        Resume(
+            applicant_id=applicant.id,
+            storage_key="k",
+            original_filename="f.pdf",
+            content_type="application/pdf",
+            size_bytes=1,
+            parse_status=ResumeParseStatus.PARSED,
+            parsed_json={
+                "name": "D Test",
+                "parser_name": "test",
+                "raw_text": "D Test",
+                "skills": [],
+                "experience": [],
+                "education": [],
+                "certifications": [],
+            },
+        )
+    )
+    await session.commit()
+
+    sm = async_sessionmaker(
+        bind=session.bind,
+        expire_on_commit=False,
+        join_transaction_mode="create_savepoint",
+    )
+
+    from kpa.workers.tasks.embed import _embed_applicant_async
+
+    await _embed_applicant_async(applicant.id, sm=sm, provider=patched_embedding_provider)
+    assert len(calls) == 1
+    assert calls[0] == str(applicant.id)

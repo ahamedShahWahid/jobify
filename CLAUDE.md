@@ -141,6 +141,17 @@ Per spec §4.2 and the comment in `db/models.py`: SQLAlchemy models are never re
 - **`embed_job` dispatch from the seed CLI** lives in `_dispatch_embeds(...)` and runs *after* `_apply` returns (outside the `asyncio.run` boundary so eager-mode `asyncio.run()` in the task body doesn't conflict). Same broad-except + `_log.warning("embed.dispatch-failed", ...)` pattern as the upload route → parse worker; broker down ≠ seed failure. Don't tighten.
 - **Three modules need patching to intercept `get_embedding_provider`** in tests: `celery_app`, `embed_job`, and `embed` (P1.3). All three import the function by name, so each holds a local reference. The `patched_embedding_provider` fixture patches all three plus the `_embedding_provider` cache. Mirror this pattern in any future fixture that needs to swap a function imported by name across multiple modules.
 
+### Scoring worker (match)
+
+- **`matches` table is the join of the applicant and job embedding spaces.** One row per `(applicant_id, job_id)` live pair, UPSERT on rescore via the partial-UNIQUE index `WHERE deleted_at IS NULL`.
+- **Two workers, one queue (`score`).** `score_applicant` is dispatched from `embed_applicant` Txn 3 post-commit; `score_job` is dispatched from `embed_job` Txn 3. Same broad-except + `_log.warning("score.dispatch-failed", ...)` pattern; don't tighten.
+- **Pure-Python cosine** in `kpa.scoring.vector`. No HNSW dependency. P2.3 feed will switch to pgvector's `<=>` if top-K becomes a hot path.
+- **`surfaced_at` is preserved on rescore.** The UPSERT `set_={...}` uses `func.coalesce(Match.surfaced_at, sa.case((sa.literal(crosses_threshold), func.now()), else_=None))`. Once a match is surfaced, a later rescore that drops below threshold does NOT unset it — the feed stays monotonic over time.
+- **`score_components` + `model_versions` JSONB columns** record the per-rule fits and the model/weight settings used. This is the eval substrate: weight/threshold A/B can replay against historical rows without rescoring.
+- **Two-transaction split (not three).** No external API call, so no need to release the DB between load and compute. Txn 1 loads everything; Python computes in memory; Txn 2 UPSERTs all rows in one commit.
+- **`TransientScoringError`** wraps UPSERT failures for autoretry. Permanent issues (missing entities) are logged and return without raising.
+- **Threshold (0.55) and vector weight (0.6) are env-driven.** `KPA_MATCH_SURFACE_THRESHOLD` and `KPA_MATCH_VECTOR_WEIGHT`. Per-rule structured weights are equal (1/3 each); promote to a config table once labeled feedback exists.
+
 ## Test patterns
 
 ### Two-conftest design

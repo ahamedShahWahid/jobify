@@ -35,7 +35,13 @@ celery_app = Celery(
     "kpa",
     broker=settings.redis_url,
     backend=settings.redis_url,
-    include=["kpa.workers.tasks.parse", "kpa.workers.tasks.embed", "kpa.workers.tasks.embed_job"],
+    include=[
+        "kpa.workers.tasks.parse",
+        "kpa.workers.tasks.embed",
+        "kpa.workers.tasks.embed_job",
+        "kpa.workers.tasks.score_applicant",
+        "kpa.workers.tasks.score_job",
+    ],
 )
 
 celery_app.conf.update(
@@ -50,6 +56,8 @@ celery_app.conf.update(
         "kpa.parse_resume": {"queue": "parse"},
         "kpa.embed_applicant": {"queue": "embed"},
         "kpa.embed_job": {"queue": "embed"},
+        "kpa.score_applicant": {"queue": "score"},
+        "kpa.score_job": {"queue": "score"},
     },
 )
 

@@ -188,11 +188,11 @@ In a second terminal (uvicorn keeps running in the first):
 ```bash
 cd api
 uv run --env-file=.env celery -A kpa.workers.celery_app worker \
-    --pool=solo --concurrency=1 -Q parse,embed --loglevel=info
+    --pool=solo --concurrency=1 -Q parse,embed,score --loglevel=info
 ```
 
 - `--pool=solo`: single-concurrency. The MVP pattern; switch to `--pool=prefork` later when load justifies parallelism.
-- `-Q parse,embed`: consume from both the `parse` queue (resume parsing) and the `embed` queue (Gemini embedding). Run a second worker pinned to `-Q embed` if you want to isolate queue consumption. Future `score`/`notify` queues land in their own plans.
+- `-Q parse,embed,score`: consume from the `parse` queue (resume parsing), the `embed` queue (Gemini embedding), and the `score` queue (match scoring). Run a second worker pinned to `-Q embed` or `-Q score` if you want to isolate queue consumption. Future `notify` queues land in their own plans.
 
 Upload a resume in the first terminal; the worker logs `parse.complete` when it's done. Poll `GET /v1/applicants/me/resumes/{rid}` (with the same Bearer token used for the upload) to see `parse_status` transition.
 
@@ -255,9 +255,9 @@ lower(title))` on jobs. Re-running updates mutable fields; `name` and an
 existing `verified_at` timestamp are preserved.
 
 The seeder dispatches `embed_job` for each inserted or updated job after the
-COMMIT. For embeddings to materialize, a Celery worker on the `embed` queue must
-be running (`uv run --env-file=.env celery -A kpa.workers.celery_app worker
---pool=solo --concurrency=1 -Q parse,embed`). If the broker is down, the
+COMMIT. For embeddings (and downstream scoring) to materialize, a Celery worker
+on the `embed,score` queues must be running (`uv run --env-file=.env celery -A kpa.workers.celery_app worker
+--pool=solo --concurrency=1 -Q parse,embed,score`). If the broker is down, the
 seeder logs `embed.dispatch-failed` per job and continues; re-running the seed
 CLI re-dispatches.
 

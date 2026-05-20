@@ -117,3 +117,43 @@ async def test_job_embeddings_job_id_is_unique(session: AsyncSession) -> None:
     )
     rows = list(result)
     assert len(rows) >= 1  # job_embeddings_job_id_key or similar
+
+
+@pytest.mark.integration
+async def test_migrated_db_has_matches_table(session: AsyncSession) -> None:
+    result = await session.execute(
+        text("""
+        SELECT table_name FROM information_schema.tables
+        WHERE table_schema = 'kpa'
+    """)
+    )
+    names = {row[0] for row in result}
+    assert "matches" in names
+
+
+@pytest.mark.integration
+async def test_matches_has_partial_indexes(session: AsyncSession) -> None:
+    result = await session.execute(
+        text("""
+        SELECT indexname FROM pg_indexes
+        WHERE schemaname = 'kpa' AND tablename = 'matches'
+    """)
+    )
+    names = {row[0] for row in result}
+    assert "ix_matches_applicant_job_live" in names
+    assert "ix_matches_applicant_surfaced" in names
+    assert "ix_matches_job_surfaced" in names
+
+
+@pytest.mark.integration
+async def test_matches_check_constraints_exist(session: AsyncSession) -> None:
+    result = await session.execute(
+        text("""
+        SELECT conname FROM pg_constraint
+        WHERE conrelid = 'kpa.matches'::regclass AND contype = 'c'
+    """)
+    )
+    names = {row[0] for row in result}
+    assert "ck_matches_vector_score_range" in names
+    assert "ck_matches_structured_score_range" in names
+    assert "ck_matches_total_score_range" in names

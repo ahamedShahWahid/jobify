@@ -227,3 +227,24 @@ async def test_embed_job_permanent_error_does_not_retry(
     await _embed_job_async(job.id, sm=sm, provider=embedding_provider)
     rows = (await session.execute(select(JobEmbedding).where(JobEmbedding.job_id == job.id))).all()
     assert rows == []  # permanent error → no row, no retry, no exception surfaced
+
+
+@pytest.mark.integration
+async def test_embed_job_dispatches_score_job(
+    session: AsyncSession,
+    patched_embedding_provider,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """After embed_job Txn 3 commits, score_job.delay is called."""
+    calls: list[str] = []
+
+    def _spy(job_id_str: str) -> None:
+        calls.append(job_id_str)
+
+    monkeypatch.setattr("kpa.workers.tasks.score_job.score_job.delay", _spy)
+
+    job = await _make_job(session)
+    sm = _make_sm(session)
+    await _embed_job_async(job.id, sm=sm, provider=patched_embedding_provider)
+    assert len(calls) == 1
+    assert calls[0] == str(job.id)

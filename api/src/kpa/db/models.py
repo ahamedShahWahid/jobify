@@ -472,3 +472,75 @@ class JobEmbedding(Base):
     created_at: Mapped[CreatedAt]
     updated_at: Mapped[UpdatedAt]
     deleted_at: Mapped[DeletedAt]
+
+
+class Match(Base):
+    """Hybrid applicant x job match score -- see spec §6.3 and the P2.2 design doc.
+
+    One row per (applicant_id, job_id) live pair. UPSERT on rescore.
+
+    ``surfaced_at`` is set on the first scoring run where total >= threshold and
+    preserved on subsequent rescores — once surfaced, a match stays surfaced
+    even if a later rescore lowers the score. This keeps the feed monotonic
+    over time. ``score_components`` (per-rule breakdown) and ``model_versions``
+    (embedding models + weight settings) are JSONB so we can replay arbitrary
+    weight/threshold settings against historical rows without rescoring.
+    """
+
+    __tablename__ = "matches"
+
+    id: Mapped[UuidPK]
+    applicant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("kpa.applicants.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    job_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("kpa.jobs.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    vector_score: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False)
+    structured_score: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False)
+    total_score: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False)
+    score_components: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    model_versions: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    surfaced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[CreatedAt]
+    updated_at: Mapped[UpdatedAt]
+    deleted_at: Mapped[DeletedAt]
+
+    __table_args__ = (
+        Index(
+            "ix_matches_applicant_job_live",
+            "applicant_id",
+            "job_id",
+            unique=True,
+            postgresql_where="deleted_at IS NULL",
+        ),
+        Index(
+            "ix_matches_applicant_surfaced",
+            "applicant_id",
+            text("total_score DESC"),
+            postgresql_where="deleted_at IS NULL AND surfaced_at IS NOT NULL",
+        ),
+        Index(
+            "ix_matches_job_surfaced",
+            "job_id",
+            text("total_score DESC"),
+            postgresql_where="deleted_at IS NULL AND surfaced_at IS NOT NULL",
+        ),
+        CheckConstraint(
+            "vector_score >= 0 AND vector_score <= 1",
+            name="ck_matches_vector_score_range",
+        ),
+        CheckConstraint(
+            "structured_score >= 0 AND structured_score <= 1",
+            name="ck_matches_structured_score_range",
+        ),
+        CheckConstraint(
+            "total_score >= 0 AND total_score <= 1",
+            name="ck_matches_total_score_range",
+        ),
+        {"schema": "kpa"},
+    )

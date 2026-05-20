@@ -382,3 +382,29 @@ def test_embedding_dim_accepts_supported_values(monkeypatch: pytest.MonkeyPatch,
     monkeypatch.setenv("KPA_EMBEDDING_DIM", str(dim))
     s = Settings()
     assert s.embedding_dim == dim
+
+
+# ---------------------------------------------------------------------------
+# Scoring settings (from P2.2)
+# ---------------------------------------------------------------------------
+
+
+def test_match_surface_threshold_out_of_range_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    _set_minimum_env(monkeypatch)
+    monkeypatch.setenv("KPA_MATCH_SURFACE_THRESHOLD", "1.5")
+    with pytest.raises(ValidationError):
+        Settings()
+
+
+def test_match_vector_weight_out_of_range_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    _set_minimum_env(monkeypatch)
+    monkeypatch.setenv("KPA_MATCH_VECTOR_WEIGHT", "-0.1")
+    with pytest.raises(ValidationError):
+        Settings()
+
+
+def test_match_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    _set_minimum_env(monkeypatch)
+    s = Settings()
+    assert s.match_surface_threshold == 0.55
+    assert s.match_vector_weight == 0.6
