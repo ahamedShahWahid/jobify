@@ -224,3 +224,43 @@ The per-test engine in the integration conftest uses `poolclass=NullPool` to for
 - API conventions and roadmap → `IMPLEMENTATION_SPEC.md` (§4 backend, §5 data model, §6 pipelines incl. §6.1 parse worker, §9.1 auth/identity, §10 API design, §11 infra).
 - Product scope → `docs/prd/KPA_Enhanced_BRD_v1_1.pdf`.
 - Active per-feature work → `docs/superpowers/plans/` (most recent file by date = current focus); paired design doc in `docs/superpowers/specs/`.
+
+## Flutter app (`app/`)
+
+The applicant-facing iOS + Android + Web client lives in `app/` as a sibling of `api/`. Architecture follows Pragmatic Clean Architecture — `lib/data/` + `lib/domain/` + `lib/presentation/` + `lib/core/`. State management is Riverpod 4.x with code-gen; HTTP is dio 5.7; routing is go_router 14.6 with `StatefulShellRoute.indexedStack` for the four-tab bottom nav.
+
+### Day-to-day commands
+
+```bash
+# from app/
+flutter pub get
+dart run build_runner build --delete-conflicting-outputs   # after touching @freezed / @riverpod / @JsonSerializable
+flutter run -d chrome --dart-define-from-file=.env
+flutter test
+flutter analyze
+dart format lib test
+```
+
+### Non-obvious bits
+
+- **Refresh-on-401 interceptor** (`lib/data/api/refresh_on_401_interceptor.dart`) is the single most important piece of code; single-flight via `Completer<String>?` so concurrent 401s never stampede the refresh endpoint. Tests in `test/unit/data/api/refresh_on_401_interceptor_test.dart` are the canonical specification — keep them passing.
+
+- **`AccessTokenHolder`** (`lib/data/api/access_token_holder.dart`) is a mutable singleton bridging dio (below Riverpod's reach) and the rest of the app. Exposes both `setToken(String?)` (nullable, primary) and `set(String)` (non-null alias). The Riverpod `accessTokenNotifierProvider` mirrors it for UI consumers; never let them diverge.
+
+- **`dio_provider` depends on a presentation-layer notifier** (`authStateProvider`) to push `SignedOut` on refresh failure. Documented inline as the one allowed exception to data/→presentation/ purity.
+
+- **Riverpod 4.x codegen** drops the `Notifier` suffix from generated providers — the `AuthStateNotifier` class produces `authStateProvider` (not `authStateNotifierProvider`).
+
+- **Pragmatic CA cheat:** `data/<feature>/*_dto.dart` files are referenced from `lib/domain/<feature>/` via `export` directives. Domain consumers import the `*Dto` types using a `domain/` path; the underlying definition lives in `data/`.
+
+- **No mutation of the feed on apply/save/withdraw/unsave.** Each mutation invalidates the corresponding list controller + the `jobDetailControllerProvider(id)`, never the feed.
+
+- **Per-tab navigation stacks** via `StatefulShellRoute.indexedStack`. `/jobs/:id` is defined as a child route under each of the four tab branches.
+
+- **google_fonts and tests:** widget tests must use `ThemeData.light(useMaterial3: true)` rather than `buildTheme()` because the production `buildTheme` triggers a network fetch for Inter that fails in CI/offline test environments. The integration test passes because it doesn't render `_MatchCard` glyphs that depend on the font.
+
+- **`--dart-define`, no flavors.** `KPA_API_BASE_URL` and `KPA_GOOGLE_WEB_CLIENT_ID` are required at compile time; `Env.validateOrThrow()` runs in `main()` before `runApp`.
+
+- **Light theme only in v0; dark plumbed but disabled.** `MaterialApp.router(themeMode: ThemeMode.light)`. Flip to `ThemeMode.system` + populate the dark branch of `buildTheme` when dark mode ships.
+
+- **No `dio_smart_retry`, no toast plugin, no analytics, no Sentry.** All deferred to follow-up plans per spec §Non-goals.
