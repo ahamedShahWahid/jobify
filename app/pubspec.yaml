@@ -12,11 +12,11 @@ dependencies:
     sdk: flutter
 
   # State management
-  flutter_riverpod: ^2.6.1
-  riverpod_annotation: ^2.6.1
+  flutter_riverpod: ^3.1.0
+  riverpod_annotation: ^4.0.0
 
   # Models / serialization
-  freezed_annotation: ^2.4.4
+  freezed_annotation: ^3.1.0
   json_annotation: ^4.9.0
 
   # Routing
@@ -44,13 +44,13 @@ dev_dependencies:
   very_good_analysis: ^6.0.0
 
   # Code-gen
-  build_runner: ^2.4.13
-  freezed: ^2.5.7
-  json_serializable: ^6.8.0
-  riverpod_generator: ^2.6.3
-  go_router_builder: ^2.7.1
-  custom_lint: ^0.7.0           # required by riverpod_lint
-  riverpod_lint: ^2.6.3         # surfaces Riverpod misuse in `flutter analyze`
+  build_runner: ^2.15.0
+  freezed: ^3.2.0
+  json_serializable: ^6.9.0
+  riverpod_generator: ^4.0.0
+  go_router_builder: ^4.0.0
+  custom_lint: ^0.8.0           # required by riverpod_lint
+  riverpod_lint: ^3.1.0         # surfaces Riverpod misuse in `flutter analyze`
 
   # Test infra
   mocktail: ^1.0.4

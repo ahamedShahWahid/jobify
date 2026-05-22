@@ -6,37 +6,88 @@ part of 'dio_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$accessTokenHolderHash() => r'f67c8c7a8e5e4a5b8e5e4a5b8e5e4a5b';
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
 
-/// See also [accessTokenHolder].
 @ProviderFor(accessTokenHolder)
-final accessTokenHolderProvider =
-    Provider<AccessTokenHolder>.internal(
-  accessTokenHolder,
-  name: r'accessTokenHolderProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$accessTokenHolderHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+final accessTokenHolderProvider = AccessTokenHolderProvider._();
 
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef AccessTokenHolderRef = ProviderRef<AccessTokenHolder>;
-String _$dioHash() => r'e5b8e5b8e5b8e5b8e5b8e5b8e5b8e5b8';
+final class AccessTokenHolderProvider extends $FunctionalProvider<
+    AccessTokenHolder,
+    AccessTokenHolder,
+    AccessTokenHolder> with $Provider<AccessTokenHolder> {
+  AccessTokenHolderProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'accessTokenHolderProvider',
+          isAutoDispose: false,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
 
-/// See also [dio].
+  @override
+  String debugGetCreateSourceHash() => _$accessTokenHolderHash();
+
+  @$internal
+  @override
+  $ProviderElement<AccessTokenHolder> $createElement(
+          $ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  AccessTokenHolder create(Ref ref) {
+    return accessTokenHolder(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AccessTokenHolder value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AccessTokenHolder>(value),
+    );
+  }
+}
+
+String _$accessTokenHolderHash() => r'7a899a8bacf1f8b46ebd99e98f992f85e89bdd27';
+
 @ProviderFor(dio)
-final dioProvider = Provider<Dio>.internal(
-  dio,
-  name: r'dioProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product') ? null : _$dioHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+final dioProvider = DioProvider._();
 
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef DioRef = ProviderRef<Dio>;
+final class DioProvider extends $FunctionalProvider<Dio, Dio, Dio>
+    with $Provider<Dio> {
+  DioProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'dioProvider',
+          isAutoDispose: false,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$dioHash();
+
+  @$internal
+  @override
+  $ProviderElement<Dio> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  Dio create(Ref ref) {
+    return dio(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Dio value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Dio>(value),
+    );
+  }
+}
+
+String _$dioHash() => r'797eebd670f747cc8099083c2001fbadc898f4d6';
