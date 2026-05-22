@@ -5,7 +5,11 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:kpa_app/core/config/env.dart';
 import 'package:kpa_app/data/api/access_token_holder.dart';
 import 'package:kpa_app/data/api/auth_header_interceptor.dart';
+import 'package:kpa_app/data/api/refresh_on_401_interceptor.dart';
 import 'package:kpa_app/data/api/request_id_interceptor.dart';
+import 'package:kpa_app/data/auth/auth_repository_impl.dart';
+import 'package:kpa_app/domain/auth/auth_state.dart';
+import 'package:kpa_app/presentation/auth/auth_providers.dart';
 
 part 'dio_provider.g.dart';
 
@@ -26,6 +30,18 @@ Dio dio(Ref ref) {
   );
   dio.interceptors.add(RequestIdInterceptor());
   dio.interceptors.add(AuthHeaderInterceptor(holder));
-  // RefreshOn401Interceptor is added in Task 13 (after AuthRepository exists).
+  dio.interceptors.add(
+    RefreshOn401Interceptor(
+      holder: holder,
+      dio: dio,
+      refresh: () async {
+        final repo = ref.read(authRepositoryProvider);
+        return (repo as AuthRepositoryImpl).refreshAccessTokenForInterceptor();
+      },
+      onSignedOut: () {
+        ref.read(authStateProvider.notifier).set(const SignedOut());
+      },
+    ),
+  );
   return dio;
 }
