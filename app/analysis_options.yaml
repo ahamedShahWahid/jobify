@@ -1,0 +1,16 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "**/build/**"
+  plugins:
+    - custom_lint
+
+linter:
+  rules:
+    # very_good_analysis is strict; loosen the rules that fight with our patterns:
+    public_member_api_docs: false       # internal app; not a published package
+    sort_pub_dependencies: false        # pubspec.yaml is hand-grouped by purpose
+    avoid_classes_with_only_static_members: false  # used by KpaSpacing, KpaRadii

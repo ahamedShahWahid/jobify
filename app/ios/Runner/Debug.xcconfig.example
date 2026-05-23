@@ -1,0 +1,7 @@
+// Copy to Debug.xcconfig (gitignored) and fill in real values from
+// Google Cloud Console → Credentials.
+// REVERSED_CLIENT_ID has components reversed (see google_sign_in docs).
+GOOGLE_IOS_CLIENT_ID = YOUR_IOS_CLIENT_ID.apps.googleusercontent.com
+GOOGLE_IOS_REVERSED_CLIENT_ID = com.googleusercontent.apps.YOUR_IOS_CLIENT_ID
+
+#include "Generated.xcconfig"

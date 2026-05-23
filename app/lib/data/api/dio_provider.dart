@@ -1,0 +1,46 @@
+// ignore_for_file: directives_ordering
+import 'package:dio/dio.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import 'package:kpa_app/core/config/env.dart';
+import 'package:kpa_app/data/api/access_token_holder.dart';
+import 'package:kpa_app/data/api/auth_header_interceptor.dart';
+import 'package:kpa_app/data/api/refresh_on_401_interceptor.dart';
+import 'package:kpa_app/data/api/request_id_interceptor.dart';
+import 'package:kpa_app/data/auth/auth_repository_impl.dart';
+import 'package:kpa_app/domain/auth/auth_state.dart';
+import 'package:kpa_app/presentation/auth/auth_providers.dart';
+
+part 'dio_provider.g.dart';
+
+@Riverpod(keepAlive: true)
+AccessTokenHolder accessTokenHolder(Ref ref) => AccessTokenHolder();
+
+@Riverpod(keepAlive: true)
+Dio dio(Ref ref) {
+  final holder = ref.read(accessTokenHolderProvider);
+  final dio = Dio(
+    BaseOptions(
+      // ignore: avoid_redundant_argument_values
+      baseUrl: Env.apiBaseUrl,
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 30),
+    ),
+  );
+  dio.interceptors.add(RequestIdInterceptor());
+  dio.interceptors.add(AuthHeaderInterceptor(holder));
+  dio.interceptors.add(
+    RefreshOn401Interceptor(
+      holder: holder,
+      dio: dio,
+      refresh: () async {
+        final repo = ref.read(authRepositoryProvider);
+        return (repo as AuthRepositoryImpl).refreshAccessTokenForInterceptor();
+      },
+      onSignedOut: () {
+        ref.read(authStateProvider.notifier).set(const SignedOut());
+      },
+    ),
+  );
+  return dio;
+}
