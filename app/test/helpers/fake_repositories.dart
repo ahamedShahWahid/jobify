@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:kpa_app/data/feed/feed_dto.dart';
 import 'package:kpa_app/data/jobs/jobs_dto.dart';
 import 'package:kpa_app/data/me/me_dto.dart';
@@ -15,17 +13,13 @@ class FakeAuthRepository implements AuthRepository {
   FakeAuthRepository({AuthState initial = const SignedOut()})
       : _state = initial;
   AuthState _state;
-  final _controller = StreamController<AuthState>.broadcast();
 
-  @override
-  Stream<AuthState> watch() => _controller.stream;
   @override
   AuthState get current => _state;
   @override
   Future<SignedIn> signInWithGoogle() async {
     const si = SignedIn(userId: 'u1', email: 'u@e.com', displayName: 'U');
     _state = si;
-    _controller.add(si);
     return si;
   }
 
@@ -33,14 +27,12 @@ class FakeAuthRepository implements AuthRepository {
   Future<SignedIn> refreshSession() async {
     const si = SignedIn(userId: 'u1', email: 'u@e.com', displayName: 'U');
     _state = si;
-    _controller.add(si);
     return si;
   }
 
   @override
   Future<void> signOut() async {
     _state = const SignedOut();
-    _controller.add(_state);
   }
 }
 

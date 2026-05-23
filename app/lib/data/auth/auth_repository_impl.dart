@@ -1,6 +1,4 @@
 // ignore_for_file: directives_ordering
-import 'dart:async';
-
 import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -41,17 +39,12 @@ class AuthRepositoryImpl implements AuthRepository {
   final void Function(AuthState) _emit;
   final AuthState Function() _readState;
   final _log = KpaLogger.named('auth.repo');
-  final _controller = StreamController<AuthState>.broadcast();
-
-  @override
-  Stream<AuthState> watch() => _controller.stream;
 
   @override
   AuthState get current => _readState();
 
   void _push(AuthState s) {
     _emit(s);
-    _controller.add(s);
   }
 
   @override

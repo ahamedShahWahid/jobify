@@ -7,6 +7,4 @@ abstract final class Routes {
   static const saved = '/saved';
   static const applications = '/applications';
   static const profile = '/profile';
-
-  static String jobDetailFor(String id) => '/jobs/$id';
 }

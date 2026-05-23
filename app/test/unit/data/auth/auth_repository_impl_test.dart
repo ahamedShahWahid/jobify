@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kpa_app/data/api/access_token_holder.dart';
@@ -328,5 +326,3 @@ void main() {
   });
 }
 
-// ignore: unused_element — suppress dart's "only used in test" false-positive
-String _dummyEncode(Object? o) => jsonEncode(o);

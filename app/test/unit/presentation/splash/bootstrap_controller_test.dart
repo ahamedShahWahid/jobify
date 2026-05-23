@@ -22,8 +22,6 @@ class _FakeAuthRepo implements AuthRepository {
   _FakeAuthRepo({this.refreshThrows});
   Object? refreshThrows;
   @override
-  Stream<AuthState> watch() => const Stream.empty();
-  @override
   AuthState get current => const SignedOut();
   @override
   Future<SignedIn> signInWithGoogle() => throw UnimplementedError();
