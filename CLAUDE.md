@@ -245,17 +245,35 @@ dart format lib test
 
 - **Refresh-on-401 interceptor** (`lib/data/api/refresh_on_401_interceptor.dart`) is the single most important piece of code; single-flight via `Completer<String>?` so concurrent 401s never stampede the refresh endpoint. Tests in `test/unit/data/api/refresh_on_401_interceptor_test.dart` are the canonical specification — keep them passing.
 
-- **`AccessTokenHolder`** (`lib/data/api/access_token_holder.dart`) is a mutable singleton bridging dio (below Riverpod's reach) and the rest of the app. Exposes both `setToken(String?)` (nullable, primary) and `set(String)` (non-null alias). The Riverpod `accessTokenNotifierProvider` mirrors it for UI consumers; never let them diverge.
+- **`AccessTokenHolder`** (`lib/data/api/access_token_holder.dart`) is a mutable singleton bridging dio (below Riverpod's reach) and the rest of the app. Single public setter: `set(String? token)`; `clear()` is `set(null)`. No mirror Riverpod notifier — it was removed when the code reviewer flagged it as dead.
 
-- **`dio_provider` depends on a presentation-layer notifier** (`authStateProvider`) to push `SignedOut` on refresh failure. Documented inline as the one allowed exception to data/→presentation/ purity.
+- **`dio_provider` depends on a presentation-layer notifier** (`authStateProvider`) to push `SignedOut` on refresh failure. This is the one documented exception to data→presentation purity. The `auth_repository_impl` previously had a second leak; that one was removed by deleting its dead `emit`/`readState` callbacks.
+
+- **Don't override `validateStatus` on the Dio instance.** An earlier version set `validateStatus: (s) => s < 500` which silently masked 401s and made `RefreshOn401Interceptor` non-functional in production (tests passed because the mock interceptor maps 401→reject explicitly). Default Dio behavior — 4xx/5xx throws DioException — is what the refresh interceptor needs to fire.
+
+- **Refresh interceptor cleanup order:** `_inFlight = null` is set **before** the Completer is `complete()`d, not after. Otherwise a continuation that synchronously re-enters `onError` could attach to a stale completer.
 
 - **Riverpod 4.x codegen** drops the `Notifier` suffix from generated providers — the `AuthStateNotifier` class produces `authStateProvider` (not `authStateNotifierProvider`).
 
 - **No mutation of the feed on apply/save/withdraw/unsave.** Each mutation invalidates the corresponding list controller + the `jobDetailControllerProvider(id)`, never the feed.
 
-- **Per-tab navigation stacks** via `StatefulShellRoute.indexedStack`. `/jobs/:id` is defined as a child route under each of the four tab branches.
+- **List screens share `PagedState<T>` + `loadNextPage` helpers** (`lib/presentation/paging/`). Feed/Saved/Applications controllers each have a `typedef XxxState = PagedState<Y>` and delegate `loadMore()` to the shared helper. Don't reinvent the pagination state machine per screen.
 
-- **google_fonts and tests:** widget tests must use `ThemeData.light(useMaterial3: true)` rather than `buildTheme()` because the production `buildTheme` triggers a network fetch for Inter that fails in CI/offline test environments. The integration test passes because it doesn't render `_MatchCard` glyphs that depend on the font.
+- **`loadMore` error path preserves loaded items** via `AsyncValue.error(...).copyWithPrevious(AsyncValue.data(...))` — early implementation wiped the list on page-N failure. `copyWithPrevious` is `@internal` in Riverpod 3+; the `// ignore: invalid_use_of_internal_member` comment in `paging.dart` is load-bearing.
+
+- **Magic strings live in enums or constants.** `JobStatus`, `ApplicationStatus`, `ApplicationSource`, `MatchGenerator` are enums with `@JsonKey(unknownEnumValue: X.unknown)` so a future backend value parses to a sentinel instead of throwing. Error slugs live in `lib/core/error/auth_slugs.dart` (`AuthSlugs.invalidAccessToken` etc.). The HTTP API layer (`*_api.dart`) still uses raw strings for source (the wire format); enums are a repo-and-above concept.
+
+- **DTOs are `@JsonSerializable` plain classes by default; `@freezed` only when `copyWith` is needed.** Only `JobDetailDto` (FakeJobsRepository uses `copyWith`) and `PagedState<T>` (paging helper uses `copyWith`) keep freezed. If you add a new DTO, default to plain `@JsonSerializable`.
+
+- **Per-tab navigation stacks** via `StatefulShellRoute.indexedStack`. `/jobs/:id` is defined as a child route under each of the four tab branches. The 404 path in JobDetail uses `context.pop()` so users return to the tab they came from, not a hardcoded `/feed`.
+
+- **google_fonts and tests:** widget tests must use `ThemeData.light(useMaterial3: true)` rather than `buildTheme()` because the production `buildTheme` triggers a network fetch for Inter that fails in CI/offline test environments. The integration test passes because it doesn't render glyphs that depend on the font.
+
+- **`PackageInfo.fromPlatform()` lives in a `keepAlive: true` provider** (`presentation/profile/package_info_provider.dart`), not in a `FutureBuilder.future:` arg — the latter re-runs the platform-channel call on every screen rebuild. Same lesson applies if you ever wrap another platform-channel async in a widget.
+
+- **`DateFormat` instances are module-static**, not per-cell. `DateFormat.yMMMMd()` parses an ICU pattern on construction; allocating one per ListView cell adds real CPU on long lists.
+
+- **Shared test infra in `test/helpers/`:** `MockInterceptor` (replaces the 6 hand-rolled copies), `fake_repositories.dart` (the six Fake*Repository implementations used by the integration test). Reuse before hand-rolling new test fakes.
 
 - **`--dart-define`, no flavors.** `KPA_API_BASE_URL` and `KPA_GOOGLE_WEB_CLIENT_ID` are required at compile time; `Env.validateOrThrow()` runs in `main()` before `runApp`.
 
