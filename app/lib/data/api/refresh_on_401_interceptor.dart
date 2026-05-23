@@ -87,12 +87,12 @@ class RefreshOn401Interceptor extends Interceptor {
     _inFlight = c;
     _refresh().then(
       (token) {
-        c.complete(token);
         _inFlight = null;
+        c.complete(token);
       },
       onError: (Object e, StackTrace s) {
-        c.completeError(_RefreshFailed(e), s);
         _inFlight = null;
+        c.completeError(_RefreshFailed(e), s);
       },
     );
     return c.future;
