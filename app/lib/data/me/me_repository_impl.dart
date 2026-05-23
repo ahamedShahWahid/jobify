@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:kpa_app/core/error/error_mapping.dart';
+import 'package:kpa_app/data/api/error_mapping.dart';
 import 'package:kpa_app/data/api/dio_provider.dart';
 import 'package:kpa_app/data/me/me_api.dart';
 import 'package:kpa_app/domain/me/me_repository.dart';

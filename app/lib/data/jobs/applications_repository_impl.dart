@@ -2,7 +2,7 @@
 import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:kpa_app/core/error/error_mapping.dart';
+import 'package:kpa_app/data/api/error_mapping.dart';
 import 'package:kpa_app/data/api/dio_provider.dart';
 import 'package:kpa_app/data/jobs/applications_api.dart';
 import 'package:kpa_app/data/jobs/jobs_dto.dart';

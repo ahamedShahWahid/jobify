@@ -2,7 +2,7 @@
 import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:kpa_app/core/error/error_mapping.dart';
+import 'package:kpa_app/data/api/error_mapping.dart';
 import 'package:kpa_app/core/error/exceptions.dart';
 import 'package:kpa_app/core/log/logger.dart';
 import 'package:kpa_app/data/api/access_token_holder.dart';

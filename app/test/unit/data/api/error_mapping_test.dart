@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/core/error/error_mapping.dart';
+import 'package:kpa_app/data/api/error_mapping.dart';
 import 'package:kpa_app/core/error/exceptions.dart';
 
 DioException _dioErrWithResponse({
