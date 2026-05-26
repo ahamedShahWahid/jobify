@@ -51,8 +51,30 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<SignedIn> signInWithGoogle() async {
     _push(const Authenticating());
+    final String idToken;
     try {
-      final idToken = await _google.getIdToken();
+      idToken = await _google.getIdToken();
+    } on AuthException {
+      _push(const SignedOut());
+      rethrow;
+    }
+    return _exchangeGoogleIdToken(idToken);
+  }
+
+  /// Web-only completion: the rendered Google button (see [GoogleWebSignIn])
+  /// delivers the ID token asynchronously, so there's no imperative
+  /// `getIdToken()` step — we go straight to the backend exchange. Kept on the
+  /// impl (not [AuthRepository]) and reached via downcast, mirroring
+  /// [refreshAccessTokenForInterceptor].
+  Future<SignedIn> completeWebSignIn(String idToken) async {
+    _push(const Authenticating());
+    return _exchangeGoogleIdToken(idToken);
+  }
+
+  /// Trade a Google ID token for a KPA session. Shared by the mobile imperative
+  /// path and the web rendered-button path.
+  Future<SignedIn> _exchangeGoogleIdToken(String idToken) async {
+    try {
       final res = await _dio.post<Map<String, dynamic>>(
         '/v1/auth/oauth/google',
         data: {'id_token': idToken},
@@ -71,9 +93,6 @@ class AuthRepositoryImpl implements AuthRepository {
     } on DioException catch (e) {
       _push(const SignedOut());
       throw mapDioException(e);
-    } on AuthException {
-      _push(const SignedOut());
-      rethrow;
     }
   }
 

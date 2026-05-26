@@ -144,6 +144,15 @@ class Settings(BaseSettings):
         description="Max notifications the sweeper claims in one pass.",
     )
 
+    # --- CORS ---
+    cors_allow_origins: list[str] | str = Field(
+        default_factory=lambda: ["http://localhost:8080"],
+        description=(
+            "CSV of browser origins allowed to call the API (the Flutter web dev"
+            " server). Mobile clients send no Origin header, so this only gates web."
+        ),
+    )
+
     # --- Background workers (Celery + Redis) ---
     redis_url: str = Field(
         ...,
@@ -226,6 +235,14 @@ class Settings(BaseSettings):
     @field_validator("google_oauth_client_ids", mode="before")
     @classmethod
     def _split_google_client_ids(cls, v: object) -> object:
+        """Same CSV-parsing behavior as allowed_resume_content_types."""
+        if isinstance(v, str):
+            return [item.strip() for item in v.split(",") if item.strip()]
+        return v
+
+    @field_validator("cors_allow_origins", mode="before")
+    @classmethod
+    def _split_cors_origins(cls, v: object) -> object:
         """Same CSV-parsing behavior as allowed_resume_content_types."""
         if isinstance(v, str):
             return [item.strip() for item in v.split(",") if item.strip()]

@@ -42,13 +42,35 @@ flutter run -d emulator-5554 \
   --dart-define=KPA_API_BASE_URL=http://10.0.2.2:8000 \
   --dart-define-from-file=.env
 
-# Web
-sed "s|{{GOOGLE_WEB_CLIENT_ID}}|$KPA_GOOGLE_WEB_CLIENT_ID|g" \
-  web/index.template.html > web/index.html
-flutter run -d chrome --dart-define-from-file=.env
+# Web — pin the port so it matches the Google OAuth allowlist (see below)
+flutter run -d web-server --web-port=8080 --dart-define-from-file=.env
+# (or `-d chrome` for a live browser, but it picks a random port that won't
+#  match Authorized JavaScript origins — prefer the pinned web-server port)
 ```
 
 Note Android needs `http://10.0.2.2:8000` (emulator's host loopback alias) instead of `localhost`.
+
+### Web Google sign-in (extra setup)
+
+Web auth is a different flow from mobile: Google Identity Services only returns an
+ID token via its **rendered button**, so on web the app shows Google's "Sign in with
+Google" button (mobile keeps the in-app `FilledButton`). Two things must be configured
+or the button 403s / sign-in fails:
+
+1. **Authorized JavaScript origins** — in Google Cloud → APIs & Services → Credentials,
+   open the **Web** OAuth client and add the exact dev origin (`http://localhost:8080`,
+   no trailing slash) under *Authorized JavaScript origins* (NOT redirect URIs). Changes
+   take 5 min – a few hours to propagate. Probe readiness without a browser:
+   ```bash
+   curl -s -o /dev/null -w '%{http_code}\n' -H 'Origin: http://localhost:8080' \
+     'https://accounts.google.com/gsi/button?client_id=<WEB_CLIENT_ID>&is_fedcm_supported=true'
+   # 403 = origin not allowed yet; 200 = live
+   ```
+2. **API CORS** — the backend must allowlist the web origin. `KPA_CORS_ALLOW_ORIGINS`
+   (default `http://localhost:8080`) drives the API's CORS middleware. See `api/README.md`.
+
+The `clientId` is passed to `GoogleSignIn` directly via `--dart-define`, so the
+`web/index.template.html` → `web/index.html` `sed` step is no longer needed for auth.
 
 ## Test
 

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'package:kpa_app/core/config/env.dart';
@@ -16,11 +17,23 @@ abstract interface class GoogleSignInDataSource {
 
 class GoogleSignInDataSourceImpl implements GoogleSignInDataSource {
   GoogleSignInDataSourceImpl([GoogleSignIn? sdk])
-      : _sdk = sdk ??
-            GoogleSignIn(
-              serverClientId: Env.googleWebClientId,
-              scopes: const ['email', 'profile', 'openid'],
-            );
+      : _sdk = sdk ?? _defaultSdk();
+
+  // The web plugin asserts `serverClientId == null` and requires `clientId`;
+  // mobile is the mirror image (wants serverClientId, ignores clientId). The
+  // imperative `getIdToken()` is only used on mobile — on web the rendered
+  // button path (see GoogleWebSignIn) is used instead — but this construction
+  // still runs on web because `signOut()` lazily inits the plugin, which would
+  // hit the `serverClientId is not supported on Web` assert otherwise.
+  static GoogleSignIn _defaultSdk() => kIsWeb
+      ? GoogleSignIn(
+          clientId: Env.googleWebClientId,
+          scopes: const ['email', 'profile', 'openid'],
+        )
+      : GoogleSignIn(
+          serverClientId: Env.googleWebClientId,
+          scopes: const ['email', 'profile', 'openid'],
+        );
 
   final GoogleSignIn _sdk;
 
