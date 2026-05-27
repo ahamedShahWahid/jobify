@@ -58,7 +58,7 @@ void main() {
 
   testWidgets('failed resume shows error chip', (tester) async {
     await _pump(tester, _dto(ResumeParseStatus.failed));
-    expect(find.text("Couldn't parse"), findsOneWidget);
+    expect(find.text("Couldn't parse — try again"), findsOneWidget);
   });
 
   testWidgets('parsing resume shows processing chip', (tester) async {

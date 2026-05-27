@@ -38,8 +38,12 @@ void main() {
     final dio = Dio(BaseOptions(baseUrl: 'http://test.local'));
     final mock = MockInterceptor();
     dio.interceptors.add(mock);
-    mock.on('POST', '/v1/notifications/n1/read', 200,
-        _n('n1', readAt: '2026-05-02T00:00:00Z'),);
+    mock.on(
+      'POST',
+      '/v1/notifications/n1/read',
+      200,
+      _n('n1', readAt: '2026-05-02T00:00:00Z'),
+    );
     final repo = NotificationsRepositoryImpl(NotificationApi(dio));
     final dto = await repo.markRead('n1');
     expect(dto.id, 'n1');

@@ -97,8 +97,8 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> {
             FilledButton.icon(
               onPressed: uploading ? null : _pickAndUpload,
               icon: const Icon(Icons.upload_file),
-              label:
-                  Text(uploading ? 'Uploading…' : 'Upload / Replace r\xe9sum\xe9'),
+              label: Text(
+                  uploading ? 'Uploading…' : 'Upload / Replace r\xe9sum\xe9'),
             ),
           ],
         ),
@@ -136,7 +136,7 @@ class _ResumeCard extends StatelessWidget {
         );
       case ResumeParseStatus.failed:
         return (
-          label: "Couldn't parse",
+          label: "Couldn't parse — try again",
           fg: c.onErrorContainer,
           bg: c.errorContainer,
         );

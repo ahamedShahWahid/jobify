@@ -5,7 +5,8 @@ import 'package:kpa_app/presentation/notifications/notification_title.dart';
 NotificationDto _n(
   String kind,
   Map<String, dynamic> payload,
-) => NotificationDto(
+) =>
+    NotificationDto(
       id: 'n1',
       kind: kind,
       channel: 'in_app',

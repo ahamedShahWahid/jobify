@@ -56,13 +56,11 @@ void main() {
     );
     addTearDown(c.dispose);
     await c.read(resumeControllerProvider.future);
-    final ok = await c
-        .read(resumeControllerProvider.notifier)
-        .uploadFromPicked(
-          bytes: const [1],
-          filename: 'cv.pdf',
-          contentType: 'application/pdf',
-        );
+    final ok = await c.read(resumeControllerProvider.notifier).uploadFromPicked(
+      bytes: const [1],
+      filename: 'cv.pdf',
+      contentType: 'application/pdf',
+    );
     expect(ok, isTrue);
     expect(
       c.read(resumeControllerProvider).value?.parseStatus,
@@ -78,13 +76,11 @@ void main() {
     );
     addTearDown(c.dispose);
     await c.read(resumeControllerProvider.future);
-    final ok = await c
-        .read(resumeControllerProvider.notifier)
-        .uploadFromPicked(
-          bytes: const [1],
-          filename: 'cv.pdf',
-          contentType: 'application/pdf',
-        );
+    final ok = await c.read(resumeControllerProvider.notifier).uploadFromPicked(
+      bytes: const [1],
+      filename: 'cv.pdf',
+      contentType: 'application/pdf',
+    );
     expect(ok, isFalse);
     expect(c.read(resumeControllerProvider).hasError, isTrue);
   });

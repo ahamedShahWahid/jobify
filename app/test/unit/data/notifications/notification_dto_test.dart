@@ -11,7 +11,11 @@ void main() {
             'kind': 'application_received',
             'channel': 'in_app',
             'status': 'sent',
-            'payload': {'job_id': 'j1', 'job_title': 'Engineer', 'employer_name': 'Acme'},
+            'payload': {
+              'job_id': 'j1',
+              'job_title': 'Engineer',
+              'employer_name': 'Acme'
+            },
             'send_after': '2026-05-01T00:00:00Z',
             'sent_at': '2026-05-01T00:00:01Z',
             'read_at': null,
