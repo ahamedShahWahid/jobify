@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import FrozenInstanceError
 from decimal import Decimal
 
 import pytest
@@ -59,5 +60,5 @@ async def test_templated_explainer_matches_pure_function() -> None:
 def test_explain_context_is_frozen() -> None:
     """ExplainContext is a frozen dataclass — mutation must raise."""
     ctx = _ctx()
-    with pytest.raises((AttributeError, TypeError)):
+    with pytest.raises(FrozenInstanceError):
         ctx.total = 0.1  # type: ignore[misc]
