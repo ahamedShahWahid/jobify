@@ -31,6 +31,25 @@ class _AuthChangeNotifier extends ChangeNotifier {
   }
 }
 
+/// Deep-link preservation across the sign-in flow.
+///
+/// When a signed-out user opens a protected route (a deep link from a
+/// push notification, an OS share, a bookmarked URL on web), we redirect
+/// to `/signin?next=<original-location>` and, on successful sign-in,
+/// route them to the encoded destination instead of the default `/feed`.
+///
+/// Open-redirect protection: only same-origin paths are honoured. Any
+/// `next` whose decoded form does not start with `/` or starts with `//`
+/// (protocol-relative URL) is ignored — falls back to `/feed`.
+String? safeNextLocation(String? raw) {
+  if (raw == null || raw.isEmpty) return null;
+  final decoded = Uri.decodeComponent(raw);
+  if (!decoded.startsWith('/')) return null;
+  if (decoded.startsWith('//')) return null;
+  if (decoded == Routes.signIn) return null;
+  return decoded;
+}
+
 @Riverpod(keepAlive: true)
 GoRouter router(Ref ref) {
   final authNotifier = _AuthChangeNotifier(ref);
@@ -47,10 +66,15 @@ GoRouter router(Ref ref) {
       if (loc == Routes.splash) return null;
 
       if (auth is SignedOut) {
-        return loc == Routes.signIn ? null : Routes.signIn;
+        if (loc == Routes.signIn) return null;
+        // Preserve the original destination as ?next so we can land them
+        // back here after sign-in succeeds.
+        final next = Uri.encodeComponent(state.uri.toString());
+        return '${Routes.signIn}?next=$next';
       }
       if (auth is SignedIn && loc == Routes.signIn) {
-        return Routes.feed;
+        final next = safeNextLocation(state.uri.queryParameters['next']);
+        return next ?? Routes.feed;
       }
       return null;
     },
