@@ -129,7 +129,10 @@ async def _score_job_async(
         return
 
     # --- (no DB) compute ---
-    from kpa.scoring.explain import templated_explanation
+    from kpa.scoring.explainer import ExplainContext
+    from kpa.workers.celery_app import get_match_explainer
+
+    _explainer = get_match_explainer()
 
     scores: list[tuple[UUID, Any, str, dict[str, str]]] = []
     for (
@@ -154,7 +157,7 @@ async def _score_job_async(
             vector_weight=_settings.match_vector_weight,
             threshold=_settings.match_surface_threshold,
         )
-        explanation = templated_explanation(
+        ctx = ExplainContext(
             components=ms.components,
             vector=ms.vector,
             structured=ms.structured,
@@ -169,6 +172,7 @@ async def _score_job_async(
             applicant_expected_ctc=applicant_ctc,
             applicant_locations=applicant_locs,
         )
+        explanation = await _explainer.explain(ctx)
         scores.append((applicant_id, ms, applicant_emb_model, explanation))
 
     # --- Txn 2: UPSERT each row ---
