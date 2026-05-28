@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 /// the repo's `try/on DioException` path runs.
 class MockInterceptor extends Interceptor {
   final Map<String, _ScriptedResponse> _routes = {};
+  final Map<String, _ScriptedListResponse> _listRoutes = {};
 
   /// Every request seen, in order — lets tests assert the request body/keys
   /// (the response mock alone can't catch a wrong request-body contract).
@@ -16,6 +17,18 @@ class MockInterceptor extends Interceptor {
       if (r.method == method && r.path == path) return r.data;
     }
     return null;
+  }
+
+  /// The most recent [RequestOptions] for a given `(method, path)`, or null.
+  RequestOptions? lastRequestFor(String method, String path) {
+    for (final r in requests.reversed) {
+      if (r.method == method && r.path == path) return r;
+    }
+    return null;
+  }
+
+  void onList(String method, String path, int status, List<dynamic> body) {
+    _listRoutes['$method:$path'] = _ScriptedListResponse(status, body);
   }
 
   void on(
@@ -34,6 +47,17 @@ class MockInterceptor extends Interceptor {
   ) {
     requests.add(options);
     final key = '${options.method}:${options.path}';
+    final listResp = _listRoutes[key];
+    if (listResp != null) {
+      handler.resolve(
+        Response(
+          requestOptions: options,
+          statusCode: listResp.status,
+          data: listResp.body,
+        ),
+      );
+      return;
+    }
     final r = _routes[key];
     if (r == null) {
       handler.reject(
@@ -69,4 +93,10 @@ class _ScriptedResponse {
   _ScriptedResponse(this.status, this.body);
   final int status;
   final Map<String, dynamic>? body;
+}
+
+class _ScriptedListResponse {
+  _ScriptedListResponse(this.status, this.body);
+  final int status;
+  final List<dynamic> body;
 }

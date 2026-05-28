@@ -164,6 +164,33 @@ async def upload_resume(
     return resume
 
 
+@router.get("/resumes", response_model=list[ResumeRead])
+async def list_resumes(
+    user: User = Depends(current_user),  # noqa: B008
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> list[ResumeRead]:
+    """List the authenticated applicant's resumes, newest first."""
+    applicant = await _require_applicant(user, session)
+    # No applicant JOIN here (unlike get_resume): we resolved `applicant` one
+    # await ago and there's no user-supplied resource id, so the soft-delete
+    # race window can at worst yield a stale read, never an ownership leak.
+    rows = (
+        (
+            await session.execute(
+                select(Resume)
+                .where(
+                    Resume.applicant_id == applicant.id,
+                    Resume.deleted_at.is_(None),
+                )
+                .order_by(Resume.created_at.desc(), Resume.id.desc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return [ResumeRead.model_validate(r) for r in rows]
+
+
 @router.get(
     "/resumes/{resume_id}",
     response_model=ResumeRead,

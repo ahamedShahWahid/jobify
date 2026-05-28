@@ -18,7 +18,7 @@ class _FakeRepo implements MeRepository {
 
 void main() {
   testWidgets(
-    'renders user name + email + Coming soon rows + Sign out',
+    'renders user name + email + résumé/notifications rows + Sign out',
     (tester) async {
       const me = MeDto(
         id: 'u1',
@@ -46,7 +46,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Eng U'), findsOneWidget);
       expect(find.text('eng@example.com'), findsOneWidget);
-      expect(find.text('Resume'), findsOneWidget);
+      expect(find.text('Résumé'), findsOneWidget);
       expect(find.text('Notifications'), findsOneWidget);
       expect(find.text('Sign out'), findsOneWidget);
       expect(find.text('Locations'), findsOneWidget);
