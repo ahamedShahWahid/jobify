@@ -45,11 +45,22 @@ class RefreshOn401Interceptor extends Interceptor {
     // are Dart-side names for the string values.
     final body = response.data;
     final detail = body is Map ? body['detail'] : null;
-    if (detail != AuthSlugs.invalidAccessToken) {
+
+    // The refresh endpoint itself (and any other caller marked kSkipAuth)
+    // must NEVER be intercepted — refresh-while-refreshing would loop.
+    if (err.requestOptions.extra[kSkipAuth] == true) {
       return handler.next(err);
     }
 
-    if (err.requestOptions.extra[kSkipAuth] == true) {
+    // Only `invalid_access_token` is recoverable via refresh. Other 401
+    // details (`missing_bearer_token`, `user_not_found`, or an unknown
+    // future slug) mean the session is structurally broken — refresh
+    // won't help. Sign out so the router redirects to /signin instead of
+    // letting the caller render a misleading inline "Signed out" view
+    // while the auth state stays SignedIn.
+    if (detail != AuthSlugs.invalidAccessToken) {
+      _holder.clear();
+      _onSignedOut?.call();
       return handler.next(err);
     }
 
