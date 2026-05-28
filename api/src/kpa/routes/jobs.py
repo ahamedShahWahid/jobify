@@ -1,17 +1,21 @@
 """GET /v1/jobs/{id} — single job + employer + match for current applicant.
+GET /v1/jobs/me — recruiter's own jobs with counts + cursor pagination.
 POST /v1/jobs — create a new job posting (recruiter-only).
 """
 
 from __future__ import annotations
 
+import base64
+import json as _json
 import uuid
+from datetime import datetime
 from decimal import Decimal
-from typing import Literal
+from typing import Annotated, Literal
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import func, select
+from sqlalchemy import and_, case, distinct, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from kpa.auth.dependencies import (
@@ -21,6 +25,7 @@ from kpa.auth.dependencies import (
 )
 from kpa.db.models import (
     Applicant,
+    Application,
     Employer,
     EmployerUser,
     Job,
@@ -57,6 +62,123 @@ async def _require_applicant(
             detail="applicant_missing",
         )
     return applicant
+
+
+class RecruiterJobRow(JobRead):
+    applicant_count: int
+    surfaced_match_count: int
+
+
+class RecruiterJobsPage(BaseModel):
+    items: list[RecruiterJobRow]
+    next_cursor: str | None
+
+
+def _encode_jobs_me_cursor(posted_at: datetime, job_id: uuid.UUID) -> str:
+    raw = _json.dumps({"posted_at": posted_at.isoformat(), "id": str(job_id)})
+    return base64.urlsafe_b64encode(raw.encode()).decode()
+
+
+def _decode_jobs_me_cursor(cursor: str) -> tuple[datetime, uuid.UUID]:
+    try:
+        raw = base64.urlsafe_b64decode(cursor.encode()).decode()
+        obj = _json.loads(raw)
+        return datetime.fromisoformat(obj["posted_at"]), uuid.UUID(obj["id"])
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="invalid_cursor") from e
+
+
+# NOTE: /v1/jobs/me MUST be registered BEFORE /v1/jobs/{job_id} — FastAPI
+# matches routes in declaration order, and otherwise "me" is interpreted as
+# a (failing) UUID path-param.
+@router.get("/jobs/me", response_model=RecruiterJobsPage)
+async def list_my_jobs(
+    user: User = Depends(current_user),  # noqa: B008
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+    status_filter: Annotated[str | None, Query(alias="status")] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    cursor: str | None = None,
+) -> RecruiterJobsPage:
+    await _require_recruiter(user)
+
+    applicant_count_expr = func.count(
+        distinct(
+            case(
+                (
+                    and_(
+                        Application.deleted_at.is_(None),
+                        Application.status == "applied",
+                    ),
+                    Application.id,
+                ),
+            )
+        )
+    ).label("applicant_count")
+    surfaced_match_count_expr = func.count(
+        distinct(
+            case(
+                (
+                    and_(
+                        Match.deleted_at.is_(None),
+                        Match.surfaced_at.is_not(None),
+                    ),
+                    Match.id,
+                ),
+            )
+        )
+    ).label("surfaced_match_count")
+
+    stmt = (
+        select(Job, Employer, applicant_count_expr, surfaced_match_count_expr)
+        .join(EmployerUser, EmployerUser.employer_id == Job.employer_id)
+        .join(Employer, Employer.id == Job.employer_id)
+        .outerjoin(Application, Application.job_id == Job.id)
+        .outerjoin(Match, Match.job_id == Job.id)
+        .where(
+            EmployerUser.user_id == user.id,
+            EmployerUser.deleted_at.is_(None),
+            Job.deleted_at.is_(None),
+        )
+        .group_by(Job.id, Employer.id)
+        .order_by(Job.posted_at.desc(), Job.id.desc())
+    )
+
+    if status_filter is None:
+        stmt = stmt.where(Job.status == JobStatus.OPEN)
+    # ?status=closed surfaces both open + closed (the recruiter's full view).
+
+    if cursor is not None:
+        cur_posted, cur_id = _decode_jobs_me_cursor(cursor)
+        stmt = stmt.where(
+            or_(
+                Job.posted_at < cur_posted,
+                and_(Job.posted_at == cur_posted, Job.id < cur_id),
+            )
+        )
+
+    stmt = stmt.limit(limit + 1)
+    rows = (await session.execute(stmt)).all()
+    has_more = len(rows) > limit
+    rows = rows[:limit]
+
+    items: list[RecruiterJobRow] = []
+    for row in rows:
+        job, employer, applicant_count, surfaced_match_count = row
+        base = JobRead.from_job_and_employer(job, employer)
+        items.append(
+            RecruiterJobRow(
+                **base.model_dump(),
+                applicant_count=applicant_count or 0,
+                surfaced_match_count=surfaced_match_count or 0,
+            )
+        )
+
+    next_cursor = (
+        _encode_jobs_me_cursor(rows[-1][0].posted_at, rows[-1][0].id)
+        if has_more and rows
+        else None
+    )
+    return RecruiterJobsPage(items=items, next_cursor=next_cursor)
 
 
 @router.get("/jobs/{job_id}", response_model=JobDetailResponse)
@@ -271,3 +393,5 @@ async def delete_job(
     job.deleted_at = func.now()
     await session.commit()
     return Response(status_code=204)
+
+
