@@ -407,7 +407,7 @@ async def list_applications(
         items.append(
             ApplicationListItem(
                 application=ApplicationRead.model_validate(application),
-                job=JobRead.model_validate(job),
+                job=JobRead.from_job_and_employer(job, employer),
                 employer=EmployerRead(
                     id=employer.id,
                     name=employer.name,

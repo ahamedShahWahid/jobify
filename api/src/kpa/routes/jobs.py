@@ -105,7 +105,7 @@ async def get_job_detail(
     response.headers["ETag"] = etag
 
     return JobDetailResponse(
-        job=JobRead.model_validate(job),
+        job=JobRead.from_job_and_employer(job, employer),
         employer=EmployerRead(
             id=employer.id,
             name=employer.name,
@@ -175,7 +175,10 @@ async def create_job(
     except Exception:
         _log.warning("embed.dispatch-failed", job_id=str(job.id), exc_info=True)
 
-    return JobRead.model_validate(job)
+    emp = await session.scalar(select(Employer).where(Employer.id == job.employer_id))
+    if emp is None:  # pragma: no cover — FK constraint makes this unreachable
+        raise HTTPException(status_code=500, detail="employer_missing")
+    return JobRead.from_job_and_employer(job, emp)
 
 
 _EMBED_TRIGGERING_FIELDS = frozenset(
@@ -252,7 +255,10 @@ async def patch_job(
         except Exception:
             _log.warning("embed.dispatch-failed", job_id=str(job.id), exc_info=True)
 
-    return JobRead.model_validate(job)
+    emp = await session.scalar(select(Employer).where(Employer.id == job.employer_id))
+    if emp is None:  # pragma: no cover — FK constraint makes this unreachable
+        raise HTTPException(status_code=500, detail="employer_missing")
+    return JobRead.from_job_and_employer(job, emp)
 
 
 @router.delete("/jobs/{job_id}", status_code=204)

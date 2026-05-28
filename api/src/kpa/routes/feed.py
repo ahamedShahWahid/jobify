@@ -58,6 +58,35 @@ class JobRead(BaseModel):
     # client uses this to render closed-role state on the saved list.
     status: str
     posted_at: datetime
+    employer_verified: bool
+
+    @classmethod
+    def from_job_and_employer(
+        cls,
+        job: Job,
+        employer: Employer,
+    ) -> JobRead:
+        """Build a JobRead from a Job ORM row and its associated Employer row.
+
+        Single construction point so every caller sets employer_verified
+        consistently. The field is required (no default) to force all future
+        callers through here.
+        """
+        return cls.model_validate(
+            {
+                "id": job.id,
+                "title": job.title,
+                "description": job.description,
+                "locations": job.locations,
+                "min_exp_years": job.min_exp_years,
+                "max_exp_years": job.max_exp_years,
+                "ctc_min": float(job.ctc_min) if job.ctc_min is not None else None,
+                "ctc_max": float(job.ctc_max) if job.ctc_max is not None else None,
+                "status": job.status.value,
+                "posted_at": job.posted_at,
+                "employer_verified": employer.verified_at is not None,
+            }
+        )
 
 
 class FeedItemRead(BaseModel):
@@ -211,7 +240,7 @@ async def get_feed(
         items.append(
             FeedItemRead(
                 match=MatchRead.model_validate(match),
-                job=JobRead.model_validate(job),
+                job=JobRead.from_job_and_employer(job, employer),
                 employer=EmployerRead(
                     id=employer.id,
                     name=employer.name,

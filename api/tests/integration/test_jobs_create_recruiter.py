@@ -149,3 +149,29 @@ async def test_create_job_dispatches_embed(
     )
     assert r.status_code == 201
     assert called_with == [r.json()["id"]]
+
+
+async def test_create_job_employer_verified_false_by_default(
+    async_client, applicant_user_and_token
+):
+    """A freshly self-created employer has verified_at=NULL → JobRead.employer_verified=False."""
+    _, token = applicant_user_and_token
+    emp = await async_client.post(
+        "/v1/employers",
+        json={"name": "Acme"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert emp.status_code == 201
+    body = {
+        "employer_id": emp.json()["id"],
+        "title": "Engineer",
+        "description": "Build distributed systems." * 2,
+        "locations": ["Bangalore"],
+        "min_exp_years": 1,
+        "max_exp_years": 5,
+    }
+    r = await async_client.post(
+        "/v1/jobs", json=body, headers={"Authorization": f"Bearer {token}"}
+    )
+    assert r.status_code == 201
+    assert r.json()["employer_verified"] is False

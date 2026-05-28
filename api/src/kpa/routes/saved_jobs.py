@@ -309,7 +309,7 @@ async def list_saved_jobs(
         items.append(
             SavedJobListItem(
                 saved_job=SavedJobRead.model_validate(saved_job),
-                job=JobRead.model_validate(job),
+                job=JobRead.from_job_and_employer(job, employer),
                 employer=EmployerRead(
                     id=employer.id,
                     name=employer.name,
