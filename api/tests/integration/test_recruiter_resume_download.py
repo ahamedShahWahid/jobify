@@ -51,7 +51,7 @@ async def _seed_applicant_with_resume(session, storage, job_id, content: bytes):
 
 
 async def test_recruiter_downloads_resume(async_client, session, applicant_user_and_token):
-    _, token = applicant_user_and_token
+    recruiter, token = applicant_user_and_token
     job_id = await _setup_employer_and_job(async_client, token)
     storage = async_client._transport.app.state.storage  # type: ignore[union-attr]
     resume, application = await _seed_applicant_with_resume(
@@ -72,6 +72,29 @@ async def test_recruiter_downloads_resume(async_client, session, applicant_user_
     assert len(audit) == 1, logs
     assert audit[0]["application_id"] == str(application.id)
     assert audit[0]["resume_id"] == str(resume.id)
+
+    from sqlalchemy import select as sa_select
+
+    from kpa.db.models import AuditLog, EmployerUser
+
+    # Resolve employer_id for the recruiter (created by _setup_employer_and_job)
+    eu_row = (
+        await session.execute(sa_select(EmployerUser).where(EmployerUser.user_id == recruiter.id))
+    ).scalar_one()
+
+    result = await session.execute(
+        sa_select(AuditLog).where(
+            AuditLog.action == "resume.accessed",
+            AuditLog.resource_id == resume.id,
+        )
+    )
+    audit_row = result.scalar_one()
+    assert audit_row.actor_user_id == recruiter.id
+    assert audit_row.actor_role == "recruiter"
+    assert audit_row.context["request_id"] is not None
+    assert audit_row.context["application_id"] == str(application.id)
+    assert audit_row.context["applicant_id"] == str(application.applicant_id)
+    assert audit_row.context["employer_id"] == str(eu_row.employer_id)
 
 
 async def test_recruiter_at_other_employer_gets_404(

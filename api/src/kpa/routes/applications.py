@@ -25,6 +25,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import and_, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from kpa.audit import audit_log
 from kpa.auth.dependencies import _require_recruiter, current_user
 from kpa.db.models import (
     Applicant,
@@ -442,6 +443,7 @@ async def list_applications(
 @router.get("/applications/{application_id}/resume")
 async def recruiter_download_application_resume(
     application_id: uuid.UUID,
+    request: Request,
     user: User = Depends(current_user),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
     storage: Storage = Depends(get_storage),  # noqa: B008
@@ -503,6 +505,20 @@ async def recruiter_download_application_resume(
         application_id=str(application.id),
         applicant_id=str(application.applicant_id),
         resume_id=str(resume.id),
+    )
+
+    await audit_log(
+        session,
+        action="resume.accessed",
+        actor=user,
+        resource_type="resume",
+        resource_id=resume.id,
+        context={
+            "request_id": request.state.request_id,
+            "application_id": str(application.id),
+            "applicant_id": str(application.applicant_id),
+            "employer_id": str(job.employer_id),
+        },
     )
 
     content = await storage.read(resume.storage_key)
