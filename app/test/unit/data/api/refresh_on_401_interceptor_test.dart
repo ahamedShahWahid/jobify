@@ -114,12 +114,16 @@ class _RefreshCounter {
   return (dio: dio, adapter: adapter, holder: holder, counter: counter);
 }
 
+/// Real backend wire shape — RFC 7807 problem+json from
+/// middleware/error_handler.py. The slug is encoded in `detail`; there is
+/// NO separate `slug` field. Tests must mirror this so contract drift
+/// (slug-key vs detail-key) cannot pass.
 Map<String, dynamic> _invalidAccess() => {
       'type': 'about:blank',
       'title': 'Unauthorized',
       'status': 401,
-      'slug': 'invalid_access_token',
-      'detail': 'expired',
+      'detail': 'invalid_access_token',
+      'request_id': 'test-req-id',
     };
 
 // ---------------------------------------------------------------------------
@@ -216,7 +220,7 @@ void main() {
       expect(h.counter.calls, 0);
     });
 
-    test('401 with non-invalid_access_token slug → no refresh', () async {
+    test('401 with non-invalid_access_token detail → no refresh', () async {
       final h = _buildHarness(
         onRefresh: (_) async => fail('should not run'),
       );
@@ -225,8 +229,7 @@ void main() {
       h.adapter.enqueue(
         _MockResponse(401, {
           'status': 401,
-          'slug': 'missing_bearer_token',
-          'detail': 'no bearer',
+          'detail': 'missing_bearer_token',
         }),
       );
 

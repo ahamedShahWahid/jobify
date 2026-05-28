@@ -39,9 +39,13 @@ class RefreshOn401Interceptor extends Interceptor {
       return handler.next(err);
     }
 
+    // Backend emits RFC 7807 problem+json (`{detail, type, title, status,
+    // request_id}`) via middleware/error_handler.py. There is NO `slug`
+    // field — the slug value lives in `detail`. The AuthSlugs constants
+    // are Dart-side names for the string values.
     final body = response.data;
-    final slug = body is Map ? body['slug'] : null;
-    if (slug != AuthSlugs.invalidAccessToken) {
+    final detail = body is Map ? body['detail'] : null;
+    if (detail != AuthSlugs.invalidAccessToken) {
       return handler.next(err);
     }
 

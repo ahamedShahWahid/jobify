@@ -43,24 +43,27 @@ KpaException _mapResponse(
   String? requestId,
   DioException cause,
 ) {
+  // Backend emits RFC 7807 problem+json (`{detail, type, title, status,
+  // request_id}`) via middleware/error_handler.py. The "slug" value lives
+  // in `detail`. `AuthSlugs` constants name the string values on the Dart
+  // side. There is no separate `slug` wire field.
   final body = response.data;
-  final slug = body is Map ? body['slug'] as String? : null;
   final detail = body is Map ? body['detail'] as String? : null;
   final status = response.statusCode ?? 0;
 
-  if (status == 401 && slug == AuthSlugs.invalidAccessToken) {
+  if (status == 401 && detail == AuthSlugs.invalidAccessToken) {
     return AuthException(
-      slug: slug!,
+      slug: detail!,
       detail: detail,
       requestId: requestId,
       cause: cause,
     );
   }
   if (status == 401) {
-    // Other 401 slugs (missing_bearer_token, user_not_found) are also
+    // Other 401 details (missing_bearer_token, user_not_found) are also
     // auth-y.
     return AuthException(
-      slug: slug ?? AuthSlugs.unauthorized,
+      slug: detail ?? AuthSlugs.unauthorized,
       detail: detail,
       requestId: requestId,
       cause: cause,
@@ -68,7 +71,7 @@ KpaException _mapResponse(
   }
   return ApiException(
     statusCode: status,
-    slug: slug,
+    slug: detail,
     detail: detail,
     requestId: requestId,
     cause: cause,
