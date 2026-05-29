@@ -441,18 +441,18 @@ def test_notify_batch_size_out_of_range_rejected(monkeypatch: pytest.MonkeyPatch
 # ---------------------------------------------------------------------------
 
 
-def test_match_explainer_default_is_templated(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_match_explainer_default_is_llm(monkeypatch: pytest.MonkeyPatch) -> None:
     _set_minimum_env(monkeypatch)
     monkeypatch.delenv("KPA_MATCH_EXPLAINER", raising=False)
     s = Settings()
-    assert s.match_explainer == "templated"
-
-
-def test_match_explainer_llm_accepted(monkeypatch: pytest.MonkeyPatch) -> None:
-    _set_minimum_env(monkeypatch)
-    monkeypatch.setenv("KPA_MATCH_EXPLAINER", "llm")
-    s = Settings()
     assert s.match_explainer == "llm"
+
+
+def test_match_explainer_templated_accepted(monkeypatch: pytest.MonkeyPatch) -> None:
+    _set_minimum_env(monkeypatch)
+    monkeypatch.setenv("KPA_MATCH_EXPLAINER", "templated")
+    s = Settings()
+    assert s.match_explainer == "templated"
 
 
 def test_match_explainer_invalid_value_rejected(monkeypatch: pytest.MonkeyPatch) -> None:

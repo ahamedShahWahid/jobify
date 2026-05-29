@@ -130,9 +130,13 @@ class Settings(BaseSettings):
         description="Weight on the vector score component. Structured weight is 1 - this.",
     )
     match_explainer: str = Field(
-        default="templated",
+        default="llm",
         alias="KPA_MATCH_EXPLAINER",
-        description="Match-explanation generator: 'templated' (default) or 'llm' (Gemini).",
+        description=(
+            "Match-explanation generator: 'llm' (Gemini, default) or 'templated' "
+            "(deterministic fallback). The LLM impl falls back to templated on any "
+            "Gemini error so scoring is never failed by an explanation outage."
+        ),
     )
     match_explainer_model: str = Field(
         default="gemini-2.5-flash",
