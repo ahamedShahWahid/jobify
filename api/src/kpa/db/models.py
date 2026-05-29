@@ -626,6 +626,7 @@ class NotificationStatus(StrEnum):
     DISPATCHING = "dispatching"
     SENT = "sent"
     FAILED = "failed"
+    CANCELLED = "cancelled"
 
 
 class NotificationChannel(StrEnum):
@@ -679,6 +680,7 @@ class Notification(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -816,3 +818,50 @@ class Match(Base):
         ),
         {"schema": "kpa"},
     )
+
+
+class ConsentScope(StrEnum):
+    EMAIL_TRANSACTIONAL = "email_transactional"
+    EMAIL_MARKETING = "email_marketing"
+    IN_APP_NOTIFICATIONS = "in_app_notifications"
+    WHATSAPP_NOTIFICATIONS = "whatsapp_notifications"
+    SMS_NOTIFICATIONS = "sms_notifications"
+    PROFILE_VISIBILITY_RECRUITERS = "profile_visibility_recruiters"
+    THIRD_PARTY_SHARING_RECRUITERS = "third_party_sharing_recruiters"
+
+
+# Defaults are the single source of truth for new-user seeding AND for the
+# sweep's LookupError fallback.
+DEFAULT_CONSENTS: dict[ConsentScope, bool] = {
+    ConsentScope.EMAIL_TRANSACTIONAL: True,
+    ConsentScope.EMAIL_MARKETING: False,
+    ConsentScope.IN_APP_NOTIFICATIONS: True,
+    ConsentScope.WHATSAPP_NOTIFICATIONS: False,
+    ConsentScope.SMS_NOTIFICATIONS: False,
+    ConsentScope.PROFILE_VISIBILITY_RECRUITERS: False,
+    ConsentScope.THIRD_PARTY_SHARING_RECRUITERS: False,
+}
+
+
+class UserConsent(Base):
+    """Operational consent state for P4 DPDP scopes. History lives in audit_logs.
+
+    Soft-delete + partial-UNIQUE on (user_id, scope) WHERE deleted_at IS NULL.
+    ON DELETE CASCADE on user_id (opposite of audit_logs — consent for a
+    non-existent user is meaningless; the audit history outlives the user via
+    audit_logs.actor_user_id ON DELETE SET NULL).
+    """
+
+    __tablename__ = "user_consents"
+
+    id: Mapped[UuidPK]
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("kpa.users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    scope: Mapped[str] = mapped_column(Text, nullable=False)
+    granted: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    created_at: Mapped[CreatedAt]
+    updated_at: Mapped[UpdatedAt]
+    deleted_at: Mapped[DeletedAt]

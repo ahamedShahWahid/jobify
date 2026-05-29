@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
@@ -47,10 +47,14 @@ class SignInResponse(BaseModel):
     status_code=status.HTTP_200_OK,
 )
 async def sign_in_with_google(
+    request: Request,
     payload: GoogleSignInRequest,
     service: AuthService = Depends(get_auth_service),  # noqa: B008
 ) -> SignInResponse:
-    result = await service.sign_in_with_google(payload.id_token)
+    result = await service.sign_in_with_google(
+        payload.id_token,
+        request_id=request.state.request_id,
+    )
     return SignInResponse(
         access_token=result.access_token,
         refresh_token=result.refresh_token,

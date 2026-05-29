@@ -30,7 +30,10 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.sql import func
 
+from kpa.consent import get_consent
 from kpa.db.models import (
+    DEFAULT_CONSENTS,
+    ConsentScope,
     Notification,
     NotificationChannel,
     NotificationStatus,
@@ -49,6 +52,14 @@ if TYPE_CHECKING:
     from kpa.integrations.notifications.base import EmailChannel
 
 _log = structlog.get_logger(__name__)
+
+
+def _scope_for_notification(n: Notification) -> ConsentScope:
+    if n.channel == NotificationChannel.EMAIL:
+        return ConsentScope.EMAIL_TRANSACTIONAL
+    if n.channel == NotificationChannel.IN_APP:
+        return ConsentScope.IN_APP_NOTIFICATIONS
+    raise ValueError(f"unmapped channel: {n.channel}")
 
 
 # --- Sync Celery entry point ---
@@ -168,6 +179,28 @@ async def _dispatch_one(
             )
             n.status = NotificationStatus.FAILED
             n.last_error = "user_missing_or_no_email"
+            await session.commit()
+            return
+
+        # --- Consent gate ---
+        scope = _scope_for_notification(n)
+        try:
+            granted = await get_consent(session, user=user, scope=scope)
+        except LookupError:
+            # Backfill miss (pre-P4-B user, or DSR-delete cascade). The default
+            # value is the safe behavior per spec §8.3.
+            granted = DEFAULT_CONSENTS[scope]
+
+        if not granted:
+            n.status = NotificationStatus.CANCELLED
+            n.cancelled_at = func.now()
+            n.last_error = f"consent_revoked:{scope.value}"
+            _log.info(
+                "sweep.cancelled-no-consent",
+                notification_id=str(notification_id),
+                user_id=str(user.id),
+                scope=scope.value,
+            )
             await session.commit()
             return
 

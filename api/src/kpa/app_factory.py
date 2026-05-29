@@ -19,6 +19,7 @@ from kpa.routes import (
     applicants,
     applications,
     auth,
+    consents,
     employers,
     feed,
     health,
@@ -78,6 +79,7 @@ def create_app() -> FastAPI:
     app.include_router(applications.router)
     app.include_router(saved_jobs.router)
     app.include_router(notifications.router)
+    app.include_router(consents.router)
 
     @app.on_event("shutdown")
     async def _close_engine() -> None:

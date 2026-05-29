@@ -10,7 +10,16 @@ import pytest
 from sqlalchemy import select
 
 from kpa.auth.google_verifier import GoogleClaims
-from kpa.db.models import Applicant, OAuthIdentity, OAuthProvider, RefreshToken, User
+from kpa.db.models import (
+    DEFAULT_CONSENTS,
+    Applicant,
+    AuditLog,
+    OAuthIdentity,
+    OAuthProvider,
+    RefreshToken,
+    User,
+    UserConsent,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -69,6 +78,30 @@ async def test_signin_creates_user_applicant_and_identity(
         await session.execute(select(RefreshToken).where(RefreshToken.user_id == user_id))
     ).scalar_one()
     assert db_refresh.revoked_at is None
+
+    # Default consents seeded in the same txn.
+    consent_rows = (
+        (await session.execute(select(UserConsent).where(UserConsent.user_id == user_id)))
+        .scalars()
+        .all()
+    )
+    assert len(consent_rows) == len(DEFAULT_CONSENTS)
+
+    audit_rows = (
+        (
+            await session.execute(
+                select(AuditLog).where(
+                    AuditLog.actor_user_id == user_id,
+                    AuditLog.action == "consent.seeded",
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(audit_rows) == len(DEFAULT_CONSENTS)
+    # Every seeded audit row carries the request_id from the sign-in HTTP call.
+    assert all("request_id" in a.context for a in audit_rows)
 
 
 async def test_signin_returning_user_updates_last_seen(

@@ -26,6 +26,7 @@ dependencies = [
 
 [project.scripts]
 kpa-seed-jobs = "kpa.scripts.seed_jobs:main"
+kpa-seed-consents = "kpa.scripts.seed_consents:main"
 
 [dependency-groups]
 dev = [

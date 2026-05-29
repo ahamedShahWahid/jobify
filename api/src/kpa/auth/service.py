@@ -29,6 +29,7 @@ from kpa.auth.tokens import (
     mint_refresh_token,
     sha256_token_hash,
 )
+from kpa.consent import seed_default_consents
 from kpa.db.models import (
     Applicant,
     OAuthIdentity,
@@ -72,7 +73,9 @@ class AuthService:
         self._verifier = verifier
         self._settings = settings
 
-    async def sign_in_with_google(self, id_token: str) -> SignInResult:
+    async def sign_in_with_google(
+        self, id_token: str, *, request_id: str | None = None
+    ) -> SignInResult:
         try:
             claims = await self._verifier.verify(id_token)
         except InvalidGoogleTokenError as exc:
@@ -83,7 +86,7 @@ class AuthService:
         if self._settings.auth_require_email_verified and not claims.email_verified:
             raise HTTPException(401, "email_not_verified")
 
-        user, applicant, is_new_user = await self._upsert_identity(claims)
+        user, applicant, is_new_user = await self._upsert_identity(claims, request_id=request_id)
 
         access = mint_access_token(
             user_id=user.id,
@@ -109,7 +112,9 @@ class AuthService:
             is_new_user=is_new_user,
         )
 
-    async def _upsert_identity(self, claims: GoogleClaims) -> tuple[User, Applicant, bool]:
+    async def _upsert_identity(
+        self, claims: GoogleClaims, *, request_id: str | None = None
+    ) -> tuple[User, Applicant, bool]:
         """Return (user, applicant, is_new_user) for the given Google claims."""
         existing_ident = (
             await self._session.execute(
@@ -165,6 +170,14 @@ class AuthService:
         )
         self._session.add(identity)
         await self._session.flush()
+
+        # Seed default consents in the same txn as user creation.
+        await seed_default_consents(
+            self._session,
+            user=user,
+            request_id=request_id,
+        )
+
         return user, applicant, True
 
     async def _issue_refresh(self, *, user_id: UUID, family_id: UUID) -> str:
