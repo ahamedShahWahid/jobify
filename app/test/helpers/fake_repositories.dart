@@ -1,14 +1,18 @@
-import 'package:kpa_app/data/feed/feed_dto.dart';
-import 'package:kpa_app/data/jobs/application_source.dart';
-import 'package:kpa_app/data/jobs/application_status.dart';
-import 'package:kpa_app/data/jobs/jobs_dto.dart';
-import 'package:kpa_app/data/me/me_dto.dart';
 import 'package:kpa_app/data/auth/auth_repository.dart';
 import 'package:kpa_app/data/auth/auth_state.dart';
+import 'package:kpa_app/data/consents/consent_dto.dart';
+import 'package:kpa_app/data/consents/consents_repository.dart';
+import 'package:kpa_app/data/dsr/dsr_dto.dart';
+import 'package:kpa_app/data/dsr/dsr_repository.dart';
+import 'package:kpa_app/data/feed/feed_dto.dart';
 import 'package:kpa_app/data/feed/feed_repository.dart';
+import 'package:kpa_app/data/jobs/application_source.dart';
+import 'package:kpa_app/data/jobs/application_status.dart';
 import 'package:kpa_app/data/jobs/applications_repository.dart';
+import 'package:kpa_app/data/jobs/jobs_dto.dart';
 import 'package:kpa_app/data/jobs/jobs_repository.dart';
 import 'package:kpa_app/data/jobs/saved_jobs_repository.dart';
+import 'package:kpa_app/data/me/me_dto.dart';
 import 'package:kpa_app/data/me/me_repository.dart';
 import 'package:kpa_app/data/me/profile_update_dto.dart';
 
@@ -135,4 +139,75 @@ class FakeMeRepository implements MeRepository {
         role: 'applicant',
         applicant: ApplicantSummaryDto(id: 'a1', fullName: 'U'),
       );
+}
+
+class FakeConsentsRepository implements ConsentsRepository {
+  FakeConsentsRepository({List<ConsentDto>? initial})
+      : items = initial ?? _defaultItems();
+
+  List<ConsentDto> items;
+  int patchCallCount = 0;
+  Object? patchError;
+
+  @override
+  Future<ConsentListResponse> list() async => ConsentListResponse(items: items);
+
+  @override
+  Future<ConsentDto> patch(String scope, {required bool granted}) async {
+    patchCallCount++;
+    if (patchError != null) throw Exception(patchError.toString());
+    final next = ConsentDto(
+      scope: scope,
+      granted: granted,
+      updatedAt: DateTime.now().toUtc(),
+    );
+    items = items.map((c) => c.scope == scope ? next : c).toList();
+    return next;
+  }
+
+  static List<ConsentDto> _defaultItems() => [
+        ConsentDto(
+          scope: 'email_transactional',
+          granted: true,
+          updatedAt: DateTime.utc(2026),
+        ),
+        ConsentDto(
+          scope: 'email_marketing',
+          granted: false,
+          updatedAt: DateTime.utc(2026),
+        ),
+        ConsentDto(
+          scope: 'in_app_notifications',
+          granted: true,
+          updatedAt: DateTime.utc(2026),
+        ),
+      ];
+}
+
+class FakeDsrRepository implements DsrRepository {
+  String exportPayload = '{"version":"1","exported_at":"..."}';
+  Object? exportError;
+  DsrDeleteResponse? deleteResponse;
+  Object? deleteError;
+  int exportCallCount = 0;
+  int deleteCallCount = 0;
+
+  @override
+  Future<String> exportData() async {
+    exportCallCount++;
+    if (exportError != null) throw Exception(exportError.toString());
+    return exportPayload;
+  }
+
+  @override
+  Future<DsrDeleteResponse> deleteAccount() async {
+    deleteCallCount++;
+    if (deleteError != null) throw Exception(deleteError.toString());
+    return deleteResponse ??
+        DsrDeleteResponse(
+          deletedAt: DateTime.utc(2026, 5, 29),
+          sectionCounts: const {'notifications': 0, 'user_tombstoned': 1},
+          warnings: const [],
+        );
+  }
 }

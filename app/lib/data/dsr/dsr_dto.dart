@@ -20,6 +20,7 @@ class OwnerlessEmployerWarningDto {
 
   factory OwnerlessEmployerWarningDto.fromJson(Map<String, dynamic> json) =>
       _$OwnerlessEmployerWarningDtoFromJson(json);
+  Map<String, dynamic> toJson() => _$OwnerlessEmployerWarningDtoToJson(this);
 }
 
 @JsonSerializable()

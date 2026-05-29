@@ -5,7 +5,9 @@ import 'package:kpa_app/data/me/me_dto.dart';
 import 'package:kpa_app/data/me/me_repository.dart';
 import 'package:kpa_app/data/me/me_repository_impl.dart';
 import 'package:kpa_app/data/me/profile_update_dto.dart';
+import 'package:kpa_app/presentation/profile/package_info_provider.dart';
 import 'package:kpa_app/presentation/profile/profile_screen.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class _FakeRepo implements MeRepository {
   _FakeRepo(this.me);
@@ -18,7 +20,7 @@ class _FakeRepo implements MeRepository {
 
 void main() {
   testWidgets(
-    'renders user name + email + résumé/notifications rows + Sign out',
+    'renders user name + email + résumé/notifications/privacy rows + Sign out',
     (tester) async {
       const me = MeDto(
         id: 'u1',
@@ -36,6 +38,14 @@ void main() {
         ProviderScope(
           overrides: [
             meRepositoryProvider.overrideWithValue(_FakeRepo(me)),
+            packageInfoProvider.overrideWith(
+              (_) async => PackageInfo(
+                appName: 'KPA',
+                packageName: 'com.kpa.app',
+                version: '1.0.0',
+                buildNumber: '1',
+              ),
+            ),
           ],
           child: MaterialApp(
             theme: ThemeData.light(useMaterial3: true),
@@ -48,10 +58,17 @@ void main() {
       expect(find.text('eng@example.com'), findsOneWidget);
       expect(find.text('Résumé'), findsOneWidget);
       expect(find.text('Notifications'), findsOneWidget);
-      expect(find.text('Sign out'), findsOneWidget);
+      expect(find.text('Privacy & data'), findsOneWidget);
       expect(find.text('Locations'), findsOneWidget);
       expect(find.text('Pune'), findsOneWidget);
       expect(find.text('Edit'), findsOneWidget);
+      // Sign out button may require scrolling in the test viewport.
+      await tester.scrollUntilVisible(
+        find.text('Sign out'),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Sign out'), findsOneWidget);
     },
   );
 }
