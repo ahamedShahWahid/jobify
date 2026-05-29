@@ -124,9 +124,9 @@ class Applicant(Base):
         nullable=False,
         unique=True,
     )
-    full_name: Mapped[str] = mapped_column(String(200), nullable=False)
-    locations: Mapped[list[str]] = mapped_column(
-        ARRAY(String(100)), nullable=False, server_default="{}"
+    full_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    locations: Mapped[list[str] | None] = mapped_column(
+        ARRAY(String(100)), nullable=True, server_default="{}"
     )
     notice_period_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
     current_ctc: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
