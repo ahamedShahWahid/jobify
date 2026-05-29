@@ -134,6 +134,20 @@ The `Base.__table_args__` is typed `Any` and uses `# noqa: RUF012` because SQLAl
 - **Recruiters get a different envelope** — applicant sections (`applicant`, `resumes`, `applicant_embedding`, `applications`, `saved_jobs`, `matches`) are empty; `employer_memberships` + `owned_jobs` populated. Admins get an all-empty envelope today.
 - **Per-section serialization is `dict[str, Any]`** not per-table Pydantic models. Trade-off for v0 — we don't introduce 12 row-shape models. The export contract is the section SET, not the row schemas; row schemas drift with the existing tables and the export inherits that.
 
+### DSR delete
+
+- **Soft-delete + scrub, not hard-delete the User row.** Hard-deleting users would CASCADE-wipe applications and matches (FKs to applicants → users), losing recruiter analytics and the eval substrate. The brainstorm constraint was "hard-delete PII, keep anonymized aggregates" — we honor it by tombstoning `users` and `applicants` with PII scrubbed, then hard-deleting the truly-PII tables around them.
+- **Migration 0015 made `applicants.full_name` + `applicants.locations` nullable** specifically to enable scrubbing. When you add a new PII column to applicants/users/resumes, decide whether it needs the same nullability + tombstone treatment, and update `delete_user_data` + a follow-up migration.
+- **Application-layer deletion graph, not FK CASCADE.** Several FKs are CASCADE (Notification, UserConsent → users) but we don't rely on them; the orchestrator (`kpa.dsr.deleter.delete_user_data`) walks the graph explicitly so the report counts and the order-sensitive blob-delete-before-scrub work correctly.
+- **Atomic transaction.** Unlike the export (whose `dsr_export_requested` row is durable on assembly failure), the delete's `dsr_delete_requested` audit row commits or rolls back atomically with all destructive work. Partial deletion is worse than no deletion. The route handler does an explicit `await session.commit()` at the success path so atomicity is pinned to the handler, not the request lifecycle.
+- **`audit_logs.actor_user_id` references survive** as pointers to the tombstone — soft-delete-and-scrub keeps the User row, so the FK still resolves. `SET NULL` only fires if a future admin sub-project hard-deletes the tombstone (post-retention).
+- **Re-signup works** because `_upsert_identity`'s email-collision check filters `deleted_at IS NULL` — tombstoned emails (scrubbed to NULL anyway) don't conflict.
+- **Confirmation token in body, not query.** `DELETE /v1/me/dsr` with body `{"confirmation": "DELETE_MY_ACCOUNT"}` — query-string would leak the token into access logs.
+- **Sole-owner employer edge case** surfaces a `warnings` entry in the response. The employer stays (admin tooling handles reassignment). Recruiter's `employer_users` rows still hard-delete.
+- **Resume blob deletion is best-effort.** Storage 5xx logs `dsr.blob-delete-failed` but doesn't roll back the DB. Orphaned blobs are reaped by a future janitor; tracked for the deploy-target (P5) sub-project.
+- **NO HTTP idempotency after a successful DSR delete.** Subsequent calls return 401 `user_not_found` because `current_user` re-fetches and the tombstone is soft-deleted. Clients should treat 401 as "already done" post-DELETE. Operationally idempotent (the data is gone) but not HTTP-idempotent.
+- **Integration test for the 401-after-delete path uses `concurrent_async_client`** (real connection pool), not `async_client`. The savepoint-bound session caches the user object in its identity map; a fresh pool connection guarantees a real refetch.
+
 ### Don't reuse models as response schemas
 
 Per spec §4.2 and the comment in `db/models.py`: SQLAlchemy models are never response models. Define `*Read` / `*Create` / `*Update` Pydantic v2 models in the route module (see `ResumeRead` with `ConfigDict(from_attributes=True)` for the conversion pattern).

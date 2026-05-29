@@ -111,7 +111,7 @@ async def _embed_applicant_async(
             _log.info("embed.no-parsed-resume", applicant_id=str(applicant_id))
             return
         parsed = ParsedResume.model_validate(latest.parsed_json)
-        text, content_hash = canonicalize_profile(parsed, full_name=applicant.full_name)
+        text, content_hash = canonicalize_profile(parsed, full_name=applicant.full_name or "")
         existing = (
             await session.execute(
                 select(ApplicantEmbedding).where(ApplicantEmbedding.applicant_id == applicant_id)
@@ -159,7 +159,9 @@ async def _embed_applicant_async(
             _log.info("embed.stale-no-parsed-resume", applicant_id=str(applicant_id))
             return
         parsed_now = ParsedResume.model_validate(latest_now.parsed_json)
-        _, content_hash_now = canonicalize_profile(parsed_now, full_name=applicant_now.full_name)
+        _, content_hash_now = canonicalize_profile(
+            parsed_now, full_name=applicant_now.full_name or ""
+        )
         if content_hash_now != content_hash:
             _log.info(
                 "embed.stale-content-aborted",

@@ -1,11 +1,13 @@
-"""POST /v1/me/dsr/export — DPDP § 11 right-of-access endpoint."""
+"""DSR routes — DPDP right-of-access (POST /v1/me/dsr/export) and
+right-of-erasure (DELETE /v1/me/dsr)."""
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
 
 import structlog
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from kpa.audit import audit_log
@@ -13,6 +15,8 @@ from kpa.auth.dependencies import current_user
 from kpa.db.models import User
 from kpa.db.session import get_session
 from kpa.dsr import build_user_export
+from kpa.dsr.deleter import DeleteReport, delete_user_data
+from kpa.integrations.storage import Storage, get_storage
 
 router = APIRouter(prefix="/v1/me", tags=["dsr"])
 _log = structlog.get_logger(__name__)
@@ -85,3 +89,66 @@ async def export_user_data(
             "Cache-Control": "no-store",
         },
     )
+
+
+_CONFIRMATION_TOKEN = "DELETE_MY_ACCOUNT"  # noqa: S105
+
+
+class DsrDeleteRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    confirmation: str
+
+
+@router.delete("/dsr", response_model=DeleteReport)
+async def delete_user_data_endpoint(
+    body: DsrDeleteRequest,
+    request: Request,
+    user: User = Depends(current_user),  # noqa: B008
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+    storage: Storage = Depends(get_storage),  # noqa: B008
+) -> DeleteReport:
+    """DPDP § 12 right-of-erasure. Soft-delete-and-scrub User + Applicant
+    tombstones; hard-delete around them. Atomic — partial deletion is worse
+    than no deletion."""
+
+    if body.confirmation != _CONFIRMATION_TOKEN:
+        raise HTTPException(status_code=400, detail="confirmation_mismatch")
+
+    request_id = request.state.request_id
+
+    # Audit BEFORE the destructive work. Same txn — atomic with the deletion.
+    await audit_log(
+        session,
+        action="user.dsr_delete_requested",
+        actor=user,
+        resource_type="user",
+        resource_id=user.id,
+        context={"request_id": request_id},
+    )
+
+    report = await delete_user_data(session, storage=storage, user=user)
+
+    await audit_log(
+        session,
+        action="user.dsr_deleted",
+        actor=user,
+        resource_type="user",
+        resource_id=user.id,
+        context={
+            "request_id": request_id,
+            "section_counts": report.section_counts,
+            "warnings": [w.model_dump(mode="json") for w in report.warnings],
+        },
+    )
+
+    await session.commit()
+
+    _log.info(
+        "dsr.delete-completed",
+        user_id=str(user.id),
+        section_counts=report.section_counts,
+        warning_count=len(report.warnings),
+    )
+
+    return report
