@@ -67,6 +67,12 @@ async def current_user(
             detail="user_not_found",
         )
 
+    if user.suspended_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="user_suspended",
+        )
+
     request.state.current_user_id = user.id
     request.state.current_role = user.role.value
     return user
@@ -86,6 +92,13 @@ async def _require_recruiter(user: User) -> User:
     """403 not_a_recruiter if the caller is not a recruiter."""
     if user.role != UserRole.RECRUITER:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not_a_recruiter")
+    return user
+
+
+async def _require_admin(user: User) -> User:
+    """403 not_an_admin if the caller is not an admin."""
+    if user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not_an_admin")
     return user
 
 

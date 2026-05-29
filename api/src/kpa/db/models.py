@@ -101,6 +101,8 @@ class User(Base):
         nullable=False,
     )
     mfa_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    suspension_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[CreatedAt]
     updated_at: Mapped[UpdatedAt]
     deleted_at: Mapped[DeletedAt]

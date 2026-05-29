@@ -15,6 +15,7 @@ import os
 from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 import pytest_asyncio
@@ -337,6 +338,21 @@ async def async_client(
 async def applicant_user_and_token(session: AsyncSession) -> tuple[User, str]:
     """Mints an applicant user + a valid access JWT for use in integration tests."""
     user = User(email="applicant@example.com", role=UserRole.APPLICANT)
+    session.add(user)
+    await session.flush()
+    token = mint_access_token(
+        user_id=user.id,
+        role=user.role.value,
+        secret="x" * 32,
+        ttl_seconds=600,
+    )
+    return user, token
+
+
+@pytest_asyncio.fixture
+async def admin_user_and_token(session: AsyncSession) -> tuple[User, str]:
+    """Mints an admin user + a valid access JWT for use in integration tests."""
+    user = User(email=f"admin-{uuid4().hex[:8]}@example.com", role=UserRole.ADMIN)
     session.add(user)
     await session.flush()
     token = mint_access_token(
