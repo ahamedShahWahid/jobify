@@ -4,6 +4,7 @@ abstract final class AuthSlugs {
   static const invalidAccessToken = 'invalid_access_token';
   static const missingBearerToken = 'missing_bearer_token';
   static const userNotFound = 'user_not_found';
+  static const userSuspended = 'user_suspended';
   static const invalidRefreshToken = 'invalid_refresh_token';
   static const noRefreshToken = 'no_refresh_token';
   static const unauthorized = 'unauthorized';

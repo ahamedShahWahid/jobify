@@ -160,6 +160,17 @@ Per spec §4.2 and the comment in `db/models.py`: SQLAlchemy models are never re
 - Refresh rotates on every use. Re-presenting an already-rotated token triggers full family revocation via `_revoke_family` ("reuse detected"). The bulk UPDATE relies on Postgres READ COMMITTED + EvalPlanQual semantics to catch concurrent legitimate rotations — don't switch it to a row-at-a-time loop.
 - JWT secret must be ≥32 bytes; HS256, issuer `kpa-api`, `jti` required. The 30s `iat` skew tolerance is checked manually because PyJWT's leeway would relax `exp` too.
 
+### Admin moderation
+
+- **`/v1/admin/*` is gated by `_require_admin` after `current_user`.** Layer order: `current_user` → 401 invariants → `_require_admin` → 403 not_an_admin → DB read. No DB lookups for admin-only resources happen before the role check.
+- **Suspended users get 401 `user_suspended`** from `current_user`, not 403. The slug is distinct from `user_not_found` and `invalid_access_token` so clients can show "Your account has been suspended. Contact support." On Flutter the refresh interceptor short-circuits to sign-out for any non-`invalid_access_token` 401 — that means suspended users are signed out cleanly without an attempted refresh.
+- **`users.suspended_at` AND `users.suspension_reason` clear together.** Unsuspending is `UPDATE users SET suspended_at=NULL, suspension_reason=NULL`. Never leave a stale reason on an unsuspended row — admin tooling reads (reason IS NOT NULL) as "this user is suspended" defensively.
+- **`admin.user.suspended` writes a new audit row on every call**, even if the user is already suspended (re-suspension with a different reason is meaningful audit evidence). `admin.user.unsuspended` is no-op-on-noop — calling unsuspend on an active user writes no audit row.
+- **Suspending self is blocked** with 400 `cannot_suspend_self`. The admin cannot lock themselves out — recovery would need direct DB access.
+- **`kpa-grant-admin <email>` is the bootstrap path.** No `POST /v1/admin/users/{id}/grant-admin` route — bootstrap chicken-and-egg. Once the first admin exists, follow-ups can ship a route.
+- **Audit-log viewer (`GET /v1/admin/audit-logs`)** does NOT write an audit row for the query itself. Self-auditing-of-admins is overkill at MVP scale; access logs (Fluent Bit → Elasticsearch) capture each call's `request_id`.
+- **Reserved action slugs (still unused by this PR):** `admin.job.unpublished`, `admin.user.dsr_export_requested`, `admin.user.dsr_deleted`. Don't repurpose them.
+
 ### Parse worker (Celery + Redis)
 
 - **Dispatch is fire-and-forget after commit.** `routes/resumes.py` wraps `parse_resume.delay()` in a broad `except Exception` with `exc_info=True` (event name `dispatch.failed`). A broker outage MUST NOT fail an upload because the row + blob are already durable — admin tooling will replay pending rows. Don't tighten the except.
