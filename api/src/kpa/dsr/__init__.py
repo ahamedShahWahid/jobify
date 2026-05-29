@@ -103,10 +103,63 @@ _NOTES = [
 # Row serialization helper
 # ---------------------------------------------------------------------------
 
+# Defensive denylist — any column with one of these names is dropped from the
+# export, regardless of which table it lives on. Today the codebase has none
+# of these (OAuth-only auth, no MFA yet, RefreshToken table is never queried
+# by this module). The list exists so that when MFA / new OAuth-token storage
+# / additional secrets ship in later sub-projects, those columns do NOT
+# silently land in a user's DSR export. Adding a new sensitive column
+# anywhere in db/models.py and forgetting it here is a real risk — the
+# integration test `test_row_to_dict_drops_redacted_columns` pins the
+# contract.
+_REDACTED_COLUMN_NAMES: frozenset[str] = frozenset(
+    {
+        # MFA (reserved for future sub-project)
+        "totp_secret",
+        "totp_recovery_codes",
+        "mfa_secret",
+        "recovery_codes",
+        # Raw OAuth tokens (we don't store these today; defensive against
+        # future provider impls that do).
+        "access_token",
+        "refresh_token",
+        "id_token",
+        "token_secret",
+        # Hashed credentials (we're OAuth-only today; defensive against a
+        # future password-auth provider).
+        "password_hash",
+        # RefreshToken table is never queried by this module, but defensive
+        # in case future code reaches in.
+        "token_hash",
+    }
+)
+
+# Suffix patterns that always indicate sensitive data, regardless of table.
+# A future column named "session_secret" or "webhook_signing_token" would be
+# caught by this without needing to extend the explicit set above.
+_REDACTED_COLUMN_SUFFIXES: tuple[str, ...] = (
+    "_secret",
+    "_password",
+)
+
+
+def _is_redacted_column(name: str) -> bool:
+    if name in _REDACTED_COLUMN_NAMES:
+        return True
+    return any(name.endswith(suffix) for suffix in _REDACTED_COLUMN_SUFFIXES)
+
 
 def _row_to_dict(row: object) -> dict[str, Any]:
     """SQLAlchemy ORM row → dict via column introspection. Includes every
-    mapped column; does NOT walk relationships."""
+    mapped column EXCEPT those flagged by _is_redacted_column. Does NOT walk
+    relationships.
+
+    The denylist is module-wide — any column named `totp_secret`,
+    `*_secret`, etc. is dropped regardless of which table it belongs to.
+    This is defense against future schema additions that introduce
+    sensitive fields whose authors forget to update the DSR builder. See
+    `test_row_to_dict_drops_redacted_columns` for the pinned contract.
+    """
     state = row.__dict__.copy()
     state.pop("_sa_instance_state", None)
     # Convert enums, datetimes, and UUIDs to strings for JSON friendliness.
@@ -115,6 +168,8 @@ def _row_to_dict(row: object) -> dict[str, Any]:
     # some edge cases; explicit enum handling is always correct and comes first.
     out: dict[str, Any] = {}
     for k, v in state.items():
+        if _is_redacted_column(k):
+            continue
         if hasattr(v, "value") and hasattr(type(v), "__members__"):  # StrEnum / Enum
             out[k] = v.value
         elif hasattr(v, "isoformat"):  # datetime

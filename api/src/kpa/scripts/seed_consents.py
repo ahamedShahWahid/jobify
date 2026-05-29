@@ -4,6 +4,7 @@ P4-B migration. Safe to re-run; seed_default_consents is idempotent.
 Usage:
     uv run --env-file=.env kpa-seed-consents
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -33,9 +34,7 @@ class SeedReport:
 async def _apply_in_session(session: AsyncSession, report: SeedReport) -> None:
     """Body of the backfill. Separated so integration tests can run it inside
     the savepoint-bound session without going through engine construction."""
-    users = (
-        await session.execute(select(User).where(User.deleted_at.is_(None)))
-    ).scalars().all()
+    users = (await session.execute(select(User).where(User.deleted_at.is_(None)))).scalars().all()
     report.scanned = len(users)
     for user in users:
         created = await seed_default_consents(session, user=user)
