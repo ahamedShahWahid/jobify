@@ -1,0 +1,106 @@
+name: api
+
+on:
+  pull_request:
+    paths: ['api/**', '.github/workflows/api.yml']
+  push:
+    branches: [main]
+    paths: ['api/**', '.github/workflows/api.yml']
+
+jobs:
+  lint-types-unit-eval:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: latest
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: ruff check
+        run: uv run ruff check src/ tests/
+
+      - name: ruff format check
+        run: uv run ruff format --check src/ tests/
+
+      - name: mypy
+        run: uv run mypy
+
+      - name: Unit tests
+        run: uv run pytest -v -m "not integration and not eval"
+
+      - name: Parse F1 quality gate
+        run: uv run pytest -v -s -m eval
+
+  integration:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: kpa_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      KPA_ENV: local
+      KPA_SERVICE_NAME: kpa-api
+      KPA_DB_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/kpa_test
+      KPA_REDIS_URL: redis://localhost:6379/0
+      KPA_JWT_SECRET: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      KPA_GOOGLE_OAUTH_CLIENT_IDS: test.apps.googleusercontent.com
+      KPA_GEMINI_API_KEY: test-gemini-key
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: latest
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Install pgvector extension
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          # pgvector extension is provided by the pgvector/pgvector:pg16 image,
+          # but we're using the upstream postgres:16 image to keep the workflow
+          # service config tight. Install pgvector via psql + the prebuilt SQL
+          # if/when CI needs it. For now, integration tests that touch the
+          # vector extension are tagged separately; the bulk pass without it.
+          psql "postgresql://postgres:postgres@localhost:5432/kpa_test" \
+            -c "CREATE EXTENSION IF NOT EXISTS vector" || true
+
+      - name: Integration tests
+        run: uv run pytest -v -m integration

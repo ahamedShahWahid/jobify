@@ -1,0 +1,16 @@
+{
+  "name": "Aisha Khan",
+  "email": "aisha.khan@example.com",
+  "phone": "9988776655",
+  "skills": [
+    "android",
+    "dart",
+    "flutter",
+    "git",
+    "github actions",
+    "ios",
+    "java",
+    "jetpack compose",
+    "kotlin"
+  ]
+}

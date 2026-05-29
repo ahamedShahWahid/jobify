@@ -1,0 +1,33 @@
+Vikram Iyer
+
+vikram.iyer@example.com
++91 96000 88888
+Mumbai, Maharashtra
+
+DevOps lead with 10 years of infrastructure experience. Specializes in
+Kubernetes at scale, observability, and incident response.
+
+EXPERIENCE
+
+Lead DevOps Engineer, PhonePe
+Apr 2019 - Present
+- Manages 350+ node Kubernetes clusters across 3 AWS regions.
+- Built unified observability platform on Prometheus, Grafana, Loki.
+- Owns incident-response runbooks and on-call rotation.
+- Stack: Kubernetes, AWS, Terraform, Ansible, Helm, ArgoCD, Prometheus,
+  Grafana, Loki, ELK, Jenkins, GitLab CI.
+
+Senior DevOps Engineer, OYO
+Jan 2016 - Mar 2019
+Stack: AWS, Docker, Jenkins, Ansible, MySQL, Redis.
+
+EDUCATION
+B.E. Computer Engineering, NIT Trichy, 2014
+
+CERTIFICATIONS
+Certified Kubernetes Administrator (CKA), 2021
+AWS DevOps Professional, 2020
+
+SKILLS
+Kubernetes, AWS, Terraform, Ansible, Helm, ArgoCD, Docker, Prometheus,
+Grafana, Loki, ELK, Jenkins, GitLab CI, MySQL, Redis, Bash, Python, Linux

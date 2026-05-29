@@ -1,0 +1,27 @@
+Karthik Subramanian
+
+karthik.subramanian@example.com
++91 91234 56789
+Bengaluru, Karnataka
+
+Machine learning engineer focused on LLM applications and retrieval systems.
+Built production RAG pipelines serving 5M queries / month.
+
+EXPERIENCE
+
+ML Engineer, Sarvam AI
+Jul 2023 - Present
+Stack: Python, PyTorch, LangChain, LlamaIndex, HuggingFace, Pinecone,
+Postgres pgvector.
+
+Software Engineer (ML), Practo
+Mar 2020 - Jun 2023
+Stack: Python, TensorFlow, Keras, scikit-learn, AWS, Docker.
+
+EDUCATION
+M.S. AI, BITS Pilani (online), 2022
+B.Tech Computer Science, Anna University, 2020
+
+SKILLS
+Python, PyTorch, LangChain, LlamaIndex, HuggingFace, TensorFlow, Keras,
+scikit-learn, AWS, Docker, PostgreSQL, FastAPI, Redis

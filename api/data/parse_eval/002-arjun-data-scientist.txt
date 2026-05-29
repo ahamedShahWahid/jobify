@@ -1,0 +1,29 @@
+Arjun Mehta
+
+arjun.mehta@example.com
++91 99800 12345
+Pune, Maharashtra
+
+Data scientist with 4 years of experience deploying ML models in production
+for fintech and e-commerce. Strong background in Python, PyTorch, and
+distributed training on GCP.
+
+WORK EXPERIENCE
+
+Senior Data Scientist, Zerodha
+Sep 2022 - Present
+Led model development for fraud detection serving 8M users.
+Stack: Python, PyTorch, BigQuery, Airflow, Vertex AI.
+
+Data Scientist, Myntra
+Jun 2020 - Aug 2022
+Built recommendation systems improving CTR by 18%.
+Worked with TensorFlow, Spark, PostgreSQL.
+
+EDUCATION
+M.Tech Data Science, IISc Bangalore, 2020
+B.E. Electronics, VIT Vellore, 2018
+
+SKILLS
+Python, PyTorch, TensorFlow, scikit-learn, Pandas, NumPy, MLflow,
+Airflow, BigQuery, GCP, Spark, PostgreSQL, Docker, Jupyter

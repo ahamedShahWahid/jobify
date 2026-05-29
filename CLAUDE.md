@@ -171,6 +171,16 @@ Per spec §4.2 and the comment in `db/models.py`: SQLAlchemy models are never re
 - **Audit-log viewer (`GET /v1/admin/audit-logs`)** does NOT write an audit row for the query itself. Self-auditing-of-admins is overkill at MVP scale; access logs (Fluent Bit → Elasticsearch) capture each call's `request_id`.
 - **Reserved action slugs (still unused by this PR):** `admin.job.unpublished`, `admin.user.dsr_export_requested`, `admin.user.dsr_deleted`. Don't repurpose them.
 
+### Parse F1 quality gate
+
+- **Gold dataset lives in `api/data/parse_eval/`** as `<id>.txt` + `<id>.expected.json` pairs. 8 examples in v0 covering software, data science, frontend, fresher, PM, DevOps, mobile, ML personas. Each `.txt` is raw resume text — text extraction (PDF/DOCX) is intentionally bypassed because the gate measures the parser's heuristics, not the byte-to-text step.
+- **Run:** `uv run pytest -m eval` (added marker registered in `pyproject.toml`). The single test `test_library_parser_meets_quality_gate` runs `kpa.eval.parse_f1.eval_gold_dataset()` and asserts the gate.
+- **Gate config** (spec §13 P1 target): overall macro-F1 ≥ 0.85, per-field floors `email ≥ 0.95`, `phone ≥ 0.85`, `name ≥ 0.70`, `skills ≥ 0.75`. Ratchet to 0.90 overall before launch.
+- **Only 4 fields are scored** today: `name`, `email`, `phone`, `skills`. The other `ParsedResume` fields (`experience`, `education`, `certifications`) are extracted by noisier date-range/keyword regex — they print in the breakdown but don't gate. Add them to the gate when the LLM parser replaces `LibraryResumeParser`.
+- **Set-skills F1** treats predicted + expected as sets (case-folded). False positives count — the substring-containment matcher in `_extract_skills` is known to over-match short SKILLS dict entries; keeping FPs in the F1 measures that drift.
+- **Adding a gold example:** drop a `.txt` + `.expected.json` pair with the next id, re-run `uv run pytest -m eval -v -s` to see the per-example breakdown. If a new example tanks a per-field floor, decide whether to fix the expectation or accept the parser limitation (and document why).
+- **CI runs the gate** as a separate `lint-types-unit-eval` job in `.github/workflows/api.yml`, before the heavier `integration` job. No DB needed for the eval — it runs against the in-process parser.
+
 ### Parse worker (Celery + Redis)
 
 - **Dispatch is fire-and-forget after commit.** `routes/resumes.py` wraps `parse_resume.delay()` in a broad `except Exception` with `exc_info=True` (event name `dispatch.failed`). A broker outage MUST NOT fail an upload because the row + blob are already durable — admin tooling will replay pending rows. Don't tighten the except.

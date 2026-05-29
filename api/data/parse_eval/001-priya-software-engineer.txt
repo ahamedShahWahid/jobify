@@ -1,0 +1,35 @@
+Priya Sharma
+
+priya.sharma@example.com
++91 98765 43210
+Bengaluru, Karnataka
+
+PROFESSIONAL SUMMARY
+Senior backend engineer with 6 years building distributed systems on AWS.
+Experienced in Python, Go, and Kubernetes. Led platform migration that
+reduced p99 latency by 40%.
+
+EXPERIENCE
+
+Senior Backend Engineer, Razorpay
+Mar 2021 - Present
+- Designed payments orchestrator handling 50M+ transactions / month.
+- Migrated 12 microservices to Kubernetes on AWS EKS.
+- Mentored 4 engineers on Go and distributed systems patterns.
+
+Backend Engineer, Flipkart
+Jul 2018 - Feb 2021
+- Built order-management APIs in Python and Django.
+- Owned PostgreSQL schema migrations across 8 services.
+- Introduced Redis-backed rate limiting; reduced abuse by 90%.
+
+EDUCATION
+
+B.Tech Computer Science, IIT Bombay, 2018
+
+SKILLS
+Python, Go, Docker, Kubernetes, AWS, PostgreSQL, Redis, Kafka, Django,
+FastAPI, Terraform, GitHub Actions, Linux
+
+CERTIFICATIONS
+AWS Solutions Architect Associate, 2022

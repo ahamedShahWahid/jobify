@@ -1,0 +1,33 @@
+Rohan Patel
+
+rohan.patel@example.com
++91 90123 45678
+Ahmedabad, Gujarat
+
+Fresh graduate seeking entry-level backend engineering roles. Strong
+fundamentals in Java and Python. Two internship projects deployed to
+production.
+
+INTERNSHIPS
+
+Software Engineering Intern, ZestMoney
+Jan 2024 - Jun 2024
+Built loan-eligibility microservice in Spring Boot.
+Stack: Java, Spring Boot, MySQL, Docker.
+
+Open Source Contributor, Apache Kafka community
+Feb 2023 - Dec 2023
+Contributed 4 patches to the Kafka Streams DSL.
+Stack: Java, Kafka.
+
+EDUCATION
+B.Tech Computer Science, IIT Gandhinagar, 2024 (CGPA 9.1/10)
+
+PROJECTS
+
+URL Shortener, github.com/rohan/shortly
+Built with Python, FastAPI, Redis, PostgreSQL. 500+ stars.
+
+SKILLS
+Java, Python, Spring Boot, FastAPI, Kafka, MySQL, PostgreSQL, Redis,
+Docker, Git, Linux

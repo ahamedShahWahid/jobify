@@ -1,0 +1,28 @@
+Divya Kumar
+
+divya.kumar@example.com
++91 87654 32109
+Hyderabad, Telangana
+
+Frontend engineer focused on accessible, performant web apps. 5 years
+of React experience, with growing depth in TypeScript and Next.js.
+
+EXPERIENCE
+
+Frontend Engineer, Swiggy
+Jan 2022 - Present
+- Owned the menu-management UI used by 200K+ restaurant partners.
+- Migrated 60% of the codebase from JavaScript to TypeScript.
+- Stack: React, Next.js, TypeScript, Tailwind CSS, GraphQL, Jest.
+
+Junior Frontend Engineer, Razorpay
+Aug 2019 - Dec 2021
+- Shipped checkout-flow improvements; reduced abandonment by 12%.
+- Stack: React, Redux, JavaScript, CSS, Cypress.
+
+EDUCATION
+B.Tech IT, BITS Pilani, 2019
+
+SKILLS
+React, Next.js, TypeScript, JavaScript, Tailwind CSS, GraphQL,
+Redux, HTML, CSS, Jest, Cypress, Webpack, Vite, Node.js

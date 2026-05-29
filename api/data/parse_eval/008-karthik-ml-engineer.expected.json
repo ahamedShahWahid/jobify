@@ -1,0 +1,20 @@
+{
+  "name": "Karthik Subramanian",
+  "email": "karthik.subramanian@example.com",
+  "phone": "+91 91234 56789",
+  "skills": [
+    "aws",
+    "docker",
+    "fastapi",
+    "huggingface",
+    "keras",
+    "langchain",
+    "llamaindex",
+    "postgresql",
+    "python",
+    "pytorch",
+    "redis",
+    "scikit-learn",
+    "tensorflow"
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "name": "Arjun Mehta",
+  "email": "arjun.mehta@example.com",
+  "phone": "+91 99800 12345",
+  "skills": [
+    "airflow",
+    "bigquery",
+    "docker",
+    "gcp",
+    "jupyter",
+    "mlflow",
+    "numpy",
+    "pandas",
+    "postgresql",
+    "python",
+    "pytorch",
+    "scikit-learn",
+    "spark",
+    "tensorflow"
+  ]
+}

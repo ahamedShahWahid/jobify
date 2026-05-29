@@ -1,0 +1,30 @@
+Sneha Reddy
+
+sneha.reddy@example.com
++91 70123 98765
+Chennai, Tamil Nadu
+
+Product manager with 7 years across SaaS and consumer products. Strong
+on growth-side analytics; comfortable working closely with engineering on
+roadmap and prioritisation.
+
+EXPERIENCE
+
+Senior Product Manager, Freshworks
+Aug 2021 - Present
+- Owned the omnichannel inbox product (3M+ monthly active agents).
+- Ran 14 A/B experiments using Mixpanel + Amplitude.
+- Tools: SQL, Mixpanel, Amplitude, Looker, Figma, Jira.
+
+Product Manager, Ola
+Mar 2018 - Jul 2021
+- Drove driver-app re-architecture; cut crashes by 35%.
+- Tools: SQL, Tableau, Jira, Confluence.
+
+EDUCATION
+MBA Marketing, IIM Bangalore, 2018
+B.Com Honours, Delhi University, 2014
+
+SKILLS
+SQL, Python, Mixpanel, Amplitude, Looker, Tableau, Figma, Jira,
+Confluence, Agile, Kanban

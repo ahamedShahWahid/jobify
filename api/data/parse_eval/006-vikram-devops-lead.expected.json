@@ -1,0 +1,25 @@
+{
+  "name": "Vikram Iyer",
+  "email": "vikram.iyer@example.com",
+  "phone": "+91 96000 88888",
+  "skills": [
+    "ansible",
+    "argocd",
+    "aws",
+    "bash",
+    "docker",
+    "elk",
+    "gitlab ci",
+    "grafana",
+    "helm",
+    "jenkins",
+    "kubernetes",
+    "linux",
+    "loki",
+    "mysql",
+    "prometheus",
+    "python",
+    "redis",
+    "terraform"
+  ]
+}

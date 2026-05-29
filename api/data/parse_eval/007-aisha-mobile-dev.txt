@@ -1,0 +1,26 @@
+Aisha Khan
+
+aisha.khan@example.com
+9988776655
+New Delhi
+
+Mobile developer with 3 years of cross-platform Flutter experience and
+prior native Android background.
+
+EXPERIENCE
+
+Mobile Developer, CRED
+Oct 2022 - Present
+Stack: Flutter, Dart, Kotlin (existing native modules).
+Shipped 6 feature releases serving 11M users.
+
+Android Developer, Paytm
+Aug 2021 - Sep 2022
+Stack: Kotlin, Java, Jetpack Compose, Firebase.
+
+EDUCATION
+B.Tech IT, Jamia Millia Islamia, 2021
+
+SKILLS
+Flutter, Dart, Kotlin, Java, Jetpack Compose, Firebase, Android,
+iOS, Git, GitHub Actions

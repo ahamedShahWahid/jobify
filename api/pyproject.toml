@@ -82,4 +82,5 @@ testpaths = ["tests"]
 pythonpath = ["src"]
 markers = [
     "integration: tests that require a running local Postgres (see README §Database)",
+    "eval: resume-parser quality gate against the gold dataset in api/data/parse_eval/",
 ]

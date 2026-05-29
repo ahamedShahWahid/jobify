@@ -1,0 +1,21 @@
+{
+  "name": "Divya Kumar",
+  "email": "divya.kumar@example.com",
+  "phone": "+91 87654 32109",
+  "skills": [
+    "css",
+    "cypress",
+    "graphql",
+    "html",
+    "javascript",
+    "jest",
+    "next.js",
+    "node.js",
+    "react",
+    "redux",
+    "tailwind",
+    "typescript",
+    "vite",
+    "webpack"
+  ]
+}
