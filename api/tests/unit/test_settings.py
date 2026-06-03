@@ -348,11 +348,11 @@ def test_celery_task_always_eager_defaults_false(monkeypatch: pytest.MonkeyPatch
 # ---------------------------------------------------------------------------
 
 
-def test_gemini_api_key_is_required(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_gemini_api_key_is_optional_at_settings_load(monkeypatch: pytest.MonkeyPatch) -> None:
     _set_minimum_env(monkeypatch)
     monkeypatch.delenv("KPA_GEMINI_API_KEY", raising=False)
-    with pytest.raises(ValidationError):
-        Settings()
+    s = Settings()
+    assert s.gemini_api_key is None
 
 
 def test_embedding_model_default_is_gemini_2(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -408,6 +408,14 @@ def test_match_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     s = Settings()
     assert s.match_surface_threshold == 0.55
     assert s.match_vector_weight == 0.6
+    assert s.score_batch_size == 100
+
+
+def test_score_batch_size_out_of_range_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    _set_minimum_env(monkeypatch)
+    monkeypatch.setenv("KPA_SCORE_BATCH_SIZE", "0")
+    with pytest.raises(ValidationError):
+        Settings()
 
 
 # ---------------------------------------------------------------------------

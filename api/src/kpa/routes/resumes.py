@@ -6,6 +6,8 @@ authenticated applicant from the access JWT — never from the URL.
 
 from __future__ import annotations
 
+import io
+import zipfile
 from datetime import datetime
 from uuid import UUID
 
@@ -33,6 +35,8 @@ _CONTENT_TYPE_TO_EXT: dict[str, str] = {
     "application/msword": ".doc",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
 }
+_UPLOAD_READ_CHUNK_BYTES = 1024 * 1024
+_LEGACY_DOC_MAGIC = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
 
 
 class ResumeRead(BaseModel):
@@ -84,6 +88,45 @@ async def _require_applicant(user: User, session: AsyncSession) -> Applicant:
     return applicant
 
 
+async def _read_upload_capped(file: UploadFile, *, max_bytes: int) -> bytes:
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await file.read(_UPLOAD_READ_CHUNK_BYTES)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > max_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"file exceeds max_upload_bytes ({max_bytes})",
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+def _validate_resume_signature(*, content: bytes, content_type: str) -> None:
+    """Reject obvious content-type spoofing before persisting the blob."""
+    matches = False
+    if content_type == "application/pdf":
+        matches = content.startswith(b"%PDF-")
+    elif content_type == "application/msword":
+        matches = content.startswith(_LEGACY_DOC_MAGIC)
+    elif content_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        try:
+            with zipfile.ZipFile(io.BytesIO(content)) as archive:
+                names = set(archive.namelist())
+            matches = "[Content_Types].xml" in names and "word/document.xml" in names
+        except zipfile.BadZipFile:
+            matches = False
+
+    if not matches:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="file content does not match declared resume content_type",
+        )
+
+
 @router.post(
     "/resumes",
     response_model=ResumeRead,
@@ -108,12 +151,8 @@ async def upload_resume(
             detail=f"content_type {file.content_type!r} is not in the resume whitelist",
         )
 
-    content = await file.read()
-    if len(content) > settings.max_upload_bytes:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"file exceeds max_upload_bytes ({settings.max_upload_bytes})",
-        )
+    content = await _read_upload_capped(file, max_bytes=settings.max_upload_bytes)
+    _validate_resume_signature(content=content, content_type=file.content_type)
 
     applicant = await _require_applicant(user, session)
 
@@ -129,9 +168,10 @@ async def upload_resume(
     await session.flush()  # populates resume.id
 
     ext = _CONTENT_TYPE_TO_EXT[file.content_type]
-    resume.storage_key = f"resumes/{resume.id}{ext}"
+    storage_key = f"resumes/{resume.id}{ext}"
+    resume.storage_key = storage_key
 
-    await storage.save(key=resume.storage_key, content=content, content_type=file.content_type)
+    await storage.save(key=storage_key, content=content, content_type=file.content_type)
     await session.commit()
 
     # Dispatch async parse — broker outages MUST NOT fail the upload because

@@ -113,6 +113,30 @@ async def test_upload_resume_rejects_disallowed_content_type(
 
 
 @pytest.mark.integration
+async def test_upload_resume_rejects_content_type_spoofing(
+    async_client: httpx.AsyncClient,
+    google_verifier,
+    session: AsyncSession,
+    tmp_path: Path,
+) -> None:
+    applicant_id, access = await _signin_as_applicant(async_client, google_verifier)
+
+    response = await async_client.post(
+        "/v1/applicants/me/resumes",
+        files={"file": ("cv.pdf", b"not a pdf", "application/pdf")},
+        headers=_auth(access),
+    )
+
+    assert response.status_code == 415
+    assert response.json()["detail"] == "file content does not match declared resume content_type"
+    rows = (
+        await session.execute(select(Resume).where(Resume.applicant_id == uuid.UUID(applicant_id)))
+    ).all()
+    assert rows == []
+    assert not any(tmp_path.rglob("*"))
+
+
+@pytest.mark.integration
 async def test_upload_resume_rejects_oversized_payload(
     async_client: httpx.AsyncClient,
     google_verifier,

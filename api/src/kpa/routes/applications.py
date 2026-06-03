@@ -498,6 +498,11 @@ async def recruiter_download_application_resume(
 
     application, job, resume = row.Application, row.Job, row.Resume
 
+    if resume.storage_key is None or resume.original_filename is None:
+        raise HTTPException(status_code=404, detail="not found")
+
+    content = await storage.read(resume.storage_key)
+
     _log.info(
         "recruiter.resume-accessed",
         recruiter_user_id=str(user.id),
@@ -506,7 +511,6 @@ async def recruiter_download_application_resume(
         applicant_id=str(application.applicant_id),
         resume_id=str(resume.id),
     )
-
     await audit_log(
         session,
         action="resume.accessed",
@@ -520,8 +524,8 @@ async def recruiter_download_application_resume(
             "employer_id": str(job.employer_id),
         },
     )
+    await session.commit()
 
-    content = await storage.read(resume.storage_key)
     return Response(
         content=content,
         media_type=resume.content_type,

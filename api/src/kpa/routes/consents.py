@@ -91,5 +91,6 @@ async def patch_consent(
         granted=body.granted,
         request_id=request.state.request_id,
     )
+    await session.commit()
     await session.refresh(row)
     return ConsentRead.model_validate(row)

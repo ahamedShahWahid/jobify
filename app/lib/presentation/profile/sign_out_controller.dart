@@ -1,4 +1,4 @@
-import 'package:kpa_app/data/auth/auth_repository_impl.dart';
+import 'package:kpa_app/data/auth/auth_repository_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'sign_out_controller.g.dart';

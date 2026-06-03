@@ -49,7 +49,7 @@ jobs:
         working-directory: api
     services:
       postgres:
-        image: postgres:16
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -94,13 +94,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y postgresql-client
-          # pgvector extension is provided by the pgvector/pgvector:pg16 image,
-          # but we're using the upstream postgres:16 image to keep the workflow
-          # service config tight. Install pgvector via psql + the prebuilt SQL
-          # if/when CI needs it. For now, integration tests that touch the
-          # vector extension are tagged separately; the bulk pass without it.
           psql "postgresql://postgres:postgres@localhost:5432/kpa_test" \
-            -c "CREATE EXTENSION IF NOT EXISTS vector" || true
+            -c "CREATE EXTENSION IF NOT EXISTS vector"
 
       - name: Integration tests
         run: uv run pytest -v -m integration

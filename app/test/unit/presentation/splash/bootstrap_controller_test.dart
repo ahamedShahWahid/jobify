@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kpa_app/core/error/exceptions.dart';
-import 'package:kpa_app/data/auth/auth_repository_impl.dart';
-import 'package:kpa_app/data/auth/token_storage.dart';
 import 'package:kpa_app/data/auth/auth_repository.dart';
+import 'package:kpa_app/data/auth/auth_repository_provider.dart';
 import 'package:kpa_app/data/auth/auth_state.dart';
+import 'package:kpa_app/data/auth/token_storage.dart';
 import 'package:kpa_app/presentation/splash/bootstrap_controller.dart';
 
 class _FakeStorage implements TokenStorage {
@@ -20,17 +20,23 @@ class _FakeStorage implements TokenStorage {
 
 class _FakeAuthRepo implements AuthRepository {
   _FakeAuthRepo({this.refreshThrows});
-  Object? refreshThrows;
+  Exception? refreshThrows;
   @override
   AuthState get current => const SignedOut();
   @override
   Future<SignedIn> signInWithGoogle() => throw UnimplementedError();
+  @override
+  Future<SignedIn> completeWebSignIn(String idToken) =>
+      throw UnimplementedError();
   @override
   Future<SignedIn> refreshSession() async {
     if (refreshThrows != null) throw refreshThrows!;
     return const SignedIn(userId: 'u1', email: 'e@e.com');
   }
 
+  @override
+  Future<String> refreshAccessTokenForInterceptor() =>
+      throw UnimplementedError();
   @override
   Future<void> signOut() async {}
 }

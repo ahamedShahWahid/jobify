@@ -1,6 +1,5 @@
 // ignore_for_file: directives_ordering
 import 'package:dio/dio.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:kpa_app/core/error/auth_slugs.dart';
 import 'package:kpa_app/data/api/error_mapping.dart';
@@ -8,16 +7,12 @@ import 'package:kpa_app/core/error/exceptions.dart';
 import 'package:kpa_app/core/log/logger.dart';
 import 'package:kpa_app/data/api/access_token_holder.dart';
 import 'package:kpa_app/data/api/auth_header_interceptor.dart';
-import 'package:kpa_app/data/api/dio_provider.dart';
 import 'package:kpa_app/data/auth/auth_dto.dart';
 import 'package:kpa_app/data/auth/google_sign_in_data_source.dart';
 import 'package:kpa_app/data/auth/token_storage.dart';
 import 'package:kpa_app/data/auth/auth_repository.dart';
 import 'package:kpa_app/data/me/me_dto.dart';
 import 'package:kpa_app/data/auth/auth_state.dart';
-import 'package:kpa_app/presentation/auth/auth_providers.dart';
-
-part 'auth_repository_impl.g.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({
@@ -62,11 +57,10 @@ class AuthRepositoryImpl implements AuthRepository {
     return _exchangeGoogleIdToken(idToken);
   }
 
-  /// Web-only completion: the rendered Google button (see [GoogleWebSignIn])
+  /// Web-only completion: the rendered Google button
   /// delivers the ID token asynchronously, so there's no imperative
-  /// `getIdToken()` step — we go straight to the backend exchange. Kept on the
-  /// impl (not [AuthRepository]) and reached via downcast, mirroring
-  /// [refreshAccessTokenForInterceptor].
+  /// `getIdToken()` step — we go straight to the backend exchange.
+  @override
   Future<SignedIn> completeWebSignIn(String idToken) async {
     _push(const Authenticating());
     return _exchangeGoogleIdToken(idToken);
@@ -134,6 +128,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
   /// Refresh callback used by the RefreshOn401Interceptor. Returns the new
   /// access token; the interceptor handles holder updates + replay.
+  @override
   Future<String> refreshAccessTokenForInterceptor() async {
     final stored = await _tokenStorage.readRefreshToken();
     if (stored == null) {
@@ -169,16 +164,4 @@ class AuthRepositoryImpl implements AuthRepository {
     await _tokenStorage.clear();
     _push(const SignedOut());
   }
-}
-
-@Riverpod(keepAlive: true)
-AuthRepository authRepository(Ref ref) {
-  return AuthRepositoryImpl(
-    dio: ref.read(dioProvider),
-    accessHolder: ref.read(accessTokenHolderProvider),
-    tokenStorage: ref.read(tokenStorageProvider),
-    google: GoogleSignInDataSourceImpl(),
-    emit: (s) => ref.read(authStateProvider.notifier).set(s),
-    readState: () => ref.read(authStateProvider),
-  );
 }

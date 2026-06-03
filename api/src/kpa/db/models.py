@@ -162,8 +162,8 @@ class Resume(Base):
         nullable=False,
         index=True,
     )
-    storage_key: Mapped[str] = mapped_column(String(512), nullable=False)
-    original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    storage_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    original_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
     content_type: Mapped[str] = mapped_column(String(127), nullable=False)
     size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
     parse_status: Mapped[ResumeParseStatus] = mapped_column(

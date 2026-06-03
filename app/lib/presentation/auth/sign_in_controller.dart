@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:kpa_app/data/auth/auth_repository_impl.dart';
+import 'package:kpa_app/data/auth/auth_repository_provider.dart';
 import 'package:kpa_app/data/auth/google_web_sign_in.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -31,8 +31,7 @@ class SignInController extends _$SignInController {
   Future<void> _completeWebSignIn(String idToken) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final repo = ref.read(authRepositoryProvider) as AuthRepositoryImpl;
-      await repo.completeWebSignIn(idToken);
+      await ref.read(authRepositoryProvider).completeWebSignIn(idToken);
     });
   }
 }

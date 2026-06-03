@@ -11,6 +11,7 @@ Covers:
 
 from __future__ import annotations
 
+from decimal import Decimal
 from uuid import uuid4
 
 import pytest
@@ -34,6 +35,7 @@ from kpa.db.models import (
     NotificationChannel,
     OAuthIdentity,
     OAuthProvider,
+    Resume,
     User,
     UserConsent,
     UserRole,
@@ -132,9 +134,27 @@ async def test_delete_missing_confirmation_returns_422(
 
 @pytest.mark.asyncio
 async def test_applicant_happy_path_tombstones_and_clears(
-    async_client: AsyncClient, session: AsyncSession
+    async_client: AsyncClient, session: AsyncSession, tmp_path
 ) -> None:
     user, applicant, token = await _make_applicant_with_dependencies(session)
+    applicant.expected_ctc = Decimal("1500000")
+    applicant.years_experience = Decimal("4.5")
+    resume = Resume(
+        applicant_id=applicant.id,
+        original_filename="private-cv.pdf",
+        content_type="application/pdf",
+        storage_key=f"resumes/{uuid4()}.pdf",
+        size_bytes=12,
+    )
+    session.add(resume)
+    storage = async_client._transport.app.state.storage  # type: ignore[union-attr]
+    await storage.save(
+        key=resume.storage_key,
+        content=b"%PDF-1.4\nx",
+        content_type="application/pdf",
+    )
+    blob_path = tmp_path / resume.storage_key
+    await session.commit()
 
     resp = await async_client.request(
         "DELETE",
@@ -149,6 +169,7 @@ async def test_applicant_happy_path_tombstones_and_clears(
     assert body["section_counts"]["user_consents"] == 7
     assert body["section_counts"]["user_tombstoned"] == 1
     assert body["section_counts"]["applicant_tombstoned"] == 1
+    assert body["section_counts"]["resumes_scrubbed"] == 1
     assert body["warnings"] == []
 
     # User row is tombstoned (still exists) with PII scrubbed.
@@ -163,6 +184,17 @@ async def test_applicant_happy_path_tombstones_and_clears(
     ).scalar_one()
     assert refetched_applicant.deleted_at is not None
     assert refetched_applicant.full_name is None
+    assert refetched_applicant.expected_ctc is None
+    assert refetched_applicant.years_experience is None
+
+    refetched_resume = (
+        await session.execute(select(Resume).where(Resume.id == resume.id))
+    ).scalar_one()
+    assert refetched_resume.deleted_at is not None
+    assert refetched_resume.original_filename is None
+    assert refetched_resume.storage_key is None
+    assert refetched_resume.parsed_json is None
+    assert not blob_path.exists()
 
     # Notifications + OAuth identities + consents are hard-gone.
     assert (

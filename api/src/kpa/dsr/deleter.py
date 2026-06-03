@@ -211,6 +211,8 @@ async def delete_user_data(
                 locations=None,
                 notice_period_days=None,
                 current_ctc=None,
+                expected_ctc=None,
+                years_experience=None,
                 deleted_at=now,
                 updated_at=now,
             )

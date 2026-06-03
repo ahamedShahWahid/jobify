@@ -114,6 +114,12 @@ def get_session_maker() -> async_sessionmaker[AsyncSession]:
 _embedding_provider: GeminiEmbeddingProvider | None = None
 
 
+def _gemini_api_key_or_raise() -> str:
+    if settings.gemini_api_key is None:
+        raise RuntimeError("KPA_GEMINI_API_KEY is required for Gemini-backed worker providers")
+    return settings.gemini_api_key.get_secret_value()
+
+
 def get_embedding_provider() -> GeminiEmbeddingProvider:
     """Return the worker's embedding provider, building it lazily.
 
@@ -126,7 +132,7 @@ def get_embedding_provider() -> GeminiEmbeddingProvider:
         from kpa.integrations.embeddings.gemini import GeminiEmbeddingProvider
 
         _embedding_provider = GeminiEmbeddingProvider(
-            api_key=settings.gemini_api_key.get_secret_value(),
+            api_key=_gemini_api_key_or_raise(),
             model=settings.embedding_model,
             output_dim=settings.embedding_dim,
         )
@@ -190,7 +196,7 @@ def get_match_explainer() -> MatchExplainer:
             from kpa.scoring.llm_explainer import GeminiMatchExplainer
 
             _match_explainer = GeminiMatchExplainer(
-                client=genai.Client(api_key=settings.gemini_api_key.get_secret_value()),
+                client=genai.Client(api_key=_gemini_api_key_or_raise()),
                 model=settings.match_explainer_model,
             )
         else:

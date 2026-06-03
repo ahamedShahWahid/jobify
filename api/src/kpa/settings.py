@@ -99,8 +99,12 @@ class Settings(BaseSettings):
     )
 
     # --- Embedding worker (Gemini) ---
-    gemini_api_key: SecretStr = Field(
-        ..., description="Gemini Developer API key for the embedding worker."
+    gemini_api_key: SecretStr | None = Field(
+        default=None,
+        description=(
+            "Gemini Developer API key. Required only when a worker constructs "
+            "Gemini-backed embeddings or LLM match explanations."
+        ),
     )
     embedding_model: str = Field(
         default="gemini-embedding-2",
@@ -142,6 +146,16 @@ class Settings(BaseSettings):
         default="gemini-2.5-flash",
         alias="KPA_MATCH_EXPLAINER_MODEL",
         description="Gemini text-generation model used when match_explainer='llm'.",
+    )
+    score_batch_size: int = Field(
+        default=100,
+        ge=1,
+        le=1000,
+        alias="KPA_SCORE_BATCH_SIZE",
+        description=(
+            "Max applicant/job pairs one scoring task processes before dispatching "
+            "a follow-up batch."
+        ),
     )
 
     # --- Notifications ---

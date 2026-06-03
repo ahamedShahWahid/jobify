@@ -125,6 +125,9 @@ async def _parse_resume_async(
         if resume is None:
             _log.warning("parse.row-missing", resume_id=str(resume_id))
             return
+        if resume.deleted_at is not None or resume.storage_key is None:
+            _log.info("parse.skip-deleted", resume_id=str(resume_id))
+            return
 
         if resume.parse_status in {
             ResumeParseStatus.PARSED,

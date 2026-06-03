@@ -7,7 +7,7 @@ import 'package:kpa_app/data/api/access_token_holder.dart';
 import 'package:kpa_app/data/api/auth_header_interceptor.dart';
 import 'package:kpa_app/data/api/refresh_on_401_interceptor.dart';
 import 'package:kpa_app/data/api/request_id_interceptor.dart';
-import 'package:kpa_app/data/auth/auth_repository_impl.dart';
+import 'package:kpa_app/data/auth/auth_repository_provider.dart';
 import 'package:kpa_app/data/auth/auth_state.dart';
 import 'package:kpa_app/presentation/auth/auth_providers.dart';
 
@@ -35,7 +35,7 @@ Dio dio(Ref ref) {
       dio: dio,
       refresh: () async {
         final repo = ref.read(authRepositoryProvider);
-        return (repo as AuthRepositoryImpl).refreshAccessTokenForInterceptor();
+        return repo.refreshAccessTokenForInterceptor();
       },
       onSignedOut: () {
         ref.read(authStateProvider.notifier).set(const SignedOut());

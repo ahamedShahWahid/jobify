@@ -1,12 +1,11 @@
 import 'package:flutter/widgets.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
 // Conditional import: the web impl pulls in `google_sign_in_web/web_only.dart`
 // (dart:js_interop), which does NOT compile on mobile or in `flutter test`.
 // The stub is selected everywhere except the web build.
 import 'package:kpa_app/data/auth/google_web_sign_in_stub.dart'
     if (dart.library.js_interop) 'package:kpa_app/data/auth/google_web_sign_in_web.dart'
     as impl;
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'google_web_sign_in.g.dart';
 
@@ -17,7 +16,7 @@ part 'google_web_sign_in.g.dart';
 /// *authorization* (an access token, via the imperative `signIn()`). The
 /// imperative path therefore can't yield an ID token — so the web flow is
 /// event-driven: render [button], listen to [idTokens], hand the token to
-/// `AuthRepositoryImpl.completeWebSignIn`.
+/// `AuthRepository.completeWebSignIn`.
 ///
 /// On non-web platforms a no-op stub is selected; the imperative
 /// `GoogleSignInDataSource.getIdToken()` is used instead.
@@ -36,7 +35,7 @@ abstract interface class GoogleWebSignIn {
   void dispose();
 }
 
-/// Initialized [GoogleWebSignIn]. Awaiting [initialize] inside the provider
+/// Initialized [GoogleWebSignIn]. Awaiting initialization inside the provider
 /// guarantees the widget tree only reaches [GoogleWebSignIn.button] after the
 /// GIS client is ready.
 @Riverpod(keepAlive: true)

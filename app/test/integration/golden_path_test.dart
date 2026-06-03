@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kpa_app/app.dart';
-import 'package:kpa_app/data/auth/auth_repository_impl.dart';
+import 'package:kpa_app/data/auth/auth_repository_provider.dart';
+import 'package:kpa_app/data/auth/auth_state.dart';
 import 'package:kpa_app/data/feed/feed_dto.dart';
 import 'package:kpa_app/data/feed/feed_repository_impl.dart';
 import 'package:kpa_app/data/feed/match_generator.dart';
@@ -11,7 +12,6 @@ import 'package:kpa_app/data/jobs/jobs_dto.dart';
 import 'package:kpa_app/data/jobs/jobs_repository_impl.dart';
 import 'package:kpa_app/data/jobs/saved_jobs_repository_impl.dart';
 import 'package:kpa_app/data/me/me_repository_impl.dart';
-import 'package:kpa_app/data/auth/auth_state.dart';
 import 'package:kpa_app/presentation/auth/auth_providers.dart';
 import 'package:kpa_app/presentation/splash/bootstrap_controller.dart';
 

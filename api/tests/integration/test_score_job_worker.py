@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from uuid import uuid4
 
 import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+import kpa.workers.tasks.score_job as score_job_task
 from kpa.db.models import (
     Applicant,
     ApplicantEmbedding,
@@ -18,6 +20,7 @@ from kpa.db.models import (
     User,
     UserRole,
 )
+from kpa.scoring.match import TransientScoringError
 from kpa.workers.tasks.score_job import _score_job_async
 
 
@@ -95,6 +98,46 @@ async def test_score_job_writes_rows_for_all_applicants_with_embeddings(
         assert "fit" in row.explanation
         assert row.explanation["generator"] == "templated"
         assert row.explanation["generator_version"] == "1"
+
+
+@pytest.mark.integration
+async def test_score_job_batches_and_dispatches_cursor(
+    session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    a1 = await _seed_applicant_with_emb(session, email="a1@example.com")
+    a2 = await _seed_applicant_with_emb(session, email="a2@example.com")
+    job = await _seed_job_with_emb(session)
+    await session.commit()
+
+    dispatched: list[tuple[object, object]] = []
+    monkeypatch.setattr(
+        score_job_task,
+        "_dispatch_next_batch",
+        lambda job_id, after_applicant_id: dispatched.append((job_id, after_applicant_id)),
+    )
+
+    await _score_job_async(job.id, sm=_make_sm(session), batch_size=1)
+
+    ordered_applicant_ids = (
+        await session.execute(
+            select(Applicant.id).where(Applicant.id.in_([a1.id, a2.id])).order_by(Applicant.id)
+        )
+    ).scalars().all()
+    rows = (await session.execute(select(Match).where(Match.job_id == job.id))).scalars().all()
+    assert [row.applicant_id for row in rows] == [ordered_applicant_ids[0]]
+    assert dispatched == [(job.id, ordered_applicant_ids[0])]
+
+
+def test_score_job_next_batch_dispatch_failure_is_transient(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail_delay(*_args: object) -> None:
+        raise RuntimeError("broker down")
+
+    monkeypatch.setattr(score_job_task.score_job, "delay", fail_delay)
+
+    with pytest.raises(TransientScoringError):
+        score_job_task._dispatch_next_batch(uuid4(), uuid4())
 
 
 @pytest.mark.integration

@@ -44,7 +44,7 @@ async def export_user_data(
         resource_id=user.id,
         context={"request_id": request_id},
     )
-    await session.flush()
+    await session.commit()
 
     export = await build_user_export(session, user=user)
 
@@ -70,6 +70,7 @@ async def export_user_data(
         resource_id=user.id,
         context={"request_id": request_id, "section_counts": section_counts},
     )
+    await session.commit()
 
     _log.info(
         "dsr.export-completed",

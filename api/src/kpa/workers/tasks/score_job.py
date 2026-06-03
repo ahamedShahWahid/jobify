@@ -23,6 +23,7 @@ from kpa.db.models import (
     Employer,
     Job,
     JobEmbedding,
+    JobStatus,
     Match,
 )
 from kpa.scoring.match import TransientScoringError, score_match
@@ -46,7 +47,9 @@ _settings = Settings()
     retry_jitter=True,
     acks_late=True,
 )
-def score_job(self, job_id_str: str) -> None:  # type: ignore[no-untyped-def]
+def score_job(  # type: ignore[no-untyped-def]
+    self, job_id_str: str, after_applicant_id_str: str | None = None
+) -> None:
     """Sync entry. Wraps the async body in a fresh event loop, with eager-mode thread hop."""
 
     def _run(coro_factory: Callable[[], Coroutine[Any, Any, None]]) -> None:
@@ -61,17 +64,23 @@ def score_job(self, job_id_str: str) -> None:  # type: ignore[no-untyped-def]
         else:
             asyncio.run(coro_factory())
 
-    _run(lambda: _score_job_async(UUID(job_id_str)))
+    after_applicant_id = (
+        UUID(after_applicant_id_str) if after_applicant_id_str is not None else None
+    )
+    _run(lambda: _score_job_async(UUID(job_id_str), after_applicant_id=after_applicant_id))
 
 
 async def _score_job_async(
     job_id: UUID,
     *,
     sm: async_sessionmaker[AsyncSession] | None = None,
+    after_applicant_id: UUID | None = None,
+    batch_size: int | None = None,
 ) -> None:
     sm = sm or get_session_maker()
+    limit = batch_size or _settings.score_batch_size
 
-    # --- Txn 1: load job + emb, list applicants with embeddings ---
+    # --- Txn 1: load job + emb, list a bounded batch of applicants with embeddings ---
     async with sm() as session:
         job_row = (
             await session.execute(
@@ -80,6 +89,7 @@ async def _score_job_async(
                 .join(Employer, Employer.id == Job.employer_id)
                 .where(
                     Job.id == job_id,
+                    Job.status == JobStatus.OPEN,
                     Job.deleted_at.is_(None),
                     JobEmbedding.deleted_at.is_(None),
                     Employer.deleted_at.is_(None),
@@ -91,16 +101,22 @@ async def _score_job_async(
             return
         job, job_emb, employer_name = job_row
 
-        app_rows = (
-            await session.execute(
-                select(Applicant, ApplicantEmbedding)
-                .join(ApplicantEmbedding, ApplicantEmbedding.applicant_id == Applicant.id)
-                .where(
-                    Applicant.deleted_at.is_(None),
-                    ApplicantEmbedding.deleted_at.is_(None),
-                )
+        apps_stmt = (
+            select(Applicant, ApplicantEmbedding)
+            .join(ApplicantEmbedding, ApplicantEmbedding.applicant_id == Applicant.id)
+            .where(
+                Applicant.deleted_at.is_(None),
+                ApplicantEmbedding.deleted_at.is_(None),
             )
-        ).all()
+            .order_by(Applicant.id.asc())
+            .limit(limit + 1)
+        )
+        if after_applicant_id is not None:
+            apps_stmt = apps_stmt.where(Applicant.id > after_applicant_id)
+        app_rows = (await session.execute(apps_stmt)).all()
+        has_more = len(app_rows) > limit
+        app_rows = app_rows[:limit]
+        next_after_applicant_id = app_rows[-1][0].id if has_more and app_rows else None
         # Detach all entities from this session before closing — we read scalars in compute step.
         scored_inputs = []
         for applicant, applicant_emb in app_rows:
@@ -125,7 +141,11 @@ async def _score_job_async(
         job_employer_name = employer_name
 
     if not scored_inputs:
-        _log.info("score.no-scoreable-applicants", job_id=str(job_id))
+        _log.info(
+            "score.no-scoreable-applicants",
+            job_id=str(job_id),
+            after_applicant_id=str(after_applicant_id) if after_applicant_id else None,
+        )
         return
 
     # --- (no DB) compute ---
@@ -226,4 +246,19 @@ async def _score_job_async(
             _log.exception("score.upsert-failed", job_id=str(job_id))
             raise TransientScoringError(f"upsert failed: {type(exc).__name__}") from exc
 
-    _log.info("score.job-complete", job_id=str(job_id), scored=len(scores))
+    _log.info("score.job-complete", job_id=str(job_id), scored=len(scores), has_more=has_more)
+    if next_after_applicant_id is not None:
+        _dispatch_next_batch(job_id, next_after_applicant_id)
+
+
+def _dispatch_next_batch(job_id: UUID, after_applicant_id: UUID) -> None:
+    """Continue job scoring after a successful committed batch."""
+    try:
+        score_job.delay(str(job_id), str(after_applicant_id))
+    except Exception as exc:
+        _log.exception(
+            "score.next-batch-dispatch-failed",
+            job_id=str(job_id),
+            after_applicant_id=str(after_applicant_id),
+        )
+        raise TransientScoringError("next batch dispatch failed") from exc

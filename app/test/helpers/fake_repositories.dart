@@ -31,11 +31,21 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<SignedIn> completeWebSignIn(String idToken) async {
+    const si = SignedIn(userId: 'u1', email: 'u@e.com', displayName: 'U');
+    _state = si;
+    return si;
+  }
+
+  @override
   Future<SignedIn> refreshSession() async {
     const si = SignedIn(userId: 'u1', email: 'u@e.com', displayName: 'U');
     _state = si;
     return si;
   }
+
+  @override
+  Future<String> refreshAccessTokenForInterceptor() async => 'ACCESS';
 
   @override
   Future<void> signOut() async {

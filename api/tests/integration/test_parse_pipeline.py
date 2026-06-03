@@ -207,12 +207,12 @@ async def test_upload_then_parse_populates_parsed_json(
         await _cleanup(migrated_db, emails=[email])
 
 
-async def test_upload_of_unsupported_blob_marks_failed(
+async def test_upload_of_unsupported_blob_is_rejected(
     pipeline_client: httpx.AsyncClient,
     migrated_db: str,
 ) -> None:
-    """Upload a .docx content-type with random bytes; parser raises
-    ParserError('docx_read_error'), task marks the row failed."""
+    """Upload a .docx content-type with random bytes; the route rejects
+    obvious content-type spoofing before storing a resume row."""
     email = "pipeline-failed@ex.com"
     applicant_id, access = await _make_applicant_direct(migrated_db, email=email)
     junk = b"\x00" * 200
@@ -229,11 +229,7 @@ async def test_upload_of_unsupported_blob_marks_failed(
             },
             headers={"Authorization": f"Bearer {access}"},
         )
-        assert resp.status_code == 201
-        resume_id = resp.json()["id"]
-
-        row = await _get_resume_row(migrated_db, resume_id)
-        assert row.parse_status == ResumeParseStatus.FAILED
-        assert row.parse_error == "docx_read_error"
+        assert resp.status_code == 415
+        assert resp.json()["detail"] == "file content does not match declared resume content_type"
     finally:
         await _cleanup(migrated_db, emails=[email])
