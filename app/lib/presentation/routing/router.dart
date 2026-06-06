@@ -14,6 +14,7 @@ import 'package:kpa_app/presentation/profile/edit_profile_screen.dart';
 import 'package:kpa_app/presentation/notifications/notifications_screen.dart';
 import 'package:kpa_app/presentation/privacy/delete_account_screen.dart';
 import 'package:kpa_app/presentation/privacy/privacy_screen.dart';
+import 'package:kpa_app/presentation/onboarding/employer_onboarding_screen.dart';
 import 'package:kpa_app/presentation/recruiter/recruiter_dashboard_screen.dart';
 import 'package:kpa_app/presentation/recruiter/recruiter_employer_screen.dart';
 import 'package:kpa_app/presentation/recruiter/recruiter_jobs_screen.dart';
@@ -101,7 +102,7 @@ GoRouter router(Ref ref) {
       ),
       GoRoute(
         path: Routes.onboardingEmployer,
-        builder: (_, __) => const SizedBox.shrink(), // TODO(Task 9): replace with const EmployerOnboardingScreen()
+        builder: (_, __) => const EmployerOnboardingScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => KpaShellScaffold(shell: shell),
