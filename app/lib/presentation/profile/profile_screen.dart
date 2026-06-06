@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:kpa_app/data/auth/user_role.dart';
+import 'package:kpa_app/presentation/auth/current_role_provider.dart';
 import 'package:kpa_app/presentation/profile/ctc_format.dart';
 import 'package:kpa_app/presentation/profile/me_controller.dart';
 import 'package:kpa_app/presentation/profile/package_info_provider.dart';
@@ -48,6 +50,20 @@ class ProfileScreen extends ConsumerWidget {
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
+            if (ref.watch(currentRoleProvider) == UserRole.applicant) ...[
+              const SizedBox(height: KpaSpacing.xl),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.business_center_outlined),
+                  title: const Text("I'm hiring — post a job"),
+                  subtitle:
+                      const Text('Create your company to start recruiting'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push(Routes.onboardingEmployer),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             if (data.applicant case final a?) ...[
               const SizedBox(height: KpaSpacing.xl),
               _DetailRow(
