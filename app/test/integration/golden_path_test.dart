@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kpa_app/app.dart';
 import 'package:kpa_app/data/auth/auth_repository_provider.dart';
 import 'package:kpa_app/data/auth/auth_state.dart';
+import 'package:kpa_app/data/auth/user_role.dart';
 import 'package:kpa_app/data/feed/feed_dto.dart';
 import 'package:kpa_app/data/feed/feed_repository_impl.dart';
 import 'package:kpa_app/data/feed/match_generator.dart';
@@ -20,7 +21,7 @@ import '../helpers/fake_repositories.dart';
 class _SignedInAuthStateNotifier extends AuthStateNotifier {
   @override
   AuthState build() =>
-      const SignedIn(userId: 'u1', email: 'u@e.com', displayName: 'U');
+      const SignedIn(userId: 'u1', email: 'u@e.com', role: UserRole.applicant, displayName: 'U');
 }
 
 class _Bootstrapped extends BootstrapController {
@@ -71,7 +72,7 @@ void main() {
             authStateProvider.overrideWith(_SignedInAuthStateNotifier.new),
             authRepositoryProvider.overrideWithValue(
               FakeAuthRepository(
-                initial: const SignedIn(userId: 'u1', email: 'u@e.com'),
+                initial: const SignedIn(userId: 'u1', email: 'u@e.com', role: UserRole.applicant),
               ),
             ),
             feedRepositoryProvider.overrideWithValue(

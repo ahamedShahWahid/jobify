@@ -14,11 +14,18 @@ import 'package:kpa_app/presentation/profile/edit_profile_screen.dart';
 import 'package:kpa_app/presentation/notifications/notifications_screen.dart';
 import 'package:kpa_app/presentation/privacy/delete_account_screen.dart';
 import 'package:kpa_app/presentation/privacy/privacy_screen.dart';
+import 'package:kpa_app/presentation/onboarding/employer_onboarding_screen.dart';
+import 'package:kpa_app/presentation/recruiter/recruiter_dashboard_screen.dart';
+import 'package:kpa_app/presentation/recruiter/recruiter_employer_screen.dart';
+import 'package:kpa_app/presentation/recruiter/recruiter_jobs_screen.dart';
+import 'package:kpa_app/presentation/recruiter/recruiter_profile_screen.dart';
 import 'package:kpa_app/presentation/resume/resume_screen.dart';
 import 'package:kpa_app/presentation/profile/profile_screen.dart';
+import 'package:kpa_app/presentation/routing/role_redirect.dart';
 import 'package:kpa_app/presentation/routing/routes.dart';
 import 'package:kpa_app/presentation/saved/saved_screen.dart';
 import 'package:kpa_app/presentation/splash/splash_screen.dart';
+import 'package:kpa_app/presentation/widgets/kpa_recruiter_shell_scaffold.dart';
 import 'package:kpa_app/presentation/widgets/kpa_shell_scaffold.dart';
 
 part 'router.g.dart';
@@ -78,6 +85,10 @@ GoRouter router(Ref ref) {
         final next = safeNextLocation(state.uri.queryParameters['next']);
         return next ?? Routes.feed;
       }
+      if (auth is SignedIn) {
+        final r = roleAwareRedirect(role: auth.role, loc: loc);
+        if (r != null) return r;
+      }
       return null;
     },
     routes: [
@@ -88,6 +99,10 @@ GoRouter router(Ref ref) {
       GoRoute(
         path: Routes.signIn,
         builder: (_, __) => const SignInScreen(),
+      ),
+      GoRoute(
+        path: Routes.onboardingEmployer,
+        builder: (_, __) => const EmployerOnboardingScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => KpaShellScaffold(shell: shell),
@@ -173,6 +188,45 @@ GoRouter router(Ref ref) {
                     ],
                   ),
                 ],
+              ),
+            ],
+          ),
+        ],
+      ),
+      // Recruiter shell — gated by roleAwareRedirect in the redirect callback.
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, shell) =>
+            KpaRecruiterShellScaffold(shell: shell),
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.recruiterDashboard,
+                builder: (_, __) => const RecruiterDashboardScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.recruiterJobs,
+                builder: (_, __) => const RecruiterJobsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.recruiterEmployer,
+                builder: (_, __) => const RecruiterEmployerScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.recruiterProfile,
+                builder: (_, __) => const RecruiterProfileScreen(),
               ),
             ],
           ),

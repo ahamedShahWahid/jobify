@@ -1,5 +1,6 @@
 import 'package:kpa_app/data/auth/auth_repository.dart';
 import 'package:kpa_app/data/auth/auth_state.dart';
+import 'package:kpa_app/data/auth/user_role.dart';
 import 'package:kpa_app/data/consents/consent_dto.dart';
 import 'package:kpa_app/data/consents/consents_repository.dart';
 import 'package:kpa_app/data/dsr/dsr_dto.dart';
@@ -25,21 +26,21 @@ class FakeAuthRepository implements AuthRepository {
   AuthState get current => _state;
   @override
   Future<SignedIn> signInWithGoogle() async {
-    const si = SignedIn(userId: 'u1', email: 'u@e.com', displayName: 'U');
+    const si = SignedIn(userId: 'u1', email: 'u@e.com', role: UserRole.applicant, displayName: 'U');
     _state = si;
     return si;
   }
 
   @override
   Future<SignedIn> completeWebSignIn(String idToken) async {
-    const si = SignedIn(userId: 'u1', email: 'u@e.com', displayName: 'U');
+    const si = SignedIn(userId: 'u1', email: 'u@e.com', role: UserRole.applicant, displayName: 'U');
     _state = si;
     return si;
   }
 
   @override
   Future<SignedIn> refreshSession() async {
-    const si = SignedIn(userId: 'u1', email: 'u@e.com', displayName: 'U');
+    const si = SignedIn(userId: 'u1', email: 'u@e.com', role: UserRole.applicant, displayName: 'U');
     _state = si;
     return si;
   }

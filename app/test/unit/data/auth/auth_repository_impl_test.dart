@@ -5,6 +5,7 @@ import 'package:kpa_app/data/auth/auth_repository_impl.dart';
 import 'package:kpa_app/data/auth/google_sign_in_data_source.dart';
 import 'package:kpa_app/data/auth/token_storage.dart';
 import 'package:kpa_app/data/auth/auth_state.dart';
+import 'package:kpa_app/data/auth/user_role.dart';
 
 import '../../../helpers/mock_interceptor.dart';
 
@@ -166,6 +167,27 @@ void main() {
       final emittedIn = h.emitted[1] as SignedIn;
       expect(emittedIn.userId, 'uid-1');
       expect(emittedIn.email, 'user@example.com');
+    });
+
+    // 1b. signInWithGoogle: role field is parsed from the OAuth exchange response.
+    test('signInWithGoogle: role is parsed from the exchange response', () async {
+      final h = _buildHarness();
+      h.mock.on(
+        'POST',
+        '/v1/auth/oauth/google',
+        200,
+        _signInBody()
+          ..['user'] = {
+            'id': 'uid-1',
+            'email': 'user@example.com',
+            'role': 'recruiter',
+            'display_name': 'Test User',
+          },
+      );
+
+      final result = await h.repo.signInWithGoogle();
+
+      expect(result.role, UserRole.recruiter);
     });
 
     // 2. signInWithGoogle: 401 → throws AuthException; emits SignedOut.
