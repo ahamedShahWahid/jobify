@@ -8,21 +8,21 @@ part of 'google_web_sign_in.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Initialized [GoogleWebSignIn]. Awaiting [initialize] inside the provider
+/// Initialized [GoogleWebSignIn]. Awaiting initialization inside the provider
 /// guarantees the widget tree only reaches [GoogleWebSignIn.button] after the
 /// GIS client is ready.
 
 @ProviderFor(googleWebSignIn)
 final googleWebSignInProvider = GoogleWebSignInProvider._();
 
-/// Initialized [GoogleWebSignIn]. Awaiting [initialize] inside the provider
+/// Initialized [GoogleWebSignIn]. Awaiting initialization inside the provider
 /// guarantees the widget tree only reaches [GoogleWebSignIn.button] after the
 /// GIS client is ready.
 
 final class GoogleWebSignInProvider extends $FunctionalProvider<
         AsyncValue<GoogleWebSignIn>, GoogleWebSignIn, FutureOr<GoogleWebSignIn>>
     with $FutureModifier<GoogleWebSignIn>, $FutureProvider<GoogleWebSignIn> {
-  /// Initialized [GoogleWebSignIn]. Awaiting [initialize] inside the provider
+  /// Initialized [GoogleWebSignIn]. Awaiting initialization inside the provider
   /// guarantees the widget tree only reaches [GoogleWebSignIn.button] after the
   /// GIS client is ready.
   GoogleWebSignInProvider._()
