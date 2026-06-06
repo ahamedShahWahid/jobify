@@ -13,6 +13,7 @@ import 'package:kpa_app/data/auth/token_storage.dart';
 import 'package:kpa_app/data/auth/auth_repository.dart';
 import 'package:kpa_app/data/me/me_dto.dart';
 import 'package:kpa_app/data/auth/auth_state.dart';
+import 'package:kpa_app/data/auth/user_role.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({
@@ -81,6 +82,7 @@ class AuthRepositoryImpl implements AuthRepository {
       final signedIn = SignedIn(
         userId: dto.user.id,
         email: dto.user.email,
+        role: UserRole.fromWire(dto.user.role),
         displayName: dto.user.displayName,
       );
       _push(signedIn);
@@ -114,6 +116,7 @@ class AuthRepositoryImpl implements AuthRepository {
       final signedIn = SignedIn(
         userId: meDto.id,
         email: meDto.email,
+        role: UserRole.fromWire(meDto.role),
         displayName: meDto.displayName,
       );
       _push(signedIn);

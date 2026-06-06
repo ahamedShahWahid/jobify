@@ -4,6 +4,7 @@ import 'package:kpa_app/core/error/exceptions.dart';
 import 'package:kpa_app/data/auth/auth_repository.dart';
 import 'package:kpa_app/data/auth/auth_repository_provider.dart';
 import 'package:kpa_app/data/auth/auth_state.dart';
+import 'package:kpa_app/data/auth/user_role.dart';
 import 'package:kpa_app/data/auth/token_storage.dart';
 import 'package:kpa_app/presentation/splash/bootstrap_controller.dart';
 
@@ -31,7 +32,7 @@ class _FakeAuthRepo implements AuthRepository {
   @override
   Future<SignedIn> refreshSession() async {
     if (refreshThrows != null) throw refreshThrows!;
-    return const SignedIn(userId: 'u1', email: 'e@e.com');
+    return const SignedIn(userId: 'u1', email: 'e@e.com', role: UserRole.applicant);
   }
 
   @override
