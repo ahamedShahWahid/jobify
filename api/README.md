@@ -281,6 +281,16 @@ Full suite:
 uv run pytest -v
 ```
 
+Parse F1 quality gate (in-process, no DB — runs the library parser against the gold
+dataset in `data/parse_eval/` and asserts the macro-F1 + per-field floors):
+
+```bash
+uv run pytest -m eval
+uv run pytest -m eval -v -s     # per-example breakdown when adding/debugging gold cases
+```
+
+CI runs the gate as the `lint-types-unit-eval` job before the heavier integration job.
+
 ## Lint, format, type-check
 
 ```bash
