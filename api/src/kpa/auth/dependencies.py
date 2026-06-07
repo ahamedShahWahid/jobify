@@ -117,3 +117,43 @@ async def _require_recruiter_at_employer(
     )
     if found is None:
         raise HTTPException(status_code=404, detail="not found")
+
+
+async def _require_employer_member(
+    user: User,
+    employer_id: uuid.UUID,
+    session: AsyncSession,
+) -> EmployerUser:
+    """Return the caller's live ``EmployerUser`` link, or uniform 404.
+
+    Any live member (owner or member) may *read* the roster/invites. Uniform
+    404 (not 403) on a missing link so we don't leak whether the employer
+    exists — mirrors ``_load_recruiter_job``.
+    """
+    link = await session.scalar(
+        select(EmployerUser).where(
+            EmployerUser.employer_id == employer_id,
+            EmployerUser.user_id == user.id,
+            EmployerUser.deleted_at.is_(None),
+        )
+    )
+    if link is None:
+        raise HTTPException(status_code=404, detail="not found")
+    return link
+
+
+async def _require_employer_owner(
+    user: User,
+    employer_id: uuid.UUID,
+    session: AsyncSession,
+) -> EmployerUser:
+    """Return the caller's live ``EmployerUser`` link iff they are an owner.
+
+    Uniform 404 if not a member at all (don't leak existence); 403
+    ``not_an_owner`` if a member but not an owner (membership already proven, so
+    the 403 leaks nothing new). Only owners may mutate members/invites.
+    """
+    link = await _require_employer_member(user, employer_id, session)
+    if link.role != "owner":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not_an_owner")
+    return link
