@@ -15,11 +15,11 @@ RecruiterJobDto _$RecruiterJobDtoFromJson(Map<String, dynamic> json) =>
           (json['locations'] as List<dynamic>).map((e) => e as String).toList(),
       minExpYears: (json['min_exp_years'] as num).toInt(),
       maxExpYears: (json['max_exp_years'] as num).toInt(),
-      ctcMin: (json['ctc_min'] as num?)?.toDouble(),
-      ctcMax: (json['ctc_max'] as num?)?.toDouble(),
       status: json['status'] as String,
       postedAt: DateTime.parse(json['posted_at'] as String),
       employerVerified: json['employer_verified'] as bool,
+      ctcMin: (json['ctc_min'] as num?)?.toDouble(),
+      ctcMax: (json['ctc_max'] as num?)?.toDouble(),
       applicantCount: (json['applicant_count'] as num?)?.toInt() ?? 0,
       surfacedMatchCount: (json['surfaced_match_count'] as num?)?.toInt() ?? 0,
     );

@@ -10,10 +10,10 @@ ApplicantOfJobDto _$ApplicantOfJobDtoFromJson(Map<String, dynamic> json) =>
     ApplicantOfJobDto(
       applicationId: json['application_id'] as String,
       applicantId: json['applicant_id'] as String,
-      displayName: json['display_name'] as String?,
-      email: json['email'] as String?,
       status: json['status'] as String,
       appliedAt: DateTime.parse(json['applied_at'] as String),
+      displayName: json['display_name'] as String?,
+      email: json['email'] as String?,
       matchScore: (json['match_score'] as num?)?.toDouble(),
       matchExplanation:
           (json['match_explanation'] as Map<String, dynamic>?)?.map(
