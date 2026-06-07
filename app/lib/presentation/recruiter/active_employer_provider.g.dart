@@ -80,7 +80,7 @@ final class ActiveEmployerProvider
   }
 }
 
-String _$activeEmployerHash() => r'a0f018fe570ce9c2d92bf467f53fdbbf1e34ffe6';
+String _$activeEmployerHash() => r'ba71690c7ae3a73e062cfa6585036e1207f9cb2a';
 
 abstract class _$ActiveEmployer extends $Notifier<EmployerDto?> {
   EmployerDto? build();

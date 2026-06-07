@@ -33,7 +33,7 @@ final class JobFormControllerProvider
   JobFormController create() => JobFormController();
 }
 
-String _$jobFormControllerHash() => r'e94a234d650478e504362b0fbcf3893b25d8ca27';
+String _$jobFormControllerHash() => r'1c5ac61f75418d2bcbf4c01606e414661bb52fd7';
 
 abstract class _$JobFormController extends $AsyncNotifier<RecruiterJobDto?> {
   FutureOr<RecruiterJobDto?> build();
