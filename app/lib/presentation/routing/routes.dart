@@ -12,6 +12,7 @@ abstract final class Routes {
   static const notifications = '/profile/notifications';
   static const privacy = '/profile/privacy';
   static const privacyDelete = '/profile/privacy/delete';
+  static const profileInvites = '/profile/invites';
 
   // Onboarding (applicant → recruiter).
   static const onboardingEmployer = '/onboarding/employer';
