@@ -16,7 +16,7 @@ from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from kpa.db.models import (
@@ -25,6 +25,7 @@ from kpa.db.models import (
     Application,
     AuditLog,
     Employer,
+    EmployerInvite,
     EmployerUser,
     Job,
     Match,
@@ -69,6 +70,10 @@ class UserExport(BaseModel):
 
     employer_memberships: list[dict[str, Any]] = []
     owned_jobs: list[dict[str, Any]] = []
+    # Employer invites addressed to this user's email (any role) and invites
+    # this user sent as an owner (recruiter/admin).
+    received_invites: list[dict[str, Any]] = []
+    sent_invites: list[dict[str, Any]] = []
 
     redactions: list[RedactionEntry] = []
     notes: list[str] = []
@@ -316,6 +321,37 @@ async def build_user_export(
                 .all()
             ]
 
+    # Employer invites — the invitee's email is PII. Surface invites addressed
+    # to this user (any role; even applicants receive invites) and, for
+    # recruiters/admins, the invites they sent.
+    received_invites: list[dict[str, Any]] = []
+    sent_invites: list[dict[str, Any]] = []
+    if user.email:
+        received_rows = (
+            await session.execute(
+                select(EmployerInvite, Employer.name)
+                .join(Employer, Employer.id == EmployerInvite.employer_id)
+                .where(func.lower(EmployerInvite.email) == user.email.lower())
+            )
+        ).all()
+        for inv, employer_name in received_rows:
+            entry = _row_to_dict(inv)
+            entry["employer_name"] = employer_name
+            received_invites.append(entry)
+    if user.role in (UserRole.RECRUITER, UserRole.ADMIN):
+        sent_invites = [
+            _row_to_dict(inv)
+            for inv in (
+                await session.execute(
+                    select(EmployerInvite).where(
+                        EmployerInvite.invited_by_user_id == user.id
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        ]
+
     return UserExport(
         exported_at=datetime.now(UTC),
         exported_for_user_id=user.id,
@@ -332,6 +368,8 @@ async def build_user_export(
         audit_history=audit_history,
         employer_memberships=employer_memberships,
         owned_jobs=owned_jobs,
+        received_invites=received_invites,
+        sent_invites=sent_invites,
         redactions=list(_REDACTIONS),
         notes=list(_NOTES),
     )

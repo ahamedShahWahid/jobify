@@ -237,8 +237,9 @@ GoRouter router(Ref ref) {
                   ),
                   GoRoute(
                     path: ':id/edit',
-                    builder: (_, s) => JobFormScreen(
-                      job: s.extra as RecruiterJobDto?,
+                    builder: (_, s) => EditJobResolver(
+                      jobId: s.pathParameters['id']!,
+                      initialJob: s.extra as RecruiterJobDto?,
                     ),
                   ),
                   GoRoute(

@@ -36,7 +36,14 @@ class RecruiterEmployerScreen extends ConsumerWidget {
           ),
         ),
         data: (list) {
-          final active = ref.watch(activeEmployerProvider) ?? list.first;
+          // Reconcile the (keepAlive) active employer against the current list:
+          // if it dropped out (e.g. membership removed by another owner), fall
+          // back to the first so the switcher's initialValue always matches an
+          // item — a DropdownButtonFormField asserts otherwise.
+          final stored = ref.watch(activeEmployerProvider);
+          final active = stored != null && list.any((e) => e.id == stored.id)
+              ? stored
+              : list.first;
           return _TeamView(employers: list, active: active);
         },
       ),
@@ -204,8 +211,13 @@ class _MemberTile extends ConsumerWidget {
       leading: const CircleAvatar(child: Icon(Icons.person_outline)),
       title: Text(name),
       subtitle: Text(subtitle),
-      trailing:
-          amOwner ? _MemberMenu(member: member, employerId: employerId) : null,
+      // Owners manage OTHERS, never themselves: self change-role/remove via this
+      // menu would strand the UI (stale switcher, 403'd roster refetch) and a
+      // self-demotion wouldn't leave the recruiter shell. Self-leave is a
+      // separate deferred feature.
+      trailing: (amOwner && !isSelf)
+          ? _MemberMenu(member: member, employerId: employerId)
+          : null,
     );
   }
 }
@@ -235,6 +247,7 @@ class _MemberMenu extends ConsumerWidget {
     WidgetRef ref,
     String action,
   ) async {
+    if (ref.read(teamActionsControllerProvider).isLoading) return;
     final messenger = ScaffoldMessenger.of(context);
     final notifier = ref.read(teamActionsControllerProvider.notifier);
     bool ok;
@@ -384,6 +397,7 @@ class _PendingInvites extends ConsumerWidget {
     WidgetRef ref,
     String inviteId,
   ) async {
+    if (ref.read(teamActionsControllerProvider).isLoading) return;
     final messenger = ScaffoldMessenger.of(context);
     final ok = await ref
         .read(teamActionsControllerProvider.notifier)

@@ -18,12 +18,24 @@ class InviteResponseController extends _$InviteResponseController {
 
   Future<bool> accept(String inviteId) async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
+    final result = await AsyncValue.guard(() async {
       await ref.read(employerTeamRepositoryProvider).acceptInvite(inviteId);
-      ref.invalidate(myInvitesControllerProvider);
-      await ref.read(authRepositoryProvider).refreshSession();
     });
-    return !state.hasError;
+    state = result;
+    if (result.hasError) return false;
+
+    // Accept is committed server-side (membership + role flip). Refresh the
+    // session so the role propagates and the router moves the user into the
+    // recruiter shell — but a transient refresh failure must NOT surface as an
+    // accept failure: re-accepting would 404 (no longer PENDING) and wedge the
+    // user. Best-effort; the next /v1/me refresh or the 401 interceptor will
+    // propagate the role.
+    ref.invalidate(myInvitesControllerProvider);
+    await ref
+        .read(authRepositoryProvider)
+        .refreshSession()
+        .then<void>((_) {}, onError: (_, __) {});
+    return true;
   }
 
   Future<bool> decline(String inviteId) async {

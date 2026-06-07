@@ -18,7 +18,7 @@ from uuid import UUID
 
 import structlog
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import delete, exists, select, update
+from sqlalchemy import delete, exists, func, or_, select, update
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
@@ -27,6 +27,7 @@ from kpa.db.models import (
     Applicant,
     ApplicantEmbedding,
     Employer,
+    EmployerInvite,
     EmployerUser,
     Notification,
     OAuthIdentity,
@@ -149,6 +150,18 @@ async def delete_user_data(
         delete(EmployerUser).where(EmployerUser.user_id == user.id)
     )
     counts["employer_users"] = r.rowcount or 0
+
+    # 5b. Employer invites addressed to (or accepted by) this user — the invite
+    # `email` column is the user's PII. Invites this user *sent* hold other
+    # people's emails and stay with the employer's records (the
+    # invited_by_user_id pointer survives to the tombstone, like audit actors).
+    invite_match = EmployerInvite.accepted_user_id == user.id
+    if user.email:
+        invite_match = or_(invite_match, func.lower(EmployerInvite.email) == user.email.lower())
+    r = await session.execute(  # type: ignore[assignment]
+        delete(EmployerInvite).where(invite_match)
+    )
+    counts["employer_invites"] = r.rowcount or 0
 
     # 6. Resolve the applicant id once for downstream queries.
     applicant_row = (

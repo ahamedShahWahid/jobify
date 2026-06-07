@@ -28,6 +28,8 @@ from kpa.db.models import (
     ApplicationStatus,
     AuditLog,
     Employer,
+    EmployerInvite,
+    EmployerInviteStatus,
     EmployerUser,
     Job,
     JobStatus,
@@ -226,6 +228,42 @@ async def test_applicant_happy_path_tombstones_and_clears(
     assert actions == {"user.dsr_delete_requested", "user.dsr_deleted"}
     deleted_row = next(r for r in audit_rows if r.action == "user.dsr_deleted")
     assert "section_counts" in deleted_row.context
+
+
+@pytest.mark.asyncio
+async def test_delete_erases_invites_addressed_to_the_user(
+    async_client: AsyncClient, session: AsyncSession
+) -> None:
+    from datetime import UTC, datetime, timedelta
+
+    user, _applicant, token = await _make_applicant_with_dependencies(session)
+    employer = Employer(name="Inviter Co", name_norm="inviter co")
+    session.add(employer)
+    await session.flush()
+    # A pending invite addressed to this user's email — their PII.
+    invite = EmployerInvite(
+        employer_id=employer.id,
+        email=user.email,
+        role="member",
+        status=EmployerInviteStatus.PENDING,
+        expires_at=datetime.now(UTC) + timedelta(days=14),
+    )
+    session.add(invite)
+    await session.commit()
+    invite_id = invite.id
+
+    resp = await async_client.request(
+        "DELETE",
+        "/v1/me/dsr",
+        headers={"Authorization": f"Bearer {token}"},
+        json=_CONFIRMATION,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["section_counts"]["employer_invites"] == 1
+    gone = (
+        await session.execute(select(EmployerInvite).where(EmployerInvite.id == invite_id))
+    ).scalar_one_or_none()
+    assert gone is None
 
 
 @pytest.mark.asyncio

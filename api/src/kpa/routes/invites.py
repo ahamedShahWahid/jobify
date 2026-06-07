@@ -20,6 +20,7 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from kpa.audit import audit_log
@@ -143,6 +144,18 @@ async def accept_invite(
         await session.commit()
         raise HTTPException(status_code=410, detail="invite_expired")
 
+    # The employer must still be live — don't resurrect a membership into a
+    # soft-deleted employer (unreachable today; defensive before employer
+    # deletion ships).
+    employer_live = await session.scalar(
+        select(Employer.id).where(
+            Employer.id == invite.employer_id,
+            Employer.deleted_at.is_(None),
+        )
+    )
+    if employer_live is None:
+        raise HTTPException(status_code=404, detail="not found")
+
     # Idempotent membership: if already a live member (joined by another path),
     # don't insert a duplicate link — just mark the invite accepted.
     existing = await session.scalar(
@@ -165,7 +178,12 @@ async def accept_invite(
     invite.accepted_user_id = user.id
     invite.updated_at = func.now()
     await flip_to_recruiter(session, user.id)
-    await session.flush()
+    try:
+        await session.flush()
+    except IntegrityError as e:
+        # Concurrent accept raced us to the membership partial-UNIQUE.
+        await session.rollback()
+        raise HTTPException(status_code=409, detail="already_a_member") from e
 
     await audit_log(
         session,

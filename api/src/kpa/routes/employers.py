@@ -217,17 +217,29 @@ def _invite_read(inv: EmployerInvite) -> InviteRead:
     )
 
 
-async def _count_live_owners(session: AsyncSession, employer_id: uuid.UUID) -> int:
-    count = await session.scalar(
-        select(func.count())
-        .select_from(EmployerUser)
-        .where(
-            EmployerUser.employer_id == employer_id,
-            EmployerUser.role == "owner",
-            EmployerUser.deleted_at.is_(None),
-        )
+async def _count_live_owners(
+    session: AsyncSession,
+    employer_id: uuid.UUID,
+    *,
+    lock: bool = False,
+) -> int:
+    """Count an employer's live owners.
+
+    With ``lock=True`` the matching owner rows are ``SELECT ... FOR UPDATE``'d so
+    concurrent owner demotions/removals serialize — without it, two owners
+    removing each other simultaneously could each pass the last-owner guard and
+    leave the employer with zero owners (TOCTOU). Aggregates can't carry
+    ``FOR UPDATE`` in Postgres, so we lock the rows and count them in Python.
+    """
+    stmt = select(EmployerUser.id).where(
+        EmployerUser.employer_id == employer_id,
+        EmployerUser.role == "owner",
+        EmployerUser.deleted_at.is_(None),
     )
-    return count or 0
+    if lock:
+        stmt = stmt.with_for_update()
+    rows = (await session.execute(stmt)).scalars().all()
+    return len(rows)
 
 
 @router.get("/employers/{employer_id}/members", response_model=list[MemberRead])
@@ -298,7 +310,12 @@ async def add_member(
     link = EmployerUser(employer_id=employer_id, user_id=target.id, role=payload.role)
     session.add(link)
     await flip_to_recruiter(session, target.id)
-    await session.flush()
+    try:
+        await session.flush()
+    except IntegrityError as e:
+        # Concurrent add raced us to the partial-UNIQUE ix_employer_users_pair_live.
+        await session.rollback()
+        raise HTTPException(status_code=409, detail="already_a_member") from e
 
     full_name = await session.scalar(
         select(Applicant.full_name).where(
@@ -369,9 +386,10 @@ async def change_member_role(
             added_at=link.created_at,
         )
 
-    # Guard: don't demote the last owner.
+    # Guard: don't demote the last owner. Lock owner rows to avoid a TOCTOU
+    # race with a concurrent demote/remove.
     if link.role == "owner" and payload.role != "owner":
-        if await _count_live_owners(session, employer_id) <= 1:
+        if await _count_live_owners(session, employer_id, lock=True) <= 1:
             raise HTTPException(status_code=400, detail="last_owner")
 
     link.role = payload.role
@@ -418,7 +436,8 @@ async def remove_member(
         raise HTTPException(status_code=404, detail="not found")
 
     # Guard: removing the last owner (covers "remove yourself as sole owner").
-    if link.role == "owner" and await _count_live_owners(session, employer_id) <= 1:
+    # Lock owner rows to avoid a TOCTOU race with a concurrent demote/remove.
+    if link.role == "owner" and await _count_live_owners(session, employer_id, lock=True) <= 1:
         raise HTTPException(status_code=400, detail="last_owner")
 
     link.deleted_at = func.now()
