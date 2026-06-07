@@ -22,9 +22,12 @@ class RecruiterDashboardSummary {
 class RecruiterDashboardController extends _$RecruiterDashboardController {
   @override
   Future<RecruiterDashboardSummary> build() async {
+    // status: 'closed' returns BOTH open and closed jobs (backend semantics),
+    // so openJobs counts correctly and the totals include closed-job counts.
+    // MVP-documented approximation for recruiters with >100 jobs (one page).
     final page = await ref
         .read(recruiterJobsRepositoryProvider)
-        .listMyJobs(limit: 100);
+        .listMyJobs(status: 'closed', limit: 100);
     final items = page.items;
     return RecruiterDashboardSummary(
       openJobs: items.where((j) => j.status == 'open').length,

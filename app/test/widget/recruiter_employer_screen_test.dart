@@ -58,8 +58,9 @@ void main() {
     expect(find.text('Mona Member'), findsOneWidget);
     // Owner-only invite form.
     expect(find.widgetWithText(FilledButton, 'Send'), findsOneWidget);
-    // Member menus (one per row).
-    expect(find.byType(PopupMenuButton<String>), findsNWidgets(2));
+    // A menu only on OTHER members' rows — not the owner's own (self) row.
+    // u1 is the caller, so only u2 (Mona) gets a menu.
+    expect(find.byType(PopupMenuButton<String>), findsOneWidget);
     // Pending invite shown.
     expect(find.text('pending@example.com'), findsOneWidget);
   });
