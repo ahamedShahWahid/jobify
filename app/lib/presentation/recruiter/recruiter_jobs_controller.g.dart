@@ -52,7 +52,7 @@ final class RecruiterJobsControllerProvider extends $AsyncNotifierProvider<
 }
 
 String _$recruiterJobsControllerHash() =>
-    r'814863830a989466e25317cbcd8506126679929e';
+    r'a089e374344c792616a771a1c232cf46717ffe34';
 
 final class RecruiterJobsControllerFamily extends $Family
     with

@@ -101,6 +101,13 @@ class ProfileScreen extends ConsumerWidget {
               subtitle: const Text('View your notifications'),
               onTap: () => context.go(Routes.notifications),
             ),
+            if (ref.watch(currentRoleProvider) == UserRole.applicant)
+              ListTile(
+                leading: const Icon(Icons.mail_outline),
+                title: const Text('Pending invitations'),
+                subtitle: const Text('Company invites to recruit'),
+                onTap: () => context.go(Routes.profileInvites),
+              ),
             ListTile(
               leading: const Icon(Icons.shield_outlined),
               title: const Text('Privacy & data'),
