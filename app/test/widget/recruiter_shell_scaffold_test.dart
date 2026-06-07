@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kpa_app/presentation/recruiter/recruiter_dashboard_screen.dart';
-import 'package:kpa_app/presentation/recruiter/recruiter_employer_screen.dart';
-import 'package:kpa_app/presentation/recruiter/recruiter_jobs_screen.dart';
-import 'package:kpa_app/presentation/recruiter/recruiter_profile_screen.dart';
 import 'package:kpa_app/presentation/widgets/kpa_recruiter_shell_scaffold.dart';
+
+/// Trivial branch body so this test stays focused on the shell scaffold's
+/// tab bar and branch switching — not the real screens' provider wiring
+/// (those are exercised in their own widget tests).
+class _Stub extends StatelessWidget {
+  const _Stub(this.label);
+  final String label;
+  @override
+  Widget build(BuildContext context) =>
+      Scaffold(body: Center(child: Text(label)));
+}
 
 void main() {
   testWidgets('recruiter shell shows four tabs and switches branches',
@@ -20,7 +27,7 @@ void main() {
               routes: [
                 GoRoute(
                   path: '/recruiter/dashboard',
-                  builder: (_, __) => const RecruiterDashboardScreen(),
+                  builder: (_, __) => const _Stub('DASH BODY'),
                 ),
               ],
             ),
@@ -28,7 +35,7 @@ void main() {
               routes: [
                 GoRoute(
                   path: '/recruiter/jobs',
-                  builder: (_, __) => const RecruiterJobsScreen(),
+                  builder: (_, __) => const _Stub('JOBS BODY'),
                 ),
               ],
             ),
@@ -36,7 +43,7 @@ void main() {
               routes: [
                 GoRoute(
                   path: '/recruiter/employer',
-                  builder: (_, __) => const RecruiterEmployerScreen(),
+                  builder: (_, __) => const _Stub('EMPLOYER BODY'),
                 ),
               ],
             ),
@@ -44,7 +51,7 @@ void main() {
               routes: [
                 GoRoute(
                   path: '/recruiter/profile',
-                  builder: (_, __) => const RecruiterProfileScreen(),
+                  builder: (_, __) => const _Stub('PROFILE BODY'),
                 ),
               ],
             ),
@@ -64,10 +71,10 @@ void main() {
     expect(find.text('Dashboard'), findsOneWidget);
     expect(find.text('Jobs'), findsOneWidget);
     expect(find.text('Employer'), findsOneWidget);
-    expect(find.text('Recruiter Dashboard'), findsOneWidget);
+    expect(find.text('DASH BODY'), findsOneWidget);
 
     await tester.tap(find.text('Jobs'));
     await tester.pumpAndSettle();
-    expect(find.text('Recruiter Jobs'), findsOneWidget);
+    expect(find.text('JOBS BODY'), findsOneWidget);
   });
 }

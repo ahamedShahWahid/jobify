@@ -1,0 +1,193 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
+import 'package:kpa_app/core/error/exceptions.dart';
+import 'package:kpa_app/data/jobs/applicant_of_job_dto.dart';
+import 'package:kpa_app/data/jobs/recruiter_jobs_repository_impl.dart';
+import 'package:kpa_app/presentation/recruiter/recruiter_applicants_controller.dart';
+import 'package:kpa_app/presentation/recruiter/resume_saver/resume_saver.dart';
+import 'package:kpa_app/presentation/theme/kpa_spacing.dart';
+import 'package:kpa_app/presentation/widgets/async_value_widget.dart';
+import 'package:kpa_app/presentation/widgets/kpa_empty_state.dart';
+import 'package:kpa_app/presentation/widgets/kpa_loading_view.dart';
+import 'package:kpa_app/presentation/widgets/kpa_score_badge.dart';
+
+final _dateFormat = DateFormat.yMMMMd();
+
+class JobApplicantsScreen extends ConsumerStatefulWidget {
+  const JobApplicantsScreen({required this.jobId, super.key});
+
+  final String jobId;
+
+  @override
+  ConsumerState<JobApplicantsScreen> createState() =>
+      _JobApplicantsScreenState();
+}
+
+class _JobApplicantsScreenState extends ConsumerState<JobApplicantsScreen> {
+  final _scroll = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(() {
+      if (_scroll.position.pixels >= _scroll.position.maxScrollExtent - 200) {
+        ref
+            .read(recruiterApplicantsControllerProvider(widget.jobId).notifier)
+            .loadMore();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  Future<void> _download(String applicationId) async {
+    final messenger = ScaffoldMessenger.of(context);
+    if (!kIsWeb) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Résumé download is available on the web app.'),
+        ),
+      );
+      return;
+    }
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Downloading résumé…')),
+    );
+    try {
+      final dl = await ref
+          .read(recruiterJobsRepositoryProvider)
+          .downloadResume(applicationId);
+      saveResume(dl.bytes, dl.filename, dl.contentType);
+    } on ApiException catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            e.statusCode == 404
+                ? 'No résumé on file for this applicant.'
+                : "Couldn't download the résumé. Try again.",
+          ),
+        ),
+      );
+    } on KpaException {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text("Couldn't download the résumé. Try again."),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final value =
+        ref.watch(recruiterApplicantsControllerProvider(widget.jobId));
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Applicants')),
+      body: AsyncValueWidget<RecruiterApplicantsState>(
+        value: value,
+        onRetry: () => ref
+            .read(recruiterApplicantsControllerProvider(widget.jobId).notifier)
+            .refresh(),
+        isEmpty: (s) => s.items.isEmpty,
+        empty: () => const KpaEmptyState(
+          headline: 'No applicants yet',
+          body: 'When candidates apply, they will show up here.',
+          icon: Icons.people_outline,
+        ),
+        data: (s) => RefreshIndicator(
+          onRefresh: () => ref
+              .read(
+                recruiterApplicantsControllerProvider(widget.jobId).notifier,
+              )
+              .refresh(),
+          child: ListView.separated(
+            controller: _scroll,
+            padding: const EdgeInsets.all(KpaSpacing.lg),
+            itemCount: s.items.length + 1,
+            separatorBuilder: (_, __) => const SizedBox(height: KpaSpacing.md),
+            itemBuilder: (context, i) {
+              if (i == s.items.length) {
+                if (s.isLoadingMore) {
+                  return const Padding(
+                    padding: EdgeInsets.all(KpaSpacing.lg),
+                    child: KpaLoadingView(),
+                  );
+                }
+                return const SizedBox.shrink();
+              }
+              return _ApplicantCard(
+                applicant: s.items[i],
+                onDownload: () => _download(s.items[i].applicationId),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ApplicantCard extends StatelessWidget {
+  const _ApplicantCard({required this.applicant, required this.onDownload});
+
+  final ApplicantOfJobDto applicant;
+  final VoidCallback onDownload;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final name = applicant.displayName ?? applicant.email ?? 'Applicant';
+    final fit = applicant.matchExplanation?['fit'];
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(KpaSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(name, style: theme.textTheme.titleMedium),
+                ),
+                if (applicant.matchScore != null) ...[
+                  const SizedBox(width: KpaSpacing.sm),
+                  KpaScoreBadge(score: applicant.matchScore!),
+                ],
+              ],
+            ),
+            const SizedBox(height: KpaSpacing.xs),
+            Text(
+              'Applied ${_dateFormat.format(applicant.appliedAt)}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            if (fit != null && fit.isNotEmpty) ...[
+              const SizedBox(height: KpaSpacing.sm),
+              Text(fit, style: theme.textTheme.bodyMedium),
+            ],
+            const SizedBox(height: KpaSpacing.sm),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: onDownload,
+                icon: const Icon(Icons.download_outlined, size: 18),
+                label: const Text('Download résumé'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

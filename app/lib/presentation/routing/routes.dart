@@ -19,6 +19,7 @@ abstract final class Routes {
   // Recruiter shell.
   static const recruiterDashboard = '/recruiter/dashboard';
   static const recruiterJobs = '/recruiter/jobs';
+  static const recruiterJobNew = '/recruiter/jobs/new';
   static const recruiterEmployer = '/recruiter/employer';
   static const recruiterProfile = '/recruiter/profile';
 }
