@@ -13,7 +13,7 @@ class RecruiterJobsController extends _$RecruiterJobsController {
   @override
   Future<RecruiterJobsState> build(bool includeClosed) async {
     final page = await ref.read(recruiterJobsRepositoryProvider).listMyJobs(
-          status: includeClosed ? null : 'open',
+          status: includeClosed ? 'closed' : null,
         );
     return PagedState(
       items: page.items,
@@ -33,7 +33,7 @@ class RecruiterJobsController extends _$RecruiterJobsController {
           final page = await ref
               .read(recruiterJobsRepositoryProvider)
               .listMyJobs(
-                status: includeClosed ? null : 'open',
+                status: includeClosed ? 'closed' : null,
                 cursor: cursor,
               );
           return PagedState(

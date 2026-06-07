@@ -87,7 +87,7 @@ void main() {
     expect(state.cursor, 'c1');
   });
 
-  test('build passes status=open when includeClosed=false', () async {
+  test('build passes no status filter when includeClosed=false', () async {
     final fake = FakeRecruiterJobsRepository(
       pages: [
         RecruiterJobsPageDto(items: [_job('j1')]),
@@ -101,10 +101,10 @@ void main() {
     addTearDown(container.dispose);
 
     await container.read(recruiterJobsControllerProvider(false).future);
-    expect(fake.lastStatus, 'open');
+    expect(fake.lastStatus, isNull);
   });
 
-  test('build passes no status filter when includeClosed=true', () async {
+  test('build passes status=closed when includeClosed=true', () async {
     final fake = FakeRecruiterJobsRepository(
       pages: [
         RecruiterJobsPageDto(items: [_job('j1')]),
@@ -118,7 +118,55 @@ void main() {
     addTearDown(container.dispose);
 
     await container.read(recruiterJobsControllerProvider(true).future);
+    expect(fake.lastStatus, 'closed');
+  });
+
+  test('loadMore preserves status=null for includeClosed=false', () async {
+    final fake = FakeRecruiterJobsRepository(
+      pages: [
+        RecruiterJobsPageDto(
+          items: [_job('j1')],
+          nextCursor: 'c1',
+        ),
+        RecruiterJobsPageDto(items: [_job('j2')]),
+      ],
+    );
+    final container = ProviderContainer(
+      overrides: [
+        recruiterJobsRepositoryProvider.overrideWithValue(fake),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(recruiterJobsControllerProvider(false).future);
+    await container
+        .read(recruiterJobsControllerProvider(false).notifier)
+        .loadMore();
     expect(fake.lastStatus, isNull);
+  });
+
+  test('loadMore preserves status=closed for includeClosed=true', () async {
+    final fake = FakeRecruiterJobsRepository(
+      pages: [
+        RecruiterJobsPageDto(
+          items: [_job('j1')],
+          nextCursor: 'c1',
+        ),
+        RecruiterJobsPageDto(items: [_job('j2')]),
+      ],
+    );
+    final container = ProviderContainer(
+      overrides: [
+        recruiterJobsRepositoryProvider.overrideWithValue(fake),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(recruiterJobsControllerProvider(true).future);
+    await container
+        .read(recruiterJobsControllerProvider(true).notifier)
+        .loadMore();
+    expect(fake.lastStatus, 'closed');
   });
 
   test('loadMore appends second page and updates cursor/hasMore', () async {
