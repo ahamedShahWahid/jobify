@@ -25,6 +25,7 @@ from kpa.routes import (
     employers,
     feed,
     health,
+    invites,
     jobs,
     me,
     notifications,
@@ -74,6 +75,7 @@ def create_app() -> FastAPI:
     app.include_router(resumes.router)
     app.include_router(applicants.router)
     app.include_router(employers.router)
+    app.include_router(invites.router)
     app.include_router(auth.router)
     app.include_router(me.router)
     app.include_router(feed.router)

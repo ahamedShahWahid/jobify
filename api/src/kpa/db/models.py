@@ -419,6 +419,81 @@ class EmployerUser(Base):
     )
 
 
+class EmployerInviteStatus(StrEnum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REVOKED = "revoked"
+    EXPIRED = "expired"
+
+
+class EmployerInvite(Base):
+    """An owner's invitation for an email to join an employer as owner/member.
+
+    See spec §5.2. At most one live *pending* invite per (employer, email) via the
+    partial-UNIQUE index. ``token`` is reserved for a future unauthenticated
+    email-link accept flow; MVP acceptance is authenticated + email-matched and
+    leaves it NULL. ``role`` mirrors ``employer_users.role`` (owner/member) and is
+    the role granted on accept.
+    """
+
+    __tablename__ = "employer_invites"
+
+    id: Mapped[UuidPK]
+    employer_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("kpa.employers.id"),
+        nullable=False,
+    )
+    email: Mapped[str] = mapped_column(String(254), nullable=False)
+    role: Mapped[str] = mapped_column(String(16), nullable=False)
+    status: Mapped[EmployerInviteStatus] = mapped_column(
+        SAEnum(
+            EmployerInviteStatus,
+            name="employer_invite_status",
+            native_enum=True,
+            schema="kpa",
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        nullable=False,
+        default=EmployerInviteStatus.PENDING,
+        server_default=EmployerInviteStatus.PENDING.value,
+    )
+    invited_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("kpa.users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    accepted_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("kpa.users.id"),
+        nullable=True,
+    )
+    token: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[CreatedAt]
+    updated_at: Mapped[UpdatedAt]
+    deleted_at: Mapped[DeletedAt]
+
+    __table_args__ = (
+        # At most one live pending invite per (employer, email).
+        Index(
+            "ix_employer_invites_pending_live",
+            "employer_id",
+            "email",
+            unique=True,
+            postgresql_where="deleted_at IS NULL AND status = 'pending'",
+        ),
+        # Invitee lookup path: pending invites by email.
+        Index(
+            "ix_employer_invites_email_live",
+            "email",
+            postgresql_where="deleted_at IS NULL AND status = 'pending'",
+        ),
+        CheckConstraint("role IN ('owner','member')", name="ck_employer_invites_role"),
+        {"schema": "kpa"},
+    )
+
+
 class Job(Base):
     """Job posting — see spec §5 and the P2.0 design doc.
 

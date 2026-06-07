@@ -172,6 +172,15 @@ class Settings(BaseSettings):
         description="Max notifications the sweeper claims in one pass.",
     )
 
+    # --- Employer team management ---
+    employer_invite_ttl_days: int = Field(
+        default=14,
+        ge=1,
+        le=365,
+        alias="KPA_EMPLOYER_INVITE_TTL_DAYS",
+        description="Days a pending employer invite stays valid before lazy-expiring.",
+    )
+
     # --- CORS ---
     cors_allow_origins: list[str] | str = Field(
         default_factory=lambda: ["http://localhost:8080"],
