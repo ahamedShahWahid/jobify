@@ -15,8 +15,12 @@ import 'package:kpa_app/presentation/notifications/notifications_screen.dart';
 import 'package:kpa_app/presentation/privacy/delete_account_screen.dart';
 import 'package:kpa_app/presentation/privacy/privacy_screen.dart';
 import 'package:kpa_app/presentation/onboarding/employer_onboarding_screen.dart';
+import 'package:kpa_app/data/jobs/recruiter_job_dto.dart';
+import 'package:kpa_app/presentation/recruiter/job_applicants_screen.dart';
+import 'package:kpa_app/presentation/recruiter/job_form_screen.dart';
 import 'package:kpa_app/presentation/recruiter/recruiter_dashboard_screen.dart';
 import 'package:kpa_app/presentation/recruiter/recruiter_employer_screen.dart';
+import 'package:kpa_app/presentation/recruiter/recruiter_job_detail_screen.dart';
 import 'package:kpa_app/presentation/recruiter/recruiter_jobs_screen.dart';
 import 'package:kpa_app/presentation/recruiter/recruiter_profile_screen.dart';
 import 'package:kpa_app/presentation/resume/resume_screen.dart';
@@ -211,6 +215,33 @@ GoRouter router(Ref ref) {
               GoRoute(
                 path: Routes.recruiterJobs,
                 builder: (_, __) => const RecruiterJobsScreen(),
+                routes: [
+                  // NOTE: 'new' MUST precede ':id' — go_router matches in
+                  // declaration order, else 'new' is captured as a (failing)
+                  // job id. Mirrors the backend's /v1/jobs/me-before-{id} rule.
+                  GoRoute(
+                    path: 'new',
+                    builder: (_, __) => const JobFormScreen(),
+                  ),
+                  GoRoute(
+                    path: ':id',
+                    builder: (_, s) => RecruiterJobDetailScreen(
+                      jobId: s.pathParameters['id']!,
+                      initialJob: s.extra as RecruiterJobDto?,
+                    ),
+                  ),
+                  GoRoute(
+                    path: ':id/edit',
+                    builder: (_, s) => JobFormScreen(
+                      job: s.extra as RecruiterJobDto?,
+                    ),
+                  ),
+                  GoRoute(
+                    path: ':id/applicants',
+                    builder: (_, s) =>
+                        JobApplicantsScreen(jobId: s.pathParameters['id']!),
+                  ),
+                ],
               ),
             ],
           ),
