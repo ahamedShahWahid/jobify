@@ -1,10 +1,81 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-class RecruiterProfileScreen extends StatelessWidget {
+import 'package:kpa_app/presentation/profile/me_controller.dart';
+import 'package:kpa_app/presentation/profile/sign_out_controller.dart';
+import 'package:kpa_app/presentation/routing/routes.dart';
+import 'package:kpa_app/presentation/theme/kpa_spacing.dart';
+import 'package:kpa_app/presentation/widgets/async_value_widget.dart';
+
+class RecruiterProfileScreen extends ConsumerWidget {
   const RecruiterProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('Recruiter Profile')));
+  Widget build(BuildContext context, WidgetRef ref) {
+    final me = ref.watch(meControllerProvider);
+    final signOut = ref.watch(signOutControllerProvider);
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Profile')),
+      body: AsyncValueWidget(
+        value: me,
+        onRetry: () => ref.read(meControllerProvider.notifier).refresh(),
+        data: (data) => ListView(
+          padding: const EdgeInsets.all(KpaSpacing.lg),
+          children: [
+            Text(
+              data.displayName ?? data.email,
+              style: theme.textTheme.headlineSmall,
+            ),
+            const SizedBox(height: KpaSpacing.xs),
+            Text(
+              data.email,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: KpaSpacing.xl),
+            ListTile(
+              leading: const Icon(Icons.shield_outlined),
+              title: const Text('Privacy & data'),
+              subtitle: const Text('Preferences, export, delete'),
+              onTap: () => context.go(Routes.privacy),
+            ),
+            const SizedBox(height: KpaSpacing.xxl),
+            OutlinedButton(
+              onPressed: signOut.isLoading
+                  ? null
+                  : () => _confirmSignOut(context, ref),
+              child: Text(signOut.isLoading ? 'Signing out…' : 'Sign out'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmSignOut(BuildContext ctx, WidgetRef ref) async {
+    final ok = await showDialog<bool>(
+      context: ctx,
+      builder: (c) => AlertDialog(
+        title: const Text('Sign out?'),
+        content: const Text("You'll need to sign in again to continue."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text('Sign out'),
+          ),
+        ],
+      ),
+    );
+    if (ok ?? false) {
+      await ref.read(signOutControllerProvider.notifier).submit();
+    }
   }
 }

@@ -16,6 +16,13 @@ String formatCtc(String? raw) {
   return _inr.format(v);
 }
 
+/// Format a recruiter-side CTC float (e.g. 1800000.0) as Indian-grouped
+/// rupees. Returns '—' for null.
+String formatCtcNum(double? value) {
+  if (value == null) return '—';
+  return _inr.format(value);
+}
+
 /// Format a wire years-of-experience string (e.g. "5.0", "4.5") for display:
 /// drops a trailing ".0" so whole numbers read cleanly. Returns null for
 /// null/unparseable so the caller can hide the row.
