@@ -25,6 +25,8 @@ from kpa.db.models import (
     Applicant,
     AuditLog,
     Employer,
+    EmployerInvite,
+    EmployerInviteStatus,
     EmployerUser,
     Job,
     JobStatus,
@@ -33,6 +35,19 @@ from kpa.db.models import (
 )
 
 pytestmark = pytest.mark.integration
+
+
+def _live_invite(*, employer_id, email: str, invited_by=None) -> EmployerInvite:
+    from datetime import UTC, datetime, timedelta
+
+    return EmployerInvite(
+        employer_id=employer_id,
+        email=email.lower(),
+        role="member",
+        status=EmployerInviteStatus.PENDING,
+        invited_by_user_id=invited_by,
+        expires_at=datetime.now(UTC) + timedelta(days=14),
+    )
 
 
 async def _make_applicant(session: AsyncSession) -> tuple[User, Applicant, str]:
@@ -124,6 +139,38 @@ async def test_recruiter_export_includes_employer_and_jobs(
     assert len(body["employer_memberships"]) == 1
     assert body["employer_memberships"][0]["employer"]["id"] == str(employer.id)
     assert any(j["id"] == str(job.id) for j in body["owned_jobs"])
+
+
+@pytest.mark.asyncio
+async def test_export_includes_received_and_sent_invites(
+    async_client: AsyncClient, session: AsyncSession
+) -> None:
+    user, employer, _job, token = await _make_recruiter_with_employer(session)
+    # An invite this recruiter SENT to someone else.
+    session.add(
+        _live_invite(
+            employer_id=employer.id,
+            email="someone-else@example.com",
+            invited_by=user.id,
+        )
+    )
+    # An invite this user RECEIVED at their own email from another employer.
+    other = Employer(name="Other Co", name_norm="other co")
+    session.add(other)
+    await session.flush()
+    session.add(_live_invite(employer_id=other.id, email=user.email))
+    await session.commit()
+
+    resp = await async_client.post(
+        "/v1/me/dsr/export",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["sent_invites"]) == 1
+    assert body["sent_invites"][0]["email"] == "someone-else@example.com"
+    assert len(body["received_invites"]) == 1
+    assert body["received_invites"][0]["employer_name"] == "Other Co"
 
 
 @pytest.mark.asyncio

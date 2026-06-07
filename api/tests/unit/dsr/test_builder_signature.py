@@ -34,6 +34,8 @@ def test_user_export_top_level_fields() -> None:
         "audit_history",
         "employer_memberships",
         "owned_jobs",
+        "received_invites",
+        "sent_invites",
         "redactions",
         "notes",
     }
