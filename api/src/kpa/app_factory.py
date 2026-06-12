@@ -5,6 +5,9 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
@@ -40,10 +43,17 @@ def create_app() -> FastAPI:
     settings = Settings()  # validated; raises on misconfiguration
     configure_logging()
     engine = create_engine_from_settings(settings)
+
+    @asynccontextmanager
+    async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        yield
+        await engine.dispose()  # release asyncpg connections on shutdown
+
     app = FastAPI(
         title="Khan Placement Agency API",
         version=__version__,
         openapi_url="/openapi.json",
+        lifespan=_lifespan,
     )
     app.state.settings = settings
     app.state.db_engine = engine
@@ -86,9 +96,5 @@ def create_app() -> FastAPI:
     app.include_router(consents.router)
     app.include_router(dsr.router)
     app.include_router(admin.router)
-
-    @app.on_event("shutdown")
-    async def _close_engine() -> None:
-        await engine.dispose()
 
     return app

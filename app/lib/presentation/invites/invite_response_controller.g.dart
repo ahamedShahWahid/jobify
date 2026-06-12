@@ -52,7 +52,7 @@ final class InviteResponseControllerProvider
 }
 
 String _$inviteResponseControllerHash() =>
-    r'0d51c7e9914df73384efd7638999b4056095c0e5';
+    r'b4bd67d26406551d893bdcfbc89cc98abd7d5c9f';
 
 /// Accept / decline a pending invitation.
 ///

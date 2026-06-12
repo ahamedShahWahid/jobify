@@ -16,7 +16,8 @@ void main() {
   });
 
   test('recruiter on a recruiter route stays', () {
-    expect(roleAwareRedirect(role: UserRole.recruiter, loc: Routes.recruiterJobs),
+    expect(
+        roleAwareRedirect(role: UserRole.recruiter, loc: Routes.recruiterJobs),
         isNull);
   });
 
@@ -28,7 +29,8 @@ void main() {
   });
 
   test('applicant on an applicant route stays', () {
-    expect(roleAwareRedirect(role: UserRole.applicant, loc: Routes.feed), isNull);
+    expect(
+        roleAwareRedirect(role: UserRole.applicant, loc: Routes.feed), isNull);
     expect(
         roleAwareRedirect(
             role: UserRole.applicant, loc: Routes.onboardingEmployer),

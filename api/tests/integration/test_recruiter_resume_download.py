@@ -137,3 +137,29 @@ async def test_applicant_role_returns_403(async_client, applicant_user_and_token
     )
     assert r.status_code == 403
     assert r.json()["detail"] == "not_a_recruiter"
+
+
+async def test_download_sanitizes_content_disposition_filename(
+    async_client, session, applicant_user_and_token
+):
+    """An applicant-controlled filename must not break the header (RFC 6266).
+
+    Quotes/backslashes/control chars are replaced in the ASCII fallback and
+    the exact original name travels percent-encoded in filename*.
+    """
+    recruiter, token = applicant_user_and_token
+    job_id = await _setup_employer_and_job(async_client, token)
+    storage = async_client._transport.app.state.storage  # type: ignore[union-attr]
+    resume, application = await _seed_applicant_with_resume(session, storage, job_id, b"X")
+    resume.original_filename = 'we"ird\\name\r\n.pdf'
+    await session.commit()
+
+    r = await async_client.get(
+        f"/v1/applications/{application.id}/resume",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 200, r.text
+    cd = r.headers["content-disposition"]
+    assert "\r" not in cd and "\n" not in cd
+    assert 'filename="we_ird_name__.pdf"' in cd
+    assert "filename*=UTF-8''we%22ird%5Cname%0D%0A.pdf" in cd

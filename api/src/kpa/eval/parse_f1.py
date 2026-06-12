@@ -34,6 +34,7 @@ class _ExpectedExample(TypedDict, total=False):
     phone: str | None
     skills: list[str]
 
+
 DEFAULT_DATA_DIR = Path(__file__).resolve().parents[3] / "data" / "parse_eval"
 
 
@@ -144,9 +145,7 @@ class EvalReport:
         for ex in self.examples:
             lines.append(f"  {ex.example_id}  F1={ex.overall_f1():.3f}")
             for fname, c in ex.per_field.items():
-                lines.append(
-                    f"    {fname:<8} F1={c.f1():.3f}  TP={c.tp} FP={c.fp} FN={c.fn}"
-                )
+                lines.append(f"    {fname:<8} F1={c.f1():.3f}  TP={c.tp} FP={c.fp} FN={c.fn}")
         return "\n".join(lines)
 
 

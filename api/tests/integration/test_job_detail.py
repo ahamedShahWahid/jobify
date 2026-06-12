@@ -385,3 +385,17 @@ async def test_job_detail_etag_changes_when_application_changes(
     r2 = await async_client.get(f"/v1/jobs/{j.id}", headers=_token_headers(user))
     etag2 = r2.headers["ETag"]
     assert etag2 != etag1, "ETag must change once an application exists"
+
+
+async def test_job_detail_soft_deleted_applicant_gets_500(
+    session: AsyncSession, async_client: AsyncClient
+) -> None:
+    """Same tombstoned-applicant guard as the feed — see test_feed.py."""
+    user, applicant = await _make_applicant(session, email="jd-tombstone@example.com")
+    j, _ = await _make_job_and_employer(session, employer_name="TombstoneCo")
+    applicant.deleted_at = datetime.now(UTC)
+    await session.commit()
+
+    r = await async_client.get(f"/v1/jobs/{j.id}", headers=_token_headers(user))
+    assert r.status_code == 500
+    assert r.json()["detail"] == "applicant_missing"

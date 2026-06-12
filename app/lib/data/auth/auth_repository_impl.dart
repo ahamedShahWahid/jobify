@@ -115,7 +115,8 @@ class AuthRepositoryImpl implements AuthRepository {
       final meDto = MeDto.fromJson(me.data!);
       final signedIn = SignedIn(
         userId: meDto.id,
-        email: meDto.email,
+        // AuthState.email is non-null display state; '' renders as "no email".
+        email: meDto.email ?? '',
         role: UserRole.fromWire(meDto.role),
         displayName: meDto.displayName,
       );

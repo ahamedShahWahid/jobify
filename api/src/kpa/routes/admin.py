@@ -7,8 +7,6 @@ _require_admin → 403 not_an_admin → DB read for the target resource.
 
 from __future__ import annotations
 
-import base64
-import json
 import uuid
 from datetime import datetime
 from typing import Annotated, Any
@@ -23,6 +21,7 @@ from kpa.audit import audit_log
 from kpa.auth.dependencies import _require_admin, current_user
 from kpa.db.models import AuditLog, User
 from kpa.db.session import get_session
+from kpa.pagination import decode_cursor, encode_cursor
 
 router = APIRouter(prefix="/v1/admin", tags=["admin"])
 _log = structlog.get_logger(__name__)
@@ -189,15 +188,14 @@ async def unsuspend_user(
 
 
 def _encode_cursor(created_at: datetime, row_id: uuid.UUID) -> str:
-    payload = {"c": created_at.isoformat(), "i": str(row_id)}
-    return base64.urlsafe_b64encode(json.dumps(payload).encode()).decode()
+    return encode_cursor({"c": created_at.isoformat(), "i": str(row_id)})
 
 
 def _decode_cursor(cursor: str) -> tuple[datetime, uuid.UUID]:
     try:
-        payload = json.loads(base64.urlsafe_b64decode(cursor.encode()).decode())
+        payload = decode_cursor(cursor)
         return datetime.fromisoformat(payload["c"]), uuid.UUID(payload["i"])
-    except Exception as exc:
+    except (ValueError, KeyError, TypeError) as exc:
         raise HTTPException(status_code=400, detail="invalid_cursor") from exc
 
 

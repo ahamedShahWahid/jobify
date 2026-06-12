@@ -82,6 +82,12 @@ def _init_engine(**_kwargs: object) -> None:
     global _engine, _sessionmaker
     from kpa.db.session import create_engine_from_settings, make_sessionmaker
 
+    # NullPool is LOAD-BEARING, not an oversight: each task body runs under a
+    # fresh `asyncio.run()` loop, and pooled asyncpg connections stay bound to
+    # the loop that created them — a QueuePool would hand task N+1 a connection
+    # bound to task N's dead loop ("Future attached to a different loop").
+    # Revisit only alongside a persistent-loop worker (e.g. a single
+    # long-lived loop per process).
     _engine = create_engine_from_settings(settings, poolclass=NullPool)
     _sessionmaker = make_sessionmaker(_engine)
 

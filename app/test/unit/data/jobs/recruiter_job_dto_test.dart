@@ -3,8 +3,7 @@ import 'package:kpa_app/data/jobs/recruiter_job_dto.dart';
 
 void main() {
   group('RecruiterJobDto.fromJson', () {
-    test('parses a full RecruiterJobRow (with counts and non-null CTCs)',
-        () {
+    test('parses a full RecruiterJobRow (with counts and non-null CTCs)', () {
       final json = <String, dynamic>{
         'id': 'job-1',
         'title': 'Senior Flutter Engineer',
@@ -40,8 +39,7 @@ void main() {
 
     test(
         'parses a plain JobRead (no count fields) — '
-        'defaults to 0 for both counts',
-        () {
+        'defaults to 0 for both counts', () {
       // POST /v1/jobs and PATCH /v1/jobs/{id} return JobRead without counts.
       final json = <String, dynamic>{
         'id': 'job-2',

@@ -542,8 +542,13 @@ class Job(Base):
 
     __table_args__ = (
         Index(
-            "ix_jobs_employer_id_live",
+            # Serves GET /v1/jobs/me: employer filter + (posted_at, id) keyset.
+            # employer_id leads, so it also covers plain employer_id lookups
+            # (the old ix_jobs_employer_id_live was a redundant prefix).
+            "ix_jobs_employer_posted_at_live",
             "employer_id",
+            text("posted_at DESC"),
+            text("id DESC"),
             postgresql_where="deleted_at IS NULL",
         ),
         Index(

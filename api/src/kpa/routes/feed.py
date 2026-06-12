@@ -2,222 +2,63 @@
 
 Cursor pagination via opaque base64 of {score, match_id}. ETag is weak,
 keyed off (applicant_id, max(updated_at), count). 401/403 ladder reuses the
-existing current_user + _require_applicant deps from auth + resumes routes.
+current_user + require_applicant deps from kpa.auth.dependencies.
+
+Shared response shapes (JobRead, EmployerRead, …) live in
+``routes/schemas.py``; cursor/ETag primitives in ``kpa.pagination``.
 """
 
 from __future__ import annotations
 
-import base64
-import binascii
-import hashlib
-import json
 import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+import structlog
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import Response
+from sqlalchemy import literal, select, tuple_
+from sqlalchemy.ext.asyncio import AsyncSession
 
-# --- Pydantic *Read models ---
-
-
-class MatchRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
-
-    id: uuid.UUID
-    total_score: float
-    vector_score: float
-    structured_score: float
-    # DB column is score_components; wire shape is components (per spec §P2.3).
-    components: dict[str, float] = Field(validation_alias="score_components")
-    surfaced_at: datetime | None
-    explanation: dict[str, str] | None
-
-
-class EmployerRead(BaseModel):
-    """Wire shape: a verified bool, not the underlying verified_at timestamp."""
-
-    model_config = ConfigDict(from_attributes=False)
-
-    id: uuid.UUID
-    name: str
-    verified: bool
-
-
-class JobRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: uuid.UUID
-    title: str
-    description: str
-    locations: list[str]
-    min_exp_years: int
-    max_exp_years: int
-    ctc_min: float | None
-    ctc_max: float | None
-    # StrEnum → serializes as its string value ("open"/"closed"). The web/mobile
-    # client uses this to render closed-role state on the saved list.
-    status: str
-    posted_at: datetime
-    employer_verified: bool
-
-    @classmethod
-    def from_job_and_employer(
-        cls,
-        job: Job,
-        employer: Employer,
-    ) -> JobRead:
-        """Build a JobRead from a Job ORM row and its associated Employer row.
-
-        Single construction point so every caller sets employer_verified
-        consistently. The field is required (no default) to force all future
-        callers through here.
-        """
-        return cls.model_validate(
-            {
-                "id": job.id,
-                "title": job.title,
-                "description": job.description,
-                "locations": job.locations,
-                "min_exp_years": job.min_exp_years,
-                "max_exp_years": job.max_exp_years,
-                "ctc_min": float(job.ctc_min) if job.ctc_min is not None else None,
-                "ctc_max": float(job.ctc_max) if job.ctc_max is not None else None,
-                "status": job.status.value,
-                "posted_at": job.posted_at,
-                "employer_verified": employer.verified_at is not None,
-            }
-        )
-
-
-class FeedItemRead(BaseModel):
-    match: MatchRead
-    job: JobRead
-    employer: EmployerRead
-
-
-class FeedResponse(BaseModel):
-    items: list[FeedItemRead]
-    next_cursor: str | None
-
-
-class JobDetailApplicationRead(BaseModel):
-    """Slim Application shape for the JobDetailResponse.
-
-    Mirrors the fields of ``routes/applications.py::ApplicationRead`` but
-    lives here to avoid the import cycle (applications.py + saved_jobs.py
-    both already import from feed.py).
-    """
-
-    model_config = ConfigDict(from_attributes=True)
-    id: uuid.UUID
-    job_id: uuid.UUID
-    status: str  # "applied" | "withdrawn"
-    source: str
-    created_at: datetime
-    updated_at: datetime
-
-
-class JobDetailSavedJobRead(BaseModel):
-    """Slim SavedJob shape for the JobDetailResponse.
-
-    Mirrors ``routes/saved_jobs.py::SavedJobRead`` — same field set the
-    Flutter ``SavedJobDto`` reads (it ignores ``updated_at`` but the
-    canonical Read includes it, so we match for consistency).
-    """
-
-    model_config = ConfigDict(from_attributes=True)
-    id: uuid.UUID
-    job_id: uuid.UUID
-    created_at: datetime
-    updated_at: datetime
-
-
-class JobDetailResponse(BaseModel):
-    job: JobRead
-    employer: EmployerRead
-    match: MatchRead | None
-    application: JobDetailApplicationRead | None
-    saved_job: JobDetailSavedJobRead | None
-
-
-# --- Cursor helpers ---
-
-
-def encode_cursor(score: Decimal, match_id: uuid.UUID) -> str:
-    """Pack (score, match_id) into an opaque base64 string."""
-    payload = {"score": str(score), "match_id": str(match_id)}
-    raw = json.dumps(payload).encode("utf-8")
-    return base64.urlsafe_b64encode(raw).decode("ascii")
-
-
-def decode_cursor(cursor: str) -> tuple[Decimal, uuid.UUID]:
-    """Decode an opaque cursor. Raises ValueError on any malformed input."""
-    try:
-        raw = base64.urlsafe_b64decode(cursor.encode("ascii"))
-        payload = json.loads(raw)
-        return Decimal(payload["score"]), uuid.UUID(payload["match_id"])
-    except (ValueError, KeyError, TypeError, json.JSONDecodeError, binascii.Error) as exc:
-        raise ValueError(f"invalid_cursor: {exc}") from exc
-
-
-# --- ETag helper ---
-
-
-def make_weak_etag(*parts: object) -> str:
-    """W/\"<sha256-hex>\" of str-rendered parts joined by '|'.
-
-    Weak ETag because the body is computed from joined data — we promise
-    semantic equivalence, not byte-exact reproducibility.
-    """
-    raw = "|".join(str(p) for p in parts)
-    return f'W/"{hashlib.sha256(raw.encode("utf-8")).hexdigest()}"'
-
-
-# --- Imports for the handler section ---
-import structlog  # noqa: E402
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status  # noqa: E402
-from fastapi.responses import Response  # noqa: E402
-from sqlalchemy import literal, select, tuple_  # noqa: E402
-from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
-
-from kpa.auth.dependencies import current_user  # noqa: E402
-from kpa.db.models import (  # noqa: E402
-    Applicant,
-    Employer,
-    Job,
-    JobStatus,
-    Match,
-    User,
-    UserRole,
+from kpa.auth.dependencies import (
+    current_user,
 )
-from kpa.db.session import get_session  # noqa: E402
+from kpa.auth.dependencies import (
+    require_applicant as _require_applicant,
+)
+from kpa.db.models import Employer, Job, JobStatus, Match, User
+from kpa.db.session import get_session
+from kpa.pagination import decode_cursor as _decode_cursor_payload
+from kpa.pagination import encode_cursor as _encode_cursor_payload
+from kpa.pagination import make_weak_etag
+from kpa.routes.schemas import (
+    EmployerRead,
+    FeedItemRead,
+    FeedResponse,
+    JobRead,
+    MatchRead,
+)
 
 _log = structlog.get_logger(__name__)
 router = APIRouter(prefix="/v1", tags=["feed"])
 
 
-async def _require_applicant(
-    user: User,
-    session: AsyncSession,
-) -> Applicant:
-    """Reject recruiter/admin tokens with 403 before any applicant-row read.
+# --- Cursor helpers (typed wrappers over kpa.pagination) ---
 
-    Mirrors `routes/resumes.py:_require_applicant`. Don't extract to a shared
-    helper in this slice — the resumes version has different downstream
-    error semantics (500 applicant_missing) that the feed doesn't need.
-    """
-    if user.role != UserRole.APPLICANT:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not_an_applicant")
-    applicant = (
-        await session.execute(select(Applicant).where(Applicant.user_id == user.id))
-    ).scalar_one_or_none()
-    if applicant is None:
-        # Defense in depth — sign-in provisions the applicants row.
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="applicant_missing",
-        )
-    return applicant
+
+def encode_cursor(score: Decimal, match_id: uuid.UUID) -> str:
+    """Pack (score, match_id) into an opaque base64 string."""
+    return _encode_cursor_payload({"score": str(score), "match_id": str(match_id)})
+
+
+def decode_cursor(cursor: str) -> tuple[Decimal, uuid.UUID]:
+    """Decode an opaque cursor. Raises ValueError on any malformed input."""
+    payload = _decode_cursor_payload(cursor)
+    try:
+        return Decimal(payload["score"]), uuid.UUID(payload["match_id"])
+    except (ValueError, KeyError, TypeError, ArithmeticError) as exc:
+        # ArithmeticError covers decimal.InvalidOperation on a garbage score.
+        raise ValueError(f"invalid_cursor: {exc}") from exc
 
 
 @router.get("/feed", response_model=FeedResponse)

@@ -213,8 +213,7 @@ void main() {
       await expectLater(
         repo.listApplicants('missing'),
         throwsA(
-          isA<ApiException>()
-              .having((e) => e.statusCode, 'statusCode', 404),
+          isA<ApiException>().having((e) => e.statusCode, 'statusCode', 404),
         ),
       );
     });
@@ -230,8 +229,7 @@ void main() {
   // -------------------------------------------------------------------------
 
   group('downloadResume', () {
-    test(
-        'returns bytes + filename parsed from content-disposition header',
+    test('returns bytes + filename parsed from content-disposition header',
         () async {
       final pdfBytes = [0x25, 0x50, 0x44, 0x46]; // %PDF magic bytes
       final headersDio = Dio(BaseOptions(baseUrl: 'http://test.local'));
@@ -254,8 +252,7 @@ void main() {
       expect(download.contentType, 'application/pdf');
     });
 
-    test(
-        'falls back to "resume" filename when content-disposition is absent',
+    test('falls back to "resume" filename when content-disposition is absent',
         () async {
       final docxBytes = [0x50, 0x4B, 0x03, 0x04]; // PK header (ZIP/DOCX)
       final headersDio = Dio(BaseOptions(baseUrl: 'http://test.local'));
@@ -328,8 +325,7 @@ void main() {
       await expectLater(
         repo.patchJob('missing', {}),
         throwsA(
-          isA<ApiException>()
-              .having((e) => e.statusCode, 'statusCode', 404),
+          isA<ApiException>().having((e) => e.statusCode, 'statusCode', 404),
         ),
       );
     });

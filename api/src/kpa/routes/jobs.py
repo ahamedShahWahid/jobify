@@ -5,23 +5,25 @@ POST /v1/jobs — create a new job posting (recruiter-only).
 
 from __future__ import annotations
 
-import base64
-import json as _json
 import uuid
 from datetime import datetime
 from decimal import Decimal
 from typing import Annotated, Literal
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import and_, case, distinct, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from kpa.audit import audit_log
 from kpa.auth.dependencies import (
     _require_recruiter,
     _require_recruiter_at_employer,
     current_user,
+)
+from kpa.auth.dependencies import (
+    require_applicant as _require_applicant,
 )
 from kpa.db.models import (
     Applicant,
@@ -33,38 +35,20 @@ from kpa.db.models import (
     Match,
     SavedJob,
     User,
-    UserRole,
 )
 from kpa.db.session import get_session
-from kpa.routes.feed import (
+from kpa.pagination import decode_cursor, encode_cursor, make_weak_etag
+from kpa.routes.schemas import (
     EmployerRead,
     JobDetailApplicationRead,
     JobDetailResponse,
     JobDetailSavedJobRead,
     JobRead,
     MatchRead,
-    make_weak_etag,
 )
 
 _log = structlog.get_logger(__name__)
 router = APIRouter(prefix="/v1", tags=["jobs"])
-
-
-async def _require_applicant(
-    user: User,
-    session: AsyncSession,
-) -> Applicant:
-    if user.role != UserRole.APPLICANT:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not_an_applicant")
-    applicant = (
-        await session.execute(select(Applicant).where(Applicant.user_id == user.id))
-    ).scalar_one_or_none()
-    if applicant is None:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="applicant_missing",
-        )
-    return applicant
 
 
 class RecruiterJobRow(JobRead):
@@ -78,16 +62,14 @@ class RecruiterJobsPage(BaseModel):
 
 
 def _encode_jobs_me_cursor(posted_at: datetime, job_id: uuid.UUID) -> str:
-    raw = _json.dumps({"posted_at": posted_at.isoformat(), "id": str(job_id)})
-    return base64.urlsafe_b64encode(raw.encode()).decode()
+    return encode_cursor({"posted_at": posted_at.isoformat(), "id": str(job_id)})
 
 
 def _decode_jobs_me_cursor(cursor: str) -> tuple[datetime, uuid.UUID]:
     try:
-        raw = base64.urlsafe_b64decode(cursor.encode()).decode()
-        obj = _json.loads(raw)
+        obj = decode_cursor(cursor)
         return datetime.fromisoformat(obj["posted_at"]), uuid.UUID(obj["id"])
-    except Exception as e:
+    except (ValueError, KeyError, TypeError) as e:
         raise HTTPException(status_code=400, detail="invalid_cursor") from e
 
 
@@ -98,7 +80,9 @@ def _decode_jobs_me_cursor(cursor: str) -> tuple[datetime, uuid.UUID]:
 async def list_my_jobs(
     user: User = Depends(current_user),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
-    status_filter: Annotated[str | None, Query(alias="status")] = None,
+    # Literal so an unknown value 422s instead of silently bypassing the
+    # default open-only filter below (fail closed).
+    status_filter: Annotated[Literal["open", "closed"] | None, Query(alias="status")] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     cursor: str | None = None,
 ) -> RecruiterJobsPage:
@@ -146,9 +130,10 @@ async def list_my_jobs(
         .order_by(Job.posted_at.desc(), Job.id.desc())
     )
 
-    if status_filter is None:
-        stmt = stmt.where(Job.status == JobStatus.OPEN)
+    # Default (and explicit ?status=open): only open jobs.
     # ?status=closed surfaces both open + closed (the recruiter's full view).
+    if status_filter != "closed":
+        stmt = stmt.where(Job.status == JobStatus.OPEN)
 
     if cursor is not None:
         cur_posted, cur_id = _decode_jobs_me_cursor(cursor)
@@ -451,29 +436,28 @@ class ApplicantsOfJobPage(BaseModel):
 
 
 def _encode_applicants_cursor(created_at: datetime, application_id: uuid.UUID) -> str:
-    raw = _json.dumps({"created_at": created_at.isoformat(), "id": str(application_id)})
-    return base64.urlsafe_b64encode(raw.encode()).decode()
+    return encode_cursor({"created_at": created_at.isoformat(), "id": str(application_id)})
 
 
 def _decode_applicants_cursor(cursor: str) -> tuple[datetime, uuid.UUID]:
     try:
-        raw = base64.urlsafe_b64decode(cursor.encode()).decode()
-        obj = _json.loads(raw)
+        obj = decode_cursor(cursor)
         return datetime.fromisoformat(obj["created_at"]), uuid.UUID(obj["id"])
-    except Exception as e:
+    except (ValueError, KeyError, TypeError) as e:
         raise HTTPException(status_code=400, detail="invalid_cursor") from e
 
 
 @router.get("/jobs/{job_id}/applicants", response_model=ApplicantsOfJobPage)
 async def list_applicants_for_job(
     job_id: uuid.UUID,
+    request: Request,
     user: User = Depends(current_user),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     cursor: str | None = None,
 ) -> ApplicantsOfJobPage:
     # _load_recruiter_job validates role + employer link + job existence; uniform 404.
-    await _load_recruiter_job(job_id, user, session)
+    job = await _load_recruiter_job(job_id, user, session)
 
     stmt = (
         select(Application, Applicant, User, Match)
@@ -529,4 +513,28 @@ async def list_applicants_for_job(
         if has_more and rows
         else None
     )
+
+    # This response exposes applicant PII (names + emails) — audit like the
+    # resume-download endpoint: structlog first, audit_log second.
+    _log.info(
+        "recruiter.applicants-listed",
+        recruiter_user_id=str(user.id),
+        job_id=str(job_id),
+        employer_id=str(job.employer_id),
+        count=len(items),
+    )
+    await audit_log(
+        session,
+        action="job.applicants_listed",
+        actor=user,
+        resource_type="job",
+        resource_id=job_id,
+        context={
+            "request_id": request.state.request_id,
+            "employer_id": str(job.employer_id),
+            "count": len(items),
+        },
+    )
+    await session.commit()
+
     return ApplicantsOfJobPage(items=items, next_cursor=next_cursor)

@@ -25,8 +25,11 @@ class ApplicantRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    full_name: str
-    locations: list[str]
+    # Nullable to mirror the DB schema — migration 0015 made full_name and
+    # locations nullable for DSR scrubbing. A non-optional str here turns a
+    # NULL row into a Pydantic ValidationError → 500.
+    full_name: str | None
+    locations: list[str] | None
     notice_period_days: int | None
     current_ctc: Decimal | None
     expected_ctc: Decimal | None
@@ -35,7 +38,9 @@ class ApplicantRead(BaseModel):
 
 class MeResponse(BaseModel):
     id: UUID
-    email: str
+    # users.email is nullable (phone-only auth later); null on the wire is
+    # honest — "" would pass for a (broken) address downstream.
+    email: str | None
     role: str
     applicant: ApplicantRead | None = None
 
@@ -51,7 +56,7 @@ async def get_me(
 ) -> MeResponse:
     payload = MeResponse(
         id=user.id,
-        email=user.email or "",
+        email=user.email,
         role=user.role.value,
     )
     if user.role == UserRole.APPLICANT:

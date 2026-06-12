@@ -11,9 +11,6 @@ ETag: W/"sha256(applicant_id|max(updated_at)|count)".
 
 from __future__ import annotations
 
-import base64
-import binascii
-import json
 import uuid
 from datetime import datetime
 
@@ -24,18 +21,22 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kpa.auth.dependencies import current_user
+from kpa.auth.dependencies import (
+    current_user,
+)
+from kpa.auth.dependencies import (
+    require_applicant as _require_applicant,
+)
 from kpa.db.models import (
-    Applicant,
     Employer,
     Job,
     JobStatus,
     SavedJob,
     User,
-    UserRole,
 )
 from kpa.db.session import get_session
-from kpa.routes.feed import EmployerRead, JobRead, make_weak_etag
+from kpa.pagination import decode_cursor, encode_cursor, make_weak_etag
+from kpa.routes.schemas import EmployerRead, JobRead
 
 _log = structlog.get_logger(__name__)
 router = APIRouter(prefix="/v1", tags=["saved_jobs"])
@@ -72,56 +73,16 @@ class SavedJobListResponse(BaseModel):
 
 def encode_cursor_saved(created_at: datetime, saved_job_id: uuid.UUID) -> str:
     """Pack (created_at, saved_job_id) into an opaque base64 string."""
-    payload = {
-        "created_at": created_at.isoformat(),
-        "saved_job_id": str(saved_job_id),
-    }
-    raw = json.dumps(payload).encode("utf-8")
-    return base64.urlsafe_b64encode(raw).decode("ascii")
+    return encode_cursor({"created_at": created_at.isoformat(), "saved_job_id": str(saved_job_id)})
 
 
 def decode_cursor_saved(cursor: str) -> tuple[datetime, uuid.UUID]:
     """Decode an opaque cursor. Raises ValueError on any malformed input."""
+    payload = decode_cursor(cursor)
     try:
-        raw = base64.urlsafe_b64decode(cursor.encode("ascii"))
-        payload = json.loads(raw)
         return datetime.fromisoformat(payload["created_at"]), uuid.UUID(payload["saved_job_id"])
-    except (ValueError, KeyError, TypeError, json.JSONDecodeError, binascii.Error) as exc:
+    except (ValueError, KeyError, TypeError) as exc:
         raise ValueError(f"invalid_cursor: {exc}") from exc
-
-
-# ---------------------------------------------------------------------------
-# Auth helper (inline — mirrors feed.py, resumes.py, applications.py)
-# ---------------------------------------------------------------------------
-
-
-async def _require_applicant(user: User, session: AsyncSession) -> Applicant:
-    """Reject non-applicant tokens with 403 before any applicant-row read.
-
-    Raises 500 applicant_missing as defence-in-depth (sign-in provisions the row).
-    Mirrors the helper in routes/feed.py, routes/resumes.py, routes/applications.py
-    — not extracted per the CLAUDE.md convention for this slice.
-    """
-    if user.role != UserRole.APPLICANT:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="not_an_applicant",
-        )
-    applicant = (
-        await session.execute(
-            select(Applicant).where(
-                Applicant.user_id == user.id,
-                Applicant.deleted_at.is_(None),
-            )
-        )
-    ).scalar_one_or_none()
-    if applicant is None:
-        _log.error("applicant.row-missing-for-applicant-role", user_id=str(user.id))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="applicant_missing",
-        )
-    return applicant
 
 
 # ---------------------------------------------------------------------------

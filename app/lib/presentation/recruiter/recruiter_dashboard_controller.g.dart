@@ -35,7 +35,7 @@ final class RecruiterDashboardControllerProvider extends $AsyncNotifierProvider<
 }
 
 String _$recruiterDashboardControllerHash() =>
-    r'e3f0026939f9f2c9231c092800832f1d3c6bae58';
+    r'6b71e0e0aef2e0be3a78bed4c56ef496af11a68b';
 
 abstract class _$RecruiterDashboardController
     extends $AsyncNotifier<RecruiterDashboardSummary> {

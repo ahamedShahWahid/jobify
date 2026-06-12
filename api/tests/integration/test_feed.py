@@ -292,3 +292,22 @@ async def test_feed_etag_changes_on_match_update(
     )
     assert r2.status_code == 200
     assert r2.headers["ETag"] != etag_before
+
+
+@pytest.mark.integration
+async def test_feed_soft_deleted_applicant_gets_500(
+    session: AsyncSession, async_client: AsyncClient
+) -> None:
+    """A tombstoned (DSR-scrubbed) applicant row must not be resolvable.
+
+    Pins the `deleted_at IS NULL` filter in the applicant guard — without it,
+    a user inside the access-token TTL window after a DSR delete could still
+    reach the feed via their scrubbed applicant row.
+    """
+    user, applicant = await _make_applicant(session, email="tombstone@example.com")
+    applicant.deleted_at = datetime.now(UTC)
+    await session.commit()
+
+    r = await async_client.get("/v1/feed", headers=_token_headers(user))
+    assert r.status_code == 500
+    assert r.json()["detail"] == "applicant_missing"

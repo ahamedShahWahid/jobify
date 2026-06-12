@@ -10,14 +10,17 @@ from __future__ import annotations
 import uuid
 from uuid import UUID
 
+import structlog
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from kpa.auth.tokens import AccessTokenError, decode_access_token
-from kpa.db.models import EmployerUser, User, UserRole
+from kpa.db.models import Applicant, EmployerUser, User, UserRole
 from kpa.db.session import get_session
 from kpa.settings import Settings
+
+_log = structlog.get_logger(__name__)
 
 
 def _extract_bearer_or_raise_401(request: Request) -> str:
@@ -100,6 +103,42 @@ async def _require_admin(user: User) -> User:
     if user.role != UserRole.ADMIN:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not_an_admin")
     return user
+
+
+async def require_applicant(user: User, session: AsyncSession) -> Applicant:
+    """Resolve the authenticated user to a live applicants row.
+
+    The ONE canonical applicant guard — route modules import this instead of
+    re-implementing it (seven local copies drifted; two lost the
+    ``deleted_at IS NULL`` filter and let DSR-tombstoned applicants through).
+
+    Raises 403 not_an_applicant if user.role is not APPLICANT (before any
+    applicant-row read). Raises 500 applicant_missing if role=applicant but no
+    live row exists — theoretically unreachable (``AuthService._upsert_identity``
+    provisions the row at sign-in), kept as defense in depth; a hit means an
+    out-of-band path created an APPLICANT user without the paired row, or the
+    row was soft-deleted while the user row wasn't. Worth paging on.
+    """
+    if user.role != UserRole.APPLICANT:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="not_an_applicant",
+        )
+    applicant = (
+        await session.execute(
+            select(Applicant).where(
+                Applicant.user_id == user.id,
+                Applicant.deleted_at.is_(None),
+            )
+        )
+    ).scalar_one_or_none()
+    if applicant is None:
+        _log.error("applicant.row-missing-for-applicant-role", user_id=str(user.id))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="applicant_missing",
+        )
+    return applicant
 
 
 async def _require_recruiter_at_employer(

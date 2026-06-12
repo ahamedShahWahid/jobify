@@ -102,3 +102,38 @@ async def test_applicants_applicant_role_returns_403(async_client, applicant_use
     )
     assert r.status_code == 403
     assert r.json()["detail"] == "not_a_recruiter"
+
+
+async def test_applicants_listing_writes_audit_row(async_client, session, applicant_user_and_token):
+    """Listing applicants exposes PII (names + emails) — must be audited,
+    mirroring the resume-download endpoint."""
+    recruiter, token = applicant_user_and_token
+    emp_id = await _setup_employer(async_client, token)
+    job_id = await _create_job(async_client, token, emp_id)
+    await _seed_applications(session, job_id, 2)
+    await session.commit()
+
+    r = await async_client.get(
+        f"/v1/jobs/{job_id}/applicants",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 200, r.text
+
+    import uuid as _uuid
+
+    from sqlalchemy import select as sa_select
+
+    from kpa.db.models import AuditLog
+
+    row = (
+        await session.execute(
+            sa_select(AuditLog).where(
+                AuditLog.action == "job.applicants_listed",
+                AuditLog.resource_id == _uuid.UUID(job_id),
+            )
+        )
+    ).scalar_one()
+    assert row.actor_user_id == recruiter.id
+    assert row.actor_role == "recruiter"
+    assert row.context["employer_id"] == emp_id
+    assert row.context["count"] == 2

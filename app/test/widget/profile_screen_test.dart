@@ -49,8 +49,7 @@ ProviderScope _buildScope({
           buildNumber: '1',
         ),
       ),
-      if (authState != null)
-        authStateProvider.overrideWithValue(authState),
+      if (authState != null) authStateProvider.overrideWithValue(authState),
     ],
     child: MaterialApp(
       theme: ThemeData.light(useMaterial3: true),

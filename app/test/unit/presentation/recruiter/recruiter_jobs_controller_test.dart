@@ -193,8 +193,7 @@ void main() {
         .read(recruiterJobsControllerProvider(false).notifier)
         .loadMore();
 
-    final state =
-        container.read(recruiterJobsControllerProvider(false)).value!;
+    final state = container.read(recruiterJobsControllerProvider(false)).value!;
     expect(state.items, hasLength(3));
     expect(state.hasMore, isFalse);
     expect(state.cursor, isNull);

@@ -92,9 +92,7 @@ async def test_member_can_read_roster_owner_can_mutate(
     assert add.status_code == 201, add.text
 
     # Member can read the roster (2 people now).
-    listing = await async_client.get(
-        f"/v1/employers/{emp_id}/members", headers=_h(member_token)
-    )
+    listing = await async_client.get(f"/v1/employers/{emp_id}/members", headers=_h(member_token))
     assert listing.status_code == 200
     assert len(listing.json()) == 2
 
@@ -251,9 +249,7 @@ async def test_remove_member_demotes_to_applicant(
     assert await _role(session, member.id) == UserRole.APPLICANT
 
     audit = (
-        await session.execute(
-            select(AuditLog).where(AuditLog.action == "employer.member_removed")
-        )
+        await session.execute(select(AuditLog).where(AuditLog.action == "employer.member_removed"))
     ).scalar_one()
     assert audit.context["demoted_to_applicant"] is True
 
@@ -333,9 +329,7 @@ async def test_create_invite_writes_outbox_for_existing_user(
     assert notes[0].payload["employer_id"] == emp_id
 
     audit = (
-        await session.execute(
-            select(AuditLog).where(AuditLog.action == "employer.invite_created")
-        )
+        await session.execute(select(AuditLog).where(AuditLog.action == "employer.invite_created"))
     ).scalar_one()
     assert audit.context["email"] == invitee.email
 
@@ -355,11 +349,7 @@ async def test_create_invite_unknown_email_no_outbox(
     )
     assert r.status_code == 201
     notes = (
-        (
-            await session.execute(
-                select(Notification).where(Notification.kind == "employer_invite")
-            )
-        )
+        (await session.execute(select(Notification).where(Notification.kind == "employer_invite")))
         .scalars()
         .all()
     )
@@ -422,9 +412,7 @@ async def test_list_and_revoke_invite(
     )
     invite_id = created.json()["id"]
 
-    listed = await async_client.get(
-        f"/v1/employers/{emp_id}/invites", headers=_h(owner_token)
-    )
+    listed = await async_client.get(f"/v1/employers/{emp_id}/invites", headers=_h(owner_token))
     assert listed.status_code == 200
     assert len(listed.json()) == 1
 
@@ -433,9 +421,7 @@ async def test_list_and_revoke_invite(
     )
     assert revoked.status_code == 204
 
-    after = await async_client.get(
-        f"/v1/employers/{emp_id}/invites", headers=_h(owner_token)
-    )
+    after = await async_client.get(f"/v1/employers/{emp_id}/invites", headers=_h(owner_token))
     assert after.json() == []
 
 
@@ -502,9 +488,7 @@ async def test_accept_invite_creates_membership_and_flips(
     assert invite.accepted_user_id == invitee.id
 
     audit = (
-        await session.execute(
-            select(AuditLog).where(AuditLog.action == "employer.invite_accepted")
-        )
+        await session.execute(select(AuditLog).where(AuditLog.action == "employer.invite_accepted"))
     ).scalar_one()
     assert audit.context["employer_id"] == emp_id
 
@@ -525,9 +509,7 @@ async def test_accept_invite_wrong_user_404(
         headers=_h(owner_token),
     )
     invite_id = created.json()["id"]
-    r = await async_client.post(
-        f"/v1/me/invites/{invite_id}/accept", headers=_h(wrong_token)
-    )
+    r = await async_client.post(f"/v1/me/invites/{invite_id}/accept", headers=_h(wrong_token))
     assert r.status_code == 404
 
 
@@ -554,9 +536,7 @@ async def test_accept_expired_invite_410(
     )
     await session.commit()
 
-    r = await async_client.post(
-        f"/v1/me/invites/{invite_id}/accept", headers=_h(invitee_token)
-    )
+    r = await async_client.post(f"/v1/me/invites/{invite_id}/accept", headers=_h(invitee_token))
     assert r.status_code == 410
     assert r.json()["detail"] == "invite_expired"
 

@@ -57,7 +57,10 @@ async def test_jobs_has_partial_indexes(session: AsyncSession) -> None:
     """)
     )
     names = {row[0] for row in result}
-    assert "ix_jobs_employer_id_live" in names
+    # 0019 replaced ix_jobs_employer_id_live with the wider composite
+    # (employer_id, posted_at DESC, id DESC) serving the recruiter list.
+    assert "ix_jobs_employer_posted_at_live" in names
+    assert "ix_jobs_employer_id_live" not in names
     assert "ix_jobs_status_posted_at_live" in names
 
 

@@ -26,21 +26,33 @@ class FakeAuthRepository implements AuthRepository {
   AuthState get current => _state;
   @override
   Future<SignedIn> signInWithGoogle() async {
-    const si = SignedIn(userId: 'u1', email: 'u@e.com', role: UserRole.applicant, displayName: 'U');
+    const si = SignedIn(
+        userId: 'u1',
+        email: 'u@e.com',
+        role: UserRole.applicant,
+        displayName: 'U');
     _state = si;
     return si;
   }
 
   @override
   Future<SignedIn> completeWebSignIn(String idToken) async {
-    const si = SignedIn(userId: 'u1', email: 'u@e.com', role: UserRole.applicant, displayName: 'U');
+    const si = SignedIn(
+        userId: 'u1',
+        email: 'u@e.com',
+        role: UserRole.applicant,
+        displayName: 'U');
     _state = si;
     return si;
   }
 
   @override
   Future<SignedIn> refreshSession() async {
-    const si = SignedIn(userId: 'u1', email: 'u@e.com', role: UserRole.applicant, displayName: 'U');
+    const si = SignedIn(
+        userId: 'u1',
+        email: 'u@e.com',
+        role: UserRole.applicant,
+        displayName: 'U');
     _state = si;
     return si;
   }

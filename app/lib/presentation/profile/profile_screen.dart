@@ -40,16 +40,17 @@ class ProfileScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(KpaSpacing.lg),
           children: [
             Text(
-              data.displayName ?? data.email,
+              data.displayName ?? data.email ?? 'Profile',
               style: theme.textTheme.headlineSmall,
             ),
             const SizedBox(height: KpaSpacing.xs),
-            Text(
-              data.email,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+            if (data.email case final email?)
+              Text(
+                email,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
-            ),
             if (ref.watch(currentRoleProvider) == UserRole.applicant) ...[
               const SizedBox(height: KpaSpacing.xl),
               Card(

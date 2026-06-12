@@ -201,6 +201,11 @@ async def build_user_export(
 
     Raises nothing custom — DB errors propagate to the route, which
     converts to 500 via the standard handler.
+
+    TODO(scale): the ~12 section queries run serially on one session
+    (AsyncSession is not safe for concurrent use). Acceptable at MVP volume;
+    if assembly time grows, switch the route to 202 + async delivery rather
+    than parallelizing here.
     """
     user_dict = _row_to_dict(user)
 
@@ -343,9 +348,7 @@ async def build_user_export(
             _row_to_dict(inv)
             for inv in (
                 await session.execute(
-                    select(EmployerInvite).where(
-                        EmployerInvite.invited_by_user_id == user.id
-                    )
+                    select(EmployerInvite).where(EmployerInvite.invited_by_user_id == user.id)
                 )
             )
             .scalars()

@@ -111,18 +111,23 @@ async def _load_invite_for_caller(
     """Load a live invite addressed to the caller, or uniform 404.
 
     Email mismatch and unknown id collapse to the same 404 so we never leak
-    whether an invite exists for someone else.
+    whether an invite exists for someone else. The email match lives in the
+    WHERE clause (``func.lower``) so it shares one normalization path with
+    ``list_my_invites`` instead of a divergent Python-side comparison.
     """
     email = _caller_email(user)
+    if email is None:
+        raise HTTPException(status_code=404, detail="not found")
     invite = (
         await session.execute(
             select(EmployerInvite).where(
                 EmployerInvite.id == invite_id,
+                func.lower(EmployerInvite.email) == email,
                 EmployerInvite.deleted_at.is_(None),
             )
         )
     ).scalar_one_or_none()
-    if invite is None or email is None or invite.email.strip().lower() != email:
+    if invite is None:
         raise HTTPException(status_code=404, detail="not found")
     return invite
 

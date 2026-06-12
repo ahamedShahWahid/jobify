@@ -233,9 +233,7 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      await container
-          .read(jobFormControllerProvider.notifier)
-          .close('job-1');
+      await container.read(jobFormControllerProvider.notifier).close('job-1');
 
       expect(fake.patchCallCount, 1);
       expect(fake.lastPatchBody, {'status': 'closed'});
@@ -253,9 +251,7 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      await container
-          .read(jobFormControllerProvider.notifier)
-          .delete('job-1');
+      await container.read(jobFormControllerProvider.notifier).delete('job-1');
 
       expect(fake.deleteCallCount, 1);
       expect(container.read(jobFormControllerProvider).hasValue, isTrue);

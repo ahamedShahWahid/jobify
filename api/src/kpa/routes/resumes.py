@@ -17,8 +17,13 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kpa.auth.dependencies import current_user
-from kpa.db.models import Applicant, Resume, ResumeParseStatus, User, UserRole
+from kpa.auth.dependencies import (
+    current_user,
+)
+from kpa.auth.dependencies import (
+    require_applicant as _require_applicant,
+)
+from kpa.db.models import Applicant, Resume, ResumeParseStatus, User
 from kpa.db.session import get_session
 from kpa.integrations.storage import Storage, get_storage
 from kpa.settings import Settings
@@ -51,41 +56,6 @@ class ResumeRead(BaseModel):
     size_bytes: int
     parse_status: ResumeParseStatus
     created_at: datetime
-
-
-async def _require_applicant(user: User, session: AsyncSession) -> Applicant:
-    """Resolve the authenticated user to a live applicants row.
-
-    Raises 403 not_an_applicant if user.role is not APPLICANT.
-    Raises 500 applicant_missing if role=applicant but no row exists
-    (theoretically unreachable; defense in depth against an auth
-    auto-provisioning regression).
-    """
-    if user.role != UserRole.APPLICANT:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="not_an_applicant",
-        )
-    applicant = (
-        await session.execute(
-            select(Applicant).where(
-                Applicant.user_id == user.id,
-                Applicant.deleted_at.is_(None),
-            )
-        )
-    ).scalar_one_or_none()
-    if applicant is None:
-        # Should not happen — `AuthService._upsert_identity` creates the
-        # applicants row on first sign-in. If we get here, an out-of-band
-        # path created an APPLICANT user without the paired row, or the
-        # row was soft-deleted. Either way it's a data-integrity bug worth
-        # paging on.
-        _log.error("applicant.row-missing-for-applicant-role", user_id=str(user.id))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="applicant_missing",
-        )
-    return applicant
 
 
 async def _read_upload_capped(file: UploadFile, *, max_bytes: int) -> bytes:

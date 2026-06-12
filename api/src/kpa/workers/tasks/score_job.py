@@ -27,14 +27,16 @@ from kpa.db.models import (
     Match,
 )
 from kpa.scoring.match import TransientScoringError, score_match
-from kpa.settings import Settings
 from kpa.workers.celery_app import celery_app, get_session_maker
+from kpa.workers.celery_app import settings as _settings
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 _log = structlog.get_logger(__name__)
-_settings = Settings()
+
+# Upper bound on concurrent explain() calls per batch (LLM impl hits Gemini).
+_EXPLAIN_CONCURRENCY = 10
 
 
 @celery_app.task(  # type: ignore[untyped-decorator]
@@ -154,7 +156,7 @@ async def _score_job_async(
 
     _explainer = get_match_explainer()
 
-    scores: list[tuple[UUID, Any, str, dict[str, str]]] = []
+    pending: list[tuple[UUID, Any, str, ExplainContext]] = []
     for (
         applicant_id,
         applicant_locs,
@@ -192,8 +194,22 @@ async def _score_job_async(
             applicant_expected_ctc=applicant_ctc,
             applicant_locations=applicant_locs,
         )
-        explanation = await _explainer.explain(ctx)
-        scores.append((applicant_id, ms, applicant_emb_model, explanation))
+        pending.append((applicant_id, ms, applicant_emb_model, ctx))
+
+    # explain() never raises (explainer contract) and the LLM impl is
+    # I/O-bound — run the batch concurrently instead of one Gemini round-trip
+    # per applicant, bounded so a large batch doesn't stampede the API.
+    sem = asyncio.Semaphore(_EXPLAIN_CONCURRENCY)
+
+    async def _explain_bounded(ctx: ExplainContext) -> dict[str, str]:
+        async with sem:
+            return await _explainer.explain(ctx)
+
+    explanations = await asyncio.gather(*(_explain_bounded(ctx) for *_, ctx in pending))
+    scores: list[tuple[UUID, Any, str, dict[str, str]]] = [
+        (applicant_id, ms, model, explanation)
+        for (applicant_id, ms, model, _ctx), explanation in zip(pending, explanations, strict=True)
+    ]
 
     # --- Txn 2: UPSERT each row ---
     async with sm() as session:

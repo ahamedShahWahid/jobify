@@ -105,3 +105,19 @@ async def test_me_applicant_returns_403(async_client, applicant_user_and_token):
     r = await async_client.get("/v1/jobs/me", headers={"Authorization": f"Bearer {token}"})
     assert r.status_code == 403
     assert r.json()["detail"] == "not_a_recruiter"
+
+
+async def test_me_rejects_unknown_status_filter(async_client, applicant_user_and_token):
+    """?status only accepts "open"/"closed" — anything else is a 422.
+
+    Pins the fail-closed contract: an unknown value must NOT silently bypass
+    the default open-only filter.
+    """
+    _, token = applicant_user_and_token
+    emp_id = await _setup_employer(async_client, token)
+    await _create_job(async_client, token, emp_id, "Role X")
+
+    r = await async_client.get(
+        "/v1/jobs/me?status=banana", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert r.status_code == 422

@@ -45,6 +45,7 @@ from kpa.workers.celery_app import (
     get_email_channel,
     get_session_maker,
 )
+from kpa.workers.celery_app import settings as _worker_settings
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -112,13 +113,11 @@ async def _sweep_notifications_async(
     Tests inject ``sm`` (savepoint-bound sessionmaker), a fake ``email_channel``,
     and an explicit ``batch_size`` to avoid env-var monkeypatching.
     """
-    from kpa.settings import Settings
-
-    _settings = Settings()
-
     sm = sm or get_session_maker()
     email_channel = email_channel or get_email_channel()
-    effective_batch_size = batch_size if batch_size is not None else _settings.notify_batch_size
+    effective_batch_size = (
+        batch_size if batch_size is not None else _worker_settings.notify_batch_size
+    )
 
     # --- Txn 1: claim a batch (SELECT FOR UPDATE SKIP LOCKED → set DISPATCHING) ---
     async with sm() as session:

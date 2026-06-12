@@ -19,7 +19,11 @@ class MeDto {
   factory MeDto.fromJson(Map<String, dynamic> json) => _$MeDtoFromJson(json);
 
   final String id;
-  final String email;
+
+  // Nullable in lockstep with the backend: users.email is nullable in the DB
+  // (phone-only auth later) and MeResponse.email is `str | None`.
+  final String? email;
+
   final String role;
 
   // Not currently emitted by /v1/me; declared optional so the UI's
@@ -49,8 +53,10 @@ class ApplicantSummaryDto {
 
   final String id;
 
+  // Nullable in lockstep with the backend: migration 0015 made
+  // applicants.full_name nullable (DSR scrubbing).
   @JsonKey(name: 'full_name')
-  final String fullName;
+  final String? fullName;
 
   final List<String> locations;
 

@@ -12,11 +12,9 @@ ETag: W/"sha256(applicant_id|max_updated_at|count)".
 
 from __future__ import annotations
 
-import base64
-import binascii
-import json
 import uuid
 from datetime import datetime
+from urllib.parse import quote
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -26,9 +24,14 @@ from sqlalchemy import and_, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from kpa.audit import audit_log
-from kpa.auth.dependencies import _require_recruiter, current_user
+from kpa.auth.dependencies import (
+    _require_recruiter,
+    current_user,
+)
+from kpa.auth.dependencies import (
+    require_applicant as _require_applicant,
+)
 from kpa.db.models import (
-    Applicant,
     Application,
     ApplicationStatus,
     Employer,
@@ -39,11 +42,11 @@ from kpa.db.models import (
     NotificationChannel,
     Resume,
     User,
-    UserRole,
 )
 from kpa.db.session import get_session
 from kpa.integrations.storage.base import Storage, get_storage
-from kpa.routes.feed import EmployerRead, JobRead, make_weak_etag
+from kpa.pagination import decode_cursor, encode_cursor, make_weak_etag
+from kpa.routes.schemas import EmployerRead, JobRead
 
 _log = structlog.get_logger(__name__)
 router = APIRouter(prefix="/v1", tags=["applications"])
@@ -94,56 +97,18 @@ class WithdrawRequest(BaseModel):
 
 def encode_cursor_apps(created_at: datetime, application_id: uuid.UUID) -> str:
     """Pack (created_at, application_id) into an opaque base64 string."""
-    payload = {
-        "created_at": created_at.isoformat(),
-        "application_id": str(application_id),
-    }
-    raw = json.dumps(payload).encode("utf-8")
-    return base64.urlsafe_b64encode(raw).decode("ascii")
+    return encode_cursor(
+        {"created_at": created_at.isoformat(), "application_id": str(application_id)}
+    )
 
 
 def decode_cursor_apps(cursor: str) -> tuple[datetime, uuid.UUID]:
     """Decode an opaque cursor. Raises ValueError on any malformed input."""
+    payload = decode_cursor(cursor)
     try:
-        raw = base64.urlsafe_b64decode(cursor.encode("ascii"))
-        payload = json.loads(raw)
         return datetime.fromisoformat(payload["created_at"]), uuid.UUID(payload["application_id"])
-    except (ValueError, KeyError, TypeError, json.JSONDecodeError, binascii.Error) as exc:
+    except (ValueError, KeyError, TypeError) as exc:
         raise ValueError(f"invalid_cursor: {exc}") from exc
-
-
-# ---------------------------------------------------------------------------
-# Auth helper (inline — mirrors feed.py and resumes.py, intentionally)
-# ---------------------------------------------------------------------------
-
-
-async def _require_applicant(user: User, session: AsyncSession) -> Applicant:
-    """Reject non-applicant tokens with 403 before any applicant-row read.
-
-    Raises 500 applicant_missing as defence-in-depth (sign-in provisions the row).
-    Mirrors the helper in routes/feed.py and routes/resumes.py — not extracted
-    per the CLAUDE.md convention for this slice.
-    """
-    if user.role != UserRole.APPLICANT:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="not_an_applicant",
-        )
-    applicant = (
-        await session.execute(
-            select(Applicant).where(
-                Applicant.user_id == user.id,
-                Applicant.deleted_at.is_(None),
-            )
-        )
-    ).scalar_one_or_none()
-    if applicant is None:
-        _log.error("applicant.row-missing-for-applicant-role", user_id=str(user.id))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="applicant_missing",
-        )
-    return applicant
 
 
 # ---------------------------------------------------------------------------
@@ -440,6 +405,20 @@ async def list_applications(
 # ---------------------------------------------------------------------------
 
 
+def _content_disposition_attachment(filename: str) -> str:
+    """RFC 6266 Content-Disposition for an applicant-controlled filename.
+
+    The filename comes from the upload (attacker-controlled): quotes,
+    backslashes and control chars would break out of the quoted-string (or
+    split the header). ASCII fallback replaces them with "_"; the exact
+    original name travels percent-encoded in the filename* parameter.
+    """
+    fallback = "".join(c if 32 <= ord(c) < 127 else "_" for c in filename)
+    fallback = fallback.replace('"', "_").replace("\\", "_")
+    encoded = quote(filename, safe="")
+    return f"attachment; filename=\"{fallback}\"; filename*=UTF-8''{encoded}"
+
+
 @router.get("/applications/{application_id}/resume")
 async def recruiter_download_application_resume(
     application_id: uuid.UUID,
@@ -501,8 +480,6 @@ async def recruiter_download_application_resume(
     if resume.storage_key is None or resume.original_filename is None:
         raise HTTPException(status_code=404, detail="not found")
 
-    content = await storage.read(resume.storage_key)
-
     _log.info(
         "recruiter.resume-accessed",
         recruiter_user_id=str(user.id),
@@ -524,10 +501,15 @@ async def recruiter_download_application_resume(
             "employer_id": str(job.employer_id),
         },
     )
+    # Commit BEFORE the blob read so the DB connection is released during
+    # storage I/O (local disk today, S3 later) — and so the canonical
+    # structlog → audit_log → side-effect order holds.
     await session.commit()
+
+    content = await storage.read(resume.storage_key)
 
     return Response(
         content=content,
         media_type=resume.content_type,
-        headers={"Content-Disposition": f'attachment; filename="{resume.original_filename}"'},
+        headers={"Content-Disposition": _content_disposition_attachment(resume.original_filename)},
     )

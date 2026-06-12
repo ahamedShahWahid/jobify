@@ -170,7 +170,8 @@ void main() {
     });
 
     // 1b. signInWithGoogle: role field is parsed from the OAuth exchange response.
-    test('signInWithGoogle: role is parsed from the exchange response', () async {
+    test('signInWithGoogle: role is parsed from the exchange response',
+        () async {
       final h = _buildHarness();
       h.mock.on(
         'POST',

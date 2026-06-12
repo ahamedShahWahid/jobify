@@ -132,8 +132,10 @@ async def test_score_applicant_batches_and_dispatches_cursor(
     await _score_applicant_async(applicant.id, sm=_make_sm(session), batch_size=1)
 
     ordered_job_ids = (
-        await session.execute(select(Job.id).where(Job.id.in_([j1.id, j2.id])).order_by(Job.id))
-    ).scalars().all()
+        (await session.execute(select(Job.id).where(Job.id.in_([j1.id, j2.id])).order_by(Job.id)))
+        .scalars()
+        .all()
+    )
     rows = (
         (await session.execute(select(Match).where(Match.applicant_id == applicant.id)))
         .scalars()

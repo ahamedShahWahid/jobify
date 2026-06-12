@@ -13,13 +13,17 @@ from typing import Annotated
 from uuid import UUID
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kpa.auth.dependencies import current_user
-from kpa.db.models import Applicant, User, UserRole
+from kpa.auth.dependencies import (
+    current_user,
+)
+from kpa.auth.dependencies import (
+    require_applicant as _require_applicant,
+)
+from kpa.db.models import User
 from kpa.db.session import get_session
 from kpa.routes.me import ApplicantRead, MeResponse
 
@@ -53,31 +57,6 @@ class ProfileUpdate(BaseModel):
             if f in self.model_fields_set and getattr(self, f) is None:
                 raise ValueError(f"{f} cannot be null")
         return self
-
-
-async def _require_applicant(user: User, session: AsyncSession) -> Applicant:
-    """Resolve the authenticated user to a live applicants row.
-
-    403 not_an_applicant if role != APPLICANT; 500 applicant_missing if the
-    paired row is absent (sign-in provisions it — defense in depth).
-    """
-    if user.role != UserRole.APPLICANT:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not_an_applicant")
-    applicant = (
-        await session.execute(
-            select(Applicant).where(
-                Applicant.user_id == user.id,
-                Applicant.deleted_at.is_(None),
-            )
-        )
-    ).scalar_one_or_none()
-    if applicant is None:
-        _log.error("applicant.row-missing-for-applicant-role", user_id=str(user.id))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="applicant_missing",
-        )
-    return applicant
 
 
 def _dispatch_score(applicant_id: UUID) -> None:

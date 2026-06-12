@@ -8,7 +8,7 @@ part of 'me_dto.dart';
 
 MeDto _$MeDtoFromJson(Map<String, dynamic> json) => MeDto(
       id: json['id'] as String,
-      email: json['email'] as String,
+      email: json['email'] as String?,
       role: json['role'] as String,
       displayName: json['display_name'] as String?,
       applicant: json['applicant'] == null
@@ -28,7 +28,7 @@ Map<String, dynamic> _$MeDtoToJson(MeDto instance) => <String, dynamic>{
 ApplicantSummaryDto _$ApplicantSummaryDtoFromJson(Map<String, dynamic> json) =>
     ApplicantSummaryDto(
       id: json['id'] as String,
-      fullName: json['full_name'] as String,
+      fullName: json['full_name'] as String?,
       locations: (json['locations'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
