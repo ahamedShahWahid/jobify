@@ -1,10 +1,10 @@
 name: app
 on:
   pull_request:
-    paths: ['app/**']
+    paths: ['app/**', '.github/workflows/app.yml']
   push:
     branches: [main]
-    paths: ['app/**']
+    paths: ['app/**', '.github/workflows/app.yml']
 
 jobs:
   test:
