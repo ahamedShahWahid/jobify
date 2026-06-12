@@ -226,3 +226,39 @@ async def test_export_writes_two_audit_rows(
     completed = next(r for r in audit_rows if r.action == "user.dsr_export_completed")
     assert "section_counts" in completed.context
     assert completed.context["section_counts"]["user_consents"] == 7
+
+
+async def test_export_serializes_pgvector_embedding(
+    async_client: AsyncClient, session: AsyncSession
+) -> None:
+    """An applicant WITH an embedding row must export cleanly.
+
+    pgvector's asyncpg codec materializes the vector as numpy.ndarray on a
+    real DB round-trip (the savepoint identity map hides this — it returns
+    the original Python list), and _row_to_dict must convert it or
+    model_dump_json() 500s. Caught live by E2E; expire_all() forces the
+    reload here.
+    """
+    from jobify.db.models import ApplicantEmbedding
+
+    user, applicant, token = await _make_applicant(session)
+    session.add(
+        ApplicantEmbedding(
+            applicant_id=applicant.id,
+            embedding=[0.5] * 1536,
+            model_name="test-model",
+            canonicalized_text_hash="x" * 64,
+            input_tokens=128,
+        )
+    )
+    await session.commit()
+    session.expire_all()  # force the next read through asyncpg → ndarray
+
+    resp = await async_client.post(
+        "/v1/me/dsr/export", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert resp.status_code == 200, resp.text
+    emb = resp.json()["applicant_embedding"]
+    assert emb is not None
+    assert isinstance(emb["embedding"], list)
+    assert len(emb["embedding"]) == 1536

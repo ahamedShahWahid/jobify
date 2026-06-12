@@ -177,6 +177,10 @@ def _row_to_dict(row: object) -> dict[str, Any]:
             continue
         if hasattr(v, "value") and hasattr(type(v), "__members__"):  # StrEnum / Enum
             out[k] = v.value
+        elif hasattr(v, "tolist"):  # numpy.ndarray — pgvector's asyncpg codec
+            # returns vectors as ndarray on a real DB round-trip; pydantic
+            # cannot JSON-serialize it (live 500 on export until converted).
+            out[k] = v.tolist()
         elif hasattr(v, "isoformat"):  # datetime
             out[k] = v.isoformat()
         elif hasattr(v, "hex"):  # UUID
