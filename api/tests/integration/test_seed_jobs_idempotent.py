@@ -23,6 +23,8 @@ from jobify.scripts.seed_jobs import (
     _apply_in_session,
 )
 
+pytestmark = pytest.mark.integration
+
 SAMPLE_JOBS_PATH = Path(__file__).resolve().parents[2] / "data" / "sample_jobs.json"
 
 

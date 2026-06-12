@@ -18,6 +18,8 @@ from jobify.db.models import (
     UserRole,
 )
 
+pytestmark = pytest.mark.integration
+
 _JWT_SECRET = "x" * 32  # matches JOBIFY_JWT_SECRET set by the integration fixtures
 
 

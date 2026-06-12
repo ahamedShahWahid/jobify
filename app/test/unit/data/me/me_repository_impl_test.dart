@@ -48,12 +48,11 @@ void main() {
       const ProfileUpdateDto(
         fullName: 'Alice Khan',
         locations: ['Pune'],
-        expectedCtc: null,
       ),
     );
     expect(me.applicant?.fullName, 'Alice Khan');
     final sent =
-        mock.lastDataFor('PATCH', '/v1/applicants/me') as Map<String, dynamic>;
+        mock.lastDataFor('PATCH', '/v1/applicants/me')! as Map<String, dynamic>;
     expect(sent['full_name'], 'Alice Khan');
     expect(sent['locations'], ['Pune']);
     expect(sent.containsKey('expected_ctc'), isTrue);

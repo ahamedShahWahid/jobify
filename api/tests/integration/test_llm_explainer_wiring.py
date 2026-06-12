@@ -23,6 +23,8 @@ from jobify.db.models import (
 )
 from jobify.workers.tasks.score_applicant import _score_applicant_async
 
+pytestmark = pytest.mark.integration
+
 
 def _make_sm(session: AsyncSession) -> async_sessionmaker[AsyncSession]:
     return async_sessionmaker(bind=session.bind, expire_on_commit=False)

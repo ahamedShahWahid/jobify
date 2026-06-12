@@ -35,6 +35,10 @@ class FeedItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isClosed = job.status != JobStatus.open;
+    final meta = [
+      if (job.locations.isNotEmpty) job.locations.join(', '),
+      _ago(job.postedAt),
+    ].join(' · ');
     return Card(
       child: InkWell(
         onTap: onTap,
@@ -74,7 +78,7 @@ class FeedItemCard extends StatelessWidget {
               Text(job.title, style: theme.textTheme.titleMedium),
               const SizedBox(height: JobifySpacing.xs),
               Text(
-                '${job.locations.isEmpty ? '' : '${job.locations.join(', ')} · '}${_ago(job.postedAt)}',
+                meta,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),

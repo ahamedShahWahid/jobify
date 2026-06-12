@@ -23,6 +23,8 @@ from jobify.db.models import (
 from jobify.scoring.match import TransientScoringError
 from jobify.workers.tasks.score_job import _score_job_async
 
+pytestmark = pytest.mark.integration
+
 
 def _make_sm(session: AsyncSession) -> async_sessionmaker[AsyncSession]:
     from sqlalchemy.ext.asyncio import async_sessionmaker

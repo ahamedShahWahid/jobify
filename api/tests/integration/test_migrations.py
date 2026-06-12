@@ -6,6 +6,8 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.mark.integration
 async def test_migrated_db_has_users_and_applicants_tables(session: AsyncSession) -> None:

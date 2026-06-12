@@ -1,7 +1,6 @@
-import 'package:json_annotation/json_annotation.dart';
-
 import 'package:jobify_app/data/feed/match_generator.dart';
 import 'package:jobify_app/data/jobs/job_status.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'feed_dto.g.dart';
 
@@ -90,9 +89,9 @@ class JobSummaryDto {
   const JobSummaryDto({
     required this.id,
     required this.title,
-    this.locations = const [],
     required this.status,
     required this.postedAt,
+    this.locations = const [],
     this.description,
   });
 

@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jobify_app/data/feed/feed_dto.dart';
-import 'package:jobify_app/data/feed/feed_repository_impl.dart';
 import 'package:jobify_app/data/feed/feed_repository.dart';
+import 'package:jobify_app/data/feed/feed_repository_impl.dart';
 import 'package:jobify_app/data/jobs/job_status.dart';
 import 'package:jobify_app/presentation/feed/feed_controller.dart';
 
@@ -58,7 +58,6 @@ void main() {
             FeedPageDto(items: [_item('j1')], nextCursor: 'c1'),
             FeedPageDto(
               items: [_item('j2'), _item('j3')],
-              nextCursor: null,
             ),
           ]),
         ),
@@ -76,7 +75,7 @@ void main() {
       overrides: [
         feedRepositoryProvider.overrideWithValue(
           _FakeFeedRepo([
-            FeedPageDto(items: [_item('j1')], nextCursor: null),
+            FeedPageDto(items: [_item('j1')]),
           ]),
         ),
       ],

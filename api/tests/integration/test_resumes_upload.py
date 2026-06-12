@@ -14,6 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jobify.auth.google_verifier import GoogleClaims
 from jobify.db.models import Resume, ResumeParseStatus
 
+pytestmark = pytest.mark.integration
+
 _TINY_PDF = b"%PDF-1.4\n%minimal\n"
 
 

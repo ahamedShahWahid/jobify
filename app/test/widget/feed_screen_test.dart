@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jobify_app/data/feed/feed_dto.dart';
-import 'package:jobify_app/data/feed/feed_repository_impl.dart';
 import 'package:jobify_app/data/feed/feed_repository.dart';
+import 'package:jobify_app/data/feed/feed_repository_impl.dart';
 import 'package:jobify_app/data/jobs/job_status.dart';
 import 'package:jobify_app/presentation/feed/feed_screen.dart';
 
@@ -30,7 +30,7 @@ void main() {
       _wrap(
         const FeedScreen(),
         repo: _FakeFeedRepo(
-          const FeedPageDto(items: [], nextCursor: null),
+          const FeedPageDto(items: []),
         ),
       ),
     );
@@ -40,10 +40,10 @@ void main() {
 
   testWidgets('renders feed item cards', (tester) async {
     final item = FeedItemDto(
-      match: MatchSummaryDto(
+      match: const MatchSummaryDto(
         id: 'm1',
         totalScore: 0.8,
-        scoreComponents: const {},
+        scoreComponents: {},
       ),
       job: JobSummaryDto(
         id: 'j1',
@@ -58,7 +58,7 @@ void main() {
       _wrap(
         const FeedScreen(),
         repo: _FakeFeedRepo(
-          FeedPageDto(items: [item], nextCursor: null),
+          FeedPageDto(items: [item]),
         ),
       ),
     );

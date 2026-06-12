@@ -15,6 +15,8 @@ from jobify.integrations.embeddings.base import (
 )
 from jobify.workers.tasks.embed_job import _embed_job_async, embed_job
 
+pytestmark = pytest.mark.integration
+
 
 def _make_sm(session: AsyncSession) -> async_sessionmaker[AsyncSession]:
     """Build a sessionmaker that shares the test's DB connection.

@@ -28,6 +28,8 @@ from tests.integration.test_sweep_notifications import (
     _seed_notification,
 )
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.mark.integration
 async def test_revoked_email_consent_cancels_next_sweep(

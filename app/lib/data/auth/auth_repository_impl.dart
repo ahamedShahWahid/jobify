@@ -67,8 +67,8 @@ class AuthRepositoryImpl implements AuthRepository {
     return _exchangeGoogleIdToken(idToken);
   }
 
-  /// Trade a Google ID token for a Jobify session. Shared by the mobile imperative
-  /// path and the web rendered-button path.
+  /// Trade a Google ID token for a Jobify session. Shared by the mobile
+  /// imperative  /// path and the web rendered-button path.
   Future<SignedIn> _exchangeGoogleIdToken(String idToken) async {
     try {
       final res = await _dio.post<Map<String, dynamic>>(

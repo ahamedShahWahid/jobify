@@ -4,8 +4,8 @@ import 'package:jobify_app/core/error/exceptions.dart';
 import 'package:jobify_app/data/auth/auth_repository.dart';
 import 'package:jobify_app/data/auth/auth_repository_provider.dart';
 import 'package:jobify_app/data/auth/auth_state.dart';
-import 'package:jobify_app/data/auth/user_role.dart';
 import 'package:jobify_app/data/auth/token_storage.dart';
+import 'package:jobify_app/data/auth/user_role.dart';
 import 'package:jobify_app/presentation/splash/bootstrap_controller.dart';
 
 class _FakeStorage implements TokenStorage {
@@ -33,7 +33,10 @@ class _FakeAuthRepo implements AuthRepository {
   Future<SignedIn> refreshSession() async {
     if (refreshThrows != null) throw refreshThrows!;
     return const SignedIn(
-        userId: 'u1', email: 'e@e.com', role: UserRole.applicant);
+      userId: 'u1',
+      email: 'e@e.com',
+      role: UserRole.applicant,
+    );
   }
 
   @override

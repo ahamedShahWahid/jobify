@@ -21,10 +21,11 @@ import '../helpers/fake_repositories.dart';
 class _SignedInAuthStateNotifier extends AuthStateNotifier {
   @override
   AuthState build() => const SignedIn(
-      userId: 'u1',
-      email: 'u@e.com',
-      role: UserRole.applicant,
-      displayName: 'U');
+        userId: 'u1',
+        email: 'u@e.com',
+        role: UserRole.applicant,
+        displayName: 'U',
+      );
 }
 
 class _Bootstrapped extends BootstrapController {
@@ -76,7 +77,10 @@ void main() {
             authRepositoryProvider.overrideWithValue(
               FakeAuthRepository(
                 initial: const SignedIn(
-                    userId: 'u1', email: 'u@e.com', role: UserRole.applicant),
+                  userId: 'u1',
+                  email: 'u@e.com',
+                  role: UserRole.applicant,
+                ),
               ),
             ),
             feedRepositoryProvider.overrideWithValue(

@@ -24,8 +24,8 @@ class PrivacyScreen extends ConsumerWidget {
       if (err != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content:
-                  Text("Couldn't update preference. Change was reverted.")),
+            content: Text("Couldn't update preference. Change was reverted."),
+          ),
         );
       }
     });
@@ -61,8 +61,10 @@ class _PrivacyBody extends ConsumerWidget {
           padding: const EdgeInsets.all(JobifySpacing.lg),
           children: [
             // ── Notification preferences section ──────────────────────────
-            Text('Notification preferences',
-                style: theme.textTheme.titleMedium),
+            Text(
+              'Notification preferences',
+              style: theme.textTheme.titleMedium,
+            ),
             const SizedBox(height: JobifySpacing.sm),
             ...ConsentScope.v0VisibleScopes.map((scope) {
               final granted = consentMap[scope.wire] ?? false;
@@ -146,7 +148,8 @@ class _PrivacyBody extends ConsumerWidget {
         builder: (c) => AlertDialog(
           title: const Text('Turn off service emails?'),
           content: const Text(
-            "You won't receive emails about your applications, matches, or account. Are you sure?",
+            "You won't receive emails about your applications, "
+            'matches, or account. Are you sure?',
           ),
           actions: [
             TextButton(

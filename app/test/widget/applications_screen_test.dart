@@ -4,10 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jobify_app/data/feed/feed_dto.dart';
 import 'package:jobify_app/data/jobs/application_source.dart';
 import 'package:jobify_app/data/jobs/application_status.dart';
+import 'package:jobify_app/data/jobs/applications_repository.dart';
 import 'package:jobify_app/data/jobs/applications_repository_impl.dart';
 import 'package:jobify_app/data/jobs/job_status.dart';
 import 'package:jobify_app/data/jobs/jobs_dto.dart';
-import 'package:jobify_app/data/jobs/applications_repository.dart';
 import 'package:jobify_app/presentation/applications/applications_screen.dart';
 
 class _FakeRepo implements ApplicationsRepository {
@@ -39,7 +39,7 @@ void main() {
       _wrap(
         const ApplicationsScreen(),
         repo: _FakeRepo(
-          const ApplicationsPageDto(items: [], nextCursor: null),
+          const ApplicationsPageDto(items: []),
         ),
       ),
     );
@@ -55,15 +55,15 @@ void main() {
           jobId: 'j1',
           status: ApplicationStatus.applied,
           source: ApplicationSource.feed,
-          createdAt: DateTime(2026, 5, 1),
-          updatedAt: DateTime(2026, 5, 1),
+          createdAt: DateTime(2026, 5),
+          updatedAt: DateTime(2026, 5),
         ),
         job: JobSummaryDto(
           id: 'j1',
           title: 'Eng',
           locations: const ['BLR'],
           status: JobStatus.open,
-          postedAt: DateTime(2026, 4, 1),
+          postedAt: DateTime(2026, 4),
         ),
         employer: const EmployerSummaryDto(id: 'e1', name: 'Acme'),
       ),
@@ -81,7 +81,7 @@ void main() {
           title: 'Designer',
           locations: const ['BLR'],
           status: JobStatus.open,
-          postedAt: DateTime(2026, 4, 1),
+          postedAt: DateTime(2026, 4),
         ),
         employer: const EmployerSummaryDto(id: 'e2', name: 'Beta'),
       ),
@@ -90,7 +90,7 @@ void main() {
       _wrap(
         const ApplicationsScreen(),
         repo: _FakeRepo(
-          ApplicationsPageDto(items: items, nextCursor: null),
+          ApplicationsPageDto(items: items),
         ),
       ),
     );

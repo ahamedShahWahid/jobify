@@ -3,10 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:riverpod/src/framework.dart' show Override;
-
 import 'package:jobify_app/presentation/auth/sign_in_controller.dart';
 import 'package:jobify_app/presentation/auth/sign_in_screen.dart';
+import 'package:riverpod/src/framework.dart' show Override;
 
 Widget _wrap(Widget child, {List<Override> overrides = const []}) {
   return ProviderScope(

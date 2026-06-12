@@ -64,12 +64,15 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.warning_amber_outlined,
-                      color: theme.colorScheme.onErrorContainer),
+                  Icon(
+                    Icons.warning_amber_outlined,
+                    color: theme.colorScheme.onErrorContainer,
+                  ),
                   const SizedBox(width: JobifySpacing.sm),
                   Expanded(
                     child: Text(
-                      'This will permanently delete your personal data on Jobify. This action is irreversible.',
+                      'This will permanently delete your personal data '
+                      'on Jobify. This action is irreversible.',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onErrorContainer,
                       ),
@@ -92,7 +95,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
             ),
             const SizedBox(height: JobifySpacing.xs),
             Text(
-              "Before you continue, we recommend downloading your data.",
+              'Before you continue, we recommend downloading your data.',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

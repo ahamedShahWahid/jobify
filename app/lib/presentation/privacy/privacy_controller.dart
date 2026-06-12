@@ -1,10 +1,9 @@
 import 'package:flutter/services.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
 import 'package:jobify_app/data/consents/consent_dto.dart';
 import 'package:jobify_app/data/consents/consents_repository_impl.dart';
 import 'package:jobify_app/data/dsr/dsr_repository_impl.dart';
 import 'package:jobify_app/presentation/privacy/privacy_state.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'privacy_controller.g.dart';
 
@@ -46,10 +45,12 @@ class PrivacyController extends _$PrivacyController {
       state = AsyncData(current.copyWith(consents: canonical));
     } catch (e) {
       // Rollback on error.
-      state = AsyncData(current.copyWith(
-        consents: previous,
-        mutationError: e,
-      ));
+      state = AsyncData(
+        current.copyWith(
+          consents: previous,
+          mutationError: e,
+        ),
+      );
     }
   }
 
@@ -59,17 +60,20 @@ class PrivacyController extends _$PrivacyController {
     final current = state.value;
     if (current == null) return null;
     state = AsyncData(
-        current.copyWith(exportInProgress: true, mutationError: null));
+      current.copyWith(exportInProgress: true, mutationError: null),
+    );
     try {
       final envelope = await ref.read(dsrRepositoryProvider).exportData();
       await Clipboard.setData(ClipboardData(text: envelope));
       state = AsyncData(current.copyWith(exportInProgress: false));
       return envelope;
     } catch (e) {
-      state = AsyncData(current.copyWith(
-        exportInProgress: false,
-        mutationError: e,
-      ));
+      state = AsyncData(
+        current.copyWith(
+          exportInProgress: false,
+          mutationError: e,
+        ),
+      );
       return null;
     }
   }

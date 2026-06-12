@@ -26,6 +26,8 @@ from jobify.db.models import (
     UserRole,
 )
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.mark.integration
 async def test_create_user_and_applicant(session: AsyncSession) -> None:

@@ -2,9 +2,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jobify_app/data/api/access_token_holder.dart';
 import 'package:jobify_app/data/auth/auth_repository_impl.dart';
+import 'package:jobify_app/data/auth/auth_state.dart';
 import 'package:jobify_app/data/auth/google_sign_in_data_source.dart';
 import 'package:jobify_app/data/auth/token_storage.dart';
-import 'package:jobify_app/data/auth/auth_state.dart';
 import 'package:jobify_app/data/auth/user_role.dart';
 
 import '../../../helpers/mock_interceptor.dart';
@@ -14,8 +14,8 @@ import '../../../helpers/mock_interceptor.dart';
 // ---------------------------------------------------------------------------
 
 class _InMemoryStorage implements TokenStorage {
-  String? token;
   _InMemoryStorage([this.token]);
+  String? token;
 
   @override
   Future<String?> readRefreshToken() async => token;
@@ -129,7 +129,7 @@ Map<String, dynamic> _meBody({
       'display_name': displayName,
     };
 
-Map<String, dynamic> _401Body() => {
+Map<String, dynamic> body401() => {
       'type': 'about:blank',
       'title': 'Unauthorized',
       'status': 401,
@@ -169,7 +169,8 @@ void main() {
       expect(emittedIn.email, 'user@example.com');
     });
 
-    // 1b. signInWithGoogle: role field is parsed from the OAuth exchange response.
+    // 1b. signInWithGoogle: role field is parsed from the OAuth exchange
+    // response.
     test('signInWithGoogle: role is parsed from the exchange response',
         () async {
       final h = _buildHarness();
@@ -195,7 +196,7 @@ void main() {
     test('signInWithGoogle: 401 → throws AuthException and emits SignedOut',
         () async {
       final h = _buildHarness();
-      h.mock.on('POST', '/v1/auth/oauth/google', 401, _401Body());
+      h.mock.on('POST', '/v1/auth/oauth/google', 401, body401());
 
       await expectLater(
         h.repo.signInWithGoogle(),
@@ -210,9 +211,10 @@ void main() {
       expect(h.holder.current, isNull);
     });
 
-    // 3. refreshSession: no stored token → throws AuthException no_refresh_token.
+    // 3. refreshSession: no stored token → throws AuthException
+    // no_refresh_token.
     test('refreshSession: no stored token → throws no_refresh_token', () async {
-      final h = _buildHarness(storedRefreshToken: null);
+      final h = _buildHarness();
 
       await expectLater(
         h.repo.refreshSession(),
@@ -247,8 +249,9 @@ void main() {
       // Storage updated with new refresh token.
       expect(await h.storage.readRefreshToken(), 'NEW_REFRESH');
 
-      // Request body must use the backend's `refresh_token` key (not `refresh`).
-      final reqData = h.mock.lastDataFor('POST', '/v1/auth/refresh')
+      // Request body must use the backend's `refresh_token` key
+      // (not `refresh`).
+      final reqData = h.mock.lastDataFor('POST', '/v1/auth/refresh')!
           as Map<String, dynamic>;
       expect(reqData['refresh_token'], 'OLD_REFRESH');
 
@@ -259,11 +262,11 @@ void main() {
 
     // 5. refreshSession: 401 from /v1/auth/refresh → clear + emit SignedOut + throws.
     test(
-        'refreshSession: 401 from refresh endpoint → clears tokens and emits SignedOut',
-        () async {
+        'refreshSession: 401 from refresh endpoint → clears tokens and '
+        'emits SignedOut', () async {
       final h = _buildHarness(storedRefreshToken: 'OLD_REFRESH');
       h.holder.set('OLD_ACCESS');
-      h.mock.on('POST', '/v1/auth/refresh', 401, _401Body());
+      h.mock.on('POST', '/v1/auth/refresh', 401, body401());
 
       await expectLater(
         h.repo.refreshSession(),
@@ -281,8 +284,8 @@ void main() {
 
     // 6. signOut: clears everything even if /v1/auth/logout returns 500.
     test(
-        'signOut: clears holder + storage + emits SignedOut even if logout fails',
-        () async {
+        'signOut: clears holder + storage + emits SignedOut even if '
+        'logout fails', () async {
       final h = _buildHarness(storedRefreshToken: 'REFRESH');
       h.holder.set('ACCESS');
       // Server returns 500 — validateStatus covers < 500, so 500 will throw.

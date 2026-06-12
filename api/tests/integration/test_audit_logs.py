@@ -23,6 +23,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jobify.audit import audit_log
 from jobify.db.models import AuditLog, User, UserRole
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.mark.asyncio
 async def test_happy_path_writes_row(session: AsyncSession) -> None:

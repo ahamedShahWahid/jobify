@@ -27,10 +27,11 @@ class FakeAuthRepository implements AuthRepository {
   @override
   Future<SignedIn> signInWithGoogle() async {
     const si = SignedIn(
-        userId: 'u1',
-        email: 'u@e.com',
-        role: UserRole.applicant,
-        displayName: 'U');
+      userId: 'u1',
+      email: 'u@e.com',
+      role: UserRole.applicant,
+      displayName: 'U',
+    );
     _state = si;
     return si;
   }
@@ -38,10 +39,11 @@ class FakeAuthRepository implements AuthRepository {
   @override
   Future<SignedIn> completeWebSignIn(String idToken) async {
     const si = SignedIn(
-        userId: 'u1',
-        email: 'u@e.com',
-        role: UserRole.applicant,
-        displayName: 'U');
+      userId: 'u1',
+      email: 'u@e.com',
+      role: UserRole.applicant,
+      displayName: 'U',
+    );
     _state = si;
     return si;
   }
@@ -49,10 +51,11 @@ class FakeAuthRepository implements AuthRepository {
   @override
   Future<SignedIn> refreshSession() async {
     const si = SignedIn(
-        userId: 'u1',
-        email: 'u@e.com',
-        role: UserRole.applicant,
-        displayName: 'U');
+      userId: 'u1',
+      email: 'u@e.com',
+      role: UserRole.applicant,
+      displayName: 'U',
+    );
     _state = si;
     return si;
   }

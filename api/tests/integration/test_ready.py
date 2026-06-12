@@ -5,6 +5,8 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.mark.integration
 def test_ready_returns_200_when_db_reachable(db_url: str, monkeypatch: pytest.MonkeyPatch) -> None:

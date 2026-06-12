@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:jobify_app/data/api/error_mapping.dart';
 import 'package:jobify_app/core/error/exceptions.dart';
+import 'package:jobify_app/data/api/error_mapping.dart';
 
 DioException _dioErrWithResponse({
   required int status,
@@ -18,7 +18,7 @@ DioException _dioErrWithResponse({
       headers: requestId == null
           ? Headers()
           : Headers.fromMap({
-              'x-request-id': [requestId]
+              'x-request-id': [requestId],
             }),
     ),
     type: DioExceptionType.badResponse,

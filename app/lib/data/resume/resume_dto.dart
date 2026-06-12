@@ -1,6 +1,5 @@
-import 'package:json_annotation/json_annotation.dart';
-
 import 'package:jobify_app/data/resume/resume_parse_status.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'resume_dto.g.dart';
 

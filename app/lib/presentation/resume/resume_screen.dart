@@ -98,7 +98,8 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> {
               onPressed: uploading ? null : _pickAndUpload,
               icon: const Icon(Icons.upload_file),
               label: Text(
-                  uploading ? 'Uploading…' : 'Upload / Replace r\xe9sum\xe9'),
+                uploading ? 'Uploading…' : 'Upload / Replace r\xe9sum\xe9',
+              ),
             ),
           ],
         ),

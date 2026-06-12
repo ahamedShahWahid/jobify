@@ -8,7 +8,6 @@ void main() {
       locations: ['Pune', 'Bengaluru'],
       noticePeriodDays: 30,
       currentCtc: 1200000,
-      expectedCtc: null,
       yearsExperience: 4.5,
     );
     final json = dto.toJson();

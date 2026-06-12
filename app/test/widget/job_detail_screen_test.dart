@@ -7,8 +7,8 @@ import 'package:jobify_app/data/jobs/application_source.dart';
 import 'package:jobify_app/data/jobs/application_status.dart';
 import 'package:jobify_app/data/jobs/job_status.dart';
 import 'package:jobify_app/data/jobs/jobs_dto.dart';
-import 'package:jobify_app/data/jobs/jobs_repository_impl.dart';
 import 'package:jobify_app/data/jobs/jobs_repository.dart';
+import 'package:jobify_app/data/jobs/jobs_repository_impl.dart';
 import 'package:jobify_app/presentation/job_detail/job_detail_screen.dart';
 
 class _FakeJobsRepo implements JobsRepository {
@@ -48,11 +48,11 @@ JobDetailDto _detail({ApplicationDto? app, SavedJobDto? saved}) => JobDetailDto(
         postedAt: DateTime.parse('2026-05-18T00:00:00Z'),
       ),
       employer: const EmployerSummaryDto(id: 'e1', name: 'Acme Co'),
-      match: MatchSummaryDto(
+      match: const MatchSummaryDto(
         id: 'm1',
         totalScore: 0.82,
-        scoreComponents: const {},
-        explanation: const ExplanationDto(
+        scoreComponents: {},
+        explanation: ExplanationDto(
           fit: 'great fit',
           generator: MatchGenerator.templated,
           generatorVersion: '1',

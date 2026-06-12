@@ -20,8 +20,10 @@ void main() {
         apiBaseUrl: '',
         googleWebClientId: '',
       );
-      expect(missing,
-          equals(['JOBIFY_API_BASE_URL', 'JOBIFY_GOOGLE_WEB_CLIENT_ID']));
+      expect(
+        missing,
+        equals(['JOBIFY_API_BASE_URL', 'JOBIFY_GOOGLE_WEB_CLIENT_ID']),
+      );
     });
 
     test('collectMissing returns empty when everything set', () {

@@ -58,6 +58,7 @@ dev_dependencies:
   mocktail: ^1.0.4
   http_mock_adapter: ^0.6.1
 
+  riverpod: any
 flutter:
   uses-material-design: true
   # No font assets here — google_fonts fetches Inter at runtime and caches.

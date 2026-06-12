@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jobify_app/data/feed/feed_dto.dart';
 import 'package:jobify_app/data/jobs/job_status.dart';
 import 'package:jobify_app/data/jobs/jobs_dto.dart';
-import 'package:jobify_app/data/jobs/saved_jobs_repository_impl.dart';
 import 'package:jobify_app/data/jobs/saved_jobs_repository.dart';
+import 'package:jobify_app/data/jobs/saved_jobs_repository_impl.dart';
 import 'package:jobify_app/presentation/saved/saved_screen.dart';
 
 class _FakeRepo implements SavedJobsRepository {
@@ -34,7 +34,7 @@ void main() {
       _wrap(
         const SavedScreen(),
         repo: _FakeRepo(
-          const SavedJobsPageDto(items: [], nextCursor: null),
+          const SavedJobsPageDto(items: []),
         ),
       ),
     );
@@ -48,20 +48,20 @@ void main() {
         saved: SavedJobDto(
           id: 's1',
           jobId: 'j1',
-          createdAt: DateTime(2026, 5, 1),
+          createdAt: DateTime(2026, 5),
         ),
         job: JobSummaryDto(
           id: 'j1',
           title: 'Open Eng',
           locations: const ['BLR'],
           status: JobStatus.open,
-          postedAt: DateTime(2026, 5, 1),
+          postedAt: DateTime(2026, 5),
         ),
         employer: const EmployerSummaryDto(id: 'e1', name: 'Acme'),
-        match: MatchSummaryDto(
+        match: const MatchSummaryDto(
           id: 'm1',
           totalScore: 0.8,
-          scoreComponents: const {},
+          scoreComponents: {},
         ),
       ),
       SavedJobListItemDto(
@@ -75,7 +75,7 @@ void main() {
           title: 'Closed Eng',
           locations: const ['BLR'],
           status: JobStatus.closed,
-          postedAt: DateTime(2026, 5, 1),
+          postedAt: DateTime(2026, 5),
         ),
         employer: const EmployerSummaryDto(id: 'e2', name: 'Beta'),
       ),
@@ -84,7 +84,7 @@ void main() {
       _wrap(
         const SavedScreen(),
         repo: _FakeRepo(
-          SavedJobsPageDto(items: items, nextCursor: null),
+          SavedJobsPageDto(items: items),
         ),
       ),
     );

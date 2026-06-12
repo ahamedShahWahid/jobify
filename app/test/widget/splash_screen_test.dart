@@ -3,11 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:riverpod/src/framework.dart' show Override;
-
 import 'package:jobify_app/core/error/exceptions.dart';
 import 'package:jobify_app/presentation/splash/bootstrap_controller.dart';
 import 'package:jobify_app/presentation/splash/splash_screen.dart';
+import 'package:riverpod/src/framework.dart' show Override;
 
 Widget _wrap(Widget child, {required List<Override> overrides}) {
   return ProviderScope(
@@ -52,7 +51,8 @@ void main() {
         overrides: [
           bootstrapControllerProvider.overrideWith(
             () => _StubError(
-                const NetworkException(message: 'Connection failed')),
+              const NetworkException(message: 'Connection failed'),
+            ),
           ),
         ],
       ),

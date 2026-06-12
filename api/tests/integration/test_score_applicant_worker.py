@@ -23,6 +23,8 @@ from jobify.db.models import (
 from jobify.scoring.match import TransientScoringError
 from jobify.workers.tasks.score_applicant import _score_applicant_async
 
+pytestmark = pytest.mark.integration
+
 
 def _make_sm(session: AsyncSession) -> async_sessionmaker[AsyncSession]:
     """Wrap the test's savepoint-bound session into a sessionmaker so the

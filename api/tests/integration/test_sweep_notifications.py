@@ -23,6 +23,8 @@ from jobify.db.models import Notification, NotificationChannel, NotificationStat
 from jobify.integrations.notifications.base import ChannelResult
 from jobify.workers.tasks.sweep_notifications import _sweep_notifications_async
 
+pytestmark = pytest.mark.integration
+
 
 def _make_sm(session: AsyncSession) -> async_sessionmaker[AsyncSession]:
     """Wrap the test's savepoint-bound session into a sessionmaker so the
