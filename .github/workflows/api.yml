@@ -72,6 +72,10 @@ jobs:
       JOBIFY_ENV: local
       JOBIFY_SERVICE_NAME: jobify-api
       JOBIFY_DB_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/jobify_test
+      # conftest's db_url fixture reads JOBIFY_TEST_DB_URL (NOT JOBIFY_DB_URL);
+      # without it, tests fall back to the local jobify:jobify role, which the
+      # service container doesn't have — every integration run fails at auth.
+      JOBIFY_TEST_DB_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/jobify_test
       JOBIFY_REDIS_URL: redis://localhost:6379/0
       JOBIFY_JWT_SECRET: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
       JOBIFY_GOOGLE_OAUTH_CLIENT_IDS: test.apps.googleusercontent.com

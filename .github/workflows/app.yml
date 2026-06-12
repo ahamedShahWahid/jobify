@@ -17,7 +17,10 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: 3.27.x
+          # Keep in step with the local toolchain (flutter --version). 3.27.x
+          # ships Dart 3.6, which can no longer solve build_runner ^2.15.0
+          # (needs Dart ^3.7) — a stale pin here fails CI at `flutter pub get`.
+          flutter-version: 3.44.x
           cache: true
       - run: flutter pub get
       - run: dart run build_runner build --delete-conflicting-outputs
