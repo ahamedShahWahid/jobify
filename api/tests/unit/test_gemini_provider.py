@@ -74,7 +74,7 @@ async def test_document_task_formats_with_title_prefix() -> None:
 
     await provider.encode(text="foo", task=EmbeddingTask.DOCUMENT, title="Alice")
 
-    assert embed_mock.call_args.kwargs["contents"] == ["title: Alice | text: foo"]
+    assert embed_mock.call_args.kwargs["contents"] == "title: Alice | text: foo"
 
 
 @pytest.mark.asyncio
@@ -85,7 +85,7 @@ async def test_document_task_with_none_title_uses_none_literal() -> None:
 
     await provider.encode(text="foo", task=EmbeddingTask.DOCUMENT, title=None)
 
-    assert embed_mock.call_args.kwargs["contents"] == ["title: none | text: foo"]
+    assert embed_mock.call_args.kwargs["contents"] == "title: none | text: foo"
 
 
 @pytest.mark.asyncio
@@ -96,7 +96,7 @@ async def test_query_task_formats_with_search_result_prefix() -> None:
 
     await provider.encode(text="foo", task=EmbeddingTask.QUERY)
 
-    assert embed_mock.call_args.kwargs["contents"] == ["task: search result | query: foo"]
+    assert embed_mock.call_args.kwargs["contents"] == "task: search result | query: foo"
 
 
 # ---------------------------------------------------------------------------

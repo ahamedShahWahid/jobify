@@ -154,7 +154,8 @@ SQLAlchemy models are never response models. Define `*Read`/`*Create`/`*Update` 
 
 - **`matches.explanation` JSONB** `{fit, caveat, generator, generator_version}`, nullable. Generated inline in both score workers.
 - **`MatchExplainer` Protocol** routes two impls; workers call `await get_match_explainer().explain(ctx)`, call site unchanged. **`explain()` NEVER raises** — scoring is never failed by the explainer.
-- **`TemplatedExplainer`** (`explainer.py`, wraps pure `templated_explanation()`) deterministic. **`GeminiMatchExplainer`** (`llm_explainer.py`) surfaced-only (if `ctx.total < ctx.threshold` returns templated, no Gemini); any failure logs `explain.llm-failed` + falls back to templated.
+- **`TemplatedExplainer`** (`explainer.py`, wraps pure `templated_explanation()`) deterministic. **`GeminiMatchExplainer`** (`llm_explainer.py`) surfaced-only (if `ctx.total < ctx.threshold` returns templated, no Gemini); any failure logs `explain.llm-failed` (with `raw_text`) + falls back to templated.
+- **`thinking_budget=0` is load-bearing** in the explainer's `GenerateContentConfig` — gemini-2.5 thinks by default and thought tokens count against `max_output_tokens`; with the 200 cap, thinking starved the output and EVERY explain silently fell back to templated (the never-raise contract hides it). Watch `generator` in stored explanations, not just error logs.
 - **Selection:** `JOBIFY_MATCH_EXPLAINER` = `"llm"` (default, Gemini) | `"templated"` (dev fallback, no `JOBIFY_GEMINI_API_KEY`). Model `JOBIFY_MATCH_EXPLAINER_MODEL` (`gemini-2.5-flash`). Factory `get_match_explainer()` lazy-singleton. **`explainer.py` does NOT import `google.genai`** (separate module; factory does `from google import genai` lazily). `patched_match_explainer` mirrors the embedding fixture (three modules + cache).
 - **`GENERATOR_VERSION` bumps on semantic template/prompt change** — flag template/prompt edits.
 

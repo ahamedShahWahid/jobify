@@ -131,3 +131,38 @@ async def test_non_dict_json_falls_back_to_templated() -> None:
     out = await explainer.explain(_ctx(total=0.9))
 
     assert out["generator"] == "templated"
+
+
+@pytest.mark.anyio
+async def test_generation_config_disables_thinking() -> None:
+    """gemini-2.5 thinking is ON by default and its tokens count against
+    max_output_tokens — with the 200 cap the model burned ~190 tokens thinking
+    and truncated (finish=MAX_TOKENS, text='Here is the JSON requested:\\n'),
+    so every explain fell back to templated in production. Pin budget=0."""
+    explainer, gc_mock = _make_explainer()
+    gc_mock.return_value = SimpleNamespace(text='{"fit": "Solid match."}')
+
+    await explainer.explain(_ctx())
+
+    config = gc_mock.await_args.kwargs["config"]
+    assert config.thinking_config is not None
+    assert config.thinking_config.thinking_budget == 0
+    assert config.max_output_tokens >= 200
+
+
+@pytest.mark.anyio
+async def test_parse_failure_logs_raw_text_snippet() -> None:
+    """The fallback is silent by design — the warning must carry the raw
+    model text or the failure mode is undiagnosable from logs."""
+    from structlog.testing import capture_logs
+
+    explainer, gc_mock = _make_explainer()
+    gc_mock.return_value = SimpleNamespace(text="Here is the JSON requested:\n")
+
+    with capture_logs() as logs:
+        out = await explainer.explain(_ctx())
+
+    assert out["generator"] == "templated"
+    failed = [e for e in logs if e.get("event") == "explain.llm-failed"]
+    assert len(failed) == 1
+    assert "Here is the JSON requested" in failed[0]["raw_text"]

@@ -44,7 +44,7 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
         try:
             resp = await self._client.aio.models.embed_content(
                 model=self._model,
-                contents=[content],
+                contents=content,
                 config=types.EmbedContentConfig(output_dimensionality=self._output_dim),
             )
         except errors.ServerError as exc:
@@ -60,12 +60,13 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
         if not resp.embeddings or not resp.embeddings[0].values:
             raise EmbeddingProviderError("empty embedding response")
         emb = resp.embeddings[0]
-        if len(emb.values) != self._output_dim:
+        values = emb.values or []  # narrowed above; keeps mypy happy on Optional
+        if len(values) != self._output_dim:
             raise EmbeddingProviderError(
-                f"dim mismatch: got {len(emb.values)} expected {self._output_dim}"
+                f"dim mismatch: got {len(values)} expected {self._output_dim}"
             )
         return EmbeddingResult(
-            values=list(emb.values),
+            values=list(values),
             model_name=self._model,
             input_tokens=(
                 int(emb.statistics.token_count)

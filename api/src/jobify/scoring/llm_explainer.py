@@ -64,6 +64,7 @@ class GeminiMatchExplainer:
         if ctx.total < ctx.threshold:
             return _templated_from_ctx(ctx)
 
+        text: str | None = None
         try:
             prompt = _build_prompt(ctx)
             resp = await self._client.aio.models.generate_content(
@@ -75,6 +76,13 @@ class GeminiMatchExplainer:
                     response_schema=_RESPONSE_SCHEMA,
                     temperature=0.3,
                     max_output_tokens=200,
+                    # gemini-2.5 thinks by default and thought tokens count
+                    # against max_output_tokens: with the 200 cap the model
+                    # burned ~190 tokens thinking, finished MAX_TOKENS, and
+                    # emitted an unparsable preamble — every explain silently
+                    # fell back to templated. This is a two-sentence JSON task;
+                    # thinking buys nothing.
+                    thinking_config=types.ThinkingConfig(thinking_budget=0),
                 ),
             )
             text = getattr(resp, "text", None)
@@ -95,7 +103,9 @@ class GeminiMatchExplainer:
                 "generator_version": LLM_GENERATOR_VERSION,
             }
         except Exception:
-            _log.warning("explain.llm-failed", exc_info=True)
+            # raw_text is the diagnosis handle — the templated fallback makes
+            # this failure invisible everywhere else.
+            _log.warning("explain.llm-failed", raw_text=(text or "")[:200], exc_info=True)
             return _templated_from_ctx(ctx)
 
 
