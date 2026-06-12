@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:kpa_app/data/auth/auth_repository_provider.dart';
-import 'package:kpa_app/data/auth/google_web_sign_in.dart';
+import 'package:jobify_app/data/auth/auth_repository_provider.dart';
+import 'package:jobify_app/data/auth/google_web_sign_in.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'sign_in_controller.g.dart';

@@ -1,9 +1,9 @@
 import 'package:dio/dio.dart';
-import 'package:kpa_app/data/api/dio_provider.dart';
-import 'package:kpa_app/data/api/error_mapping.dart';
-import 'package:kpa_app/data/employers/employer_dto.dart';
-import 'package:kpa_app/data/employers/employer_repository.dart';
-import 'package:kpa_app/data/employers/employers_api.dart';
+import 'package:jobify_app/data/api/dio_provider.dart';
+import 'package:jobify_app/data/api/error_mapping.dart';
+import 'package:jobify_app/data/employers/employer_dto.dart';
+import 'package:jobify_app/data/employers/employer_repository.dart';
+import 'package:jobify_app/data/employers/employers_api.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'employer_repository_impl.g.dart';

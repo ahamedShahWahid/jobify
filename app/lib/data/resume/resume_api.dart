@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 
-import 'package:kpa_app/data/resume/resume_dto.dart';
+import 'package:jobify_app/data/resume/resume_dto.dart';
 
 class ResumeApi {
   ResumeApi(this._dio);

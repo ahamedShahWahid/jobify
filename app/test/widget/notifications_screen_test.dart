@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kpa_app/data/notifications/notification_dto.dart';
-import 'package:kpa_app/data/notifications/notifications_repository.dart';
-import 'package:kpa_app/data/notifications/notifications_repository_impl.dart';
-import 'package:kpa_app/presentation/notifications/notifications_screen.dart';
+import 'package:jobify_app/data/notifications/notification_dto.dart';
+import 'package:jobify_app/data/notifications/notifications_repository.dart';
+import 'package:jobify_app/data/notifications/notifications_repository_impl.dart';
+import 'package:jobify_app/presentation/notifications/notifications_screen.dart';
 
 NotificationDto _n(String id, {DateTime? readAt}) => NotificationDto(
       id: id,

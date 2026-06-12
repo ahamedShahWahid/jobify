@@ -1,10 +1,10 @@
 import 'package:dio/dio.dart';
-import 'package:kpa_app/data/api/dio_provider.dart';
-import 'package:kpa_app/data/api/error_mapping.dart';
-import 'package:kpa_app/data/jobs/applicant_of_job_dto.dart';
-import 'package:kpa_app/data/jobs/recruiter_job_dto.dart';
-import 'package:kpa_app/data/jobs/recruiter_jobs_api.dart';
-import 'package:kpa_app/data/jobs/recruiter_jobs_repository.dart';
+import 'package:jobify_app/data/api/dio_provider.dart';
+import 'package:jobify_app/data/api/error_mapping.dart';
+import 'package:jobify_app/data/jobs/applicant_of_job_dto.dart';
+import 'package:jobify_app/data/jobs/recruiter_job_dto.dart';
+import 'package:jobify_app/data/jobs/recruiter_jobs_api.dart';
+import 'package:jobify_app/data/jobs/recruiter_jobs_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'recruiter_jobs_repository_impl.g.dart';

@@ -1,4 +1,4 @@
-import 'package:kpa_app/data/notifications/notification_dto.dart';
+import 'package:jobify_app/data/notifications/notification_dto.dart';
 
 abstract interface class NotificationsRepository {
   Future<NotificationsPageDto> fetchPage({String? cursor, int limit});

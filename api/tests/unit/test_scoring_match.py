@@ -6,7 +6,7 @@ from decimal import Decimal
 
 import pytest
 
-from kpa.scoring.match import score_match
+from jobify.scoring.match import score_match
 
 
 def _kw(**overrides) -> dict:

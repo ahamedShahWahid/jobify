@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 
-import 'package:kpa_app/data/dsr/dsr_dto.dart';
+import 'package:jobify_app/data/dsr/dsr_dto.dart';
 
 class DsrApi {
   DsrApi(this._dio);

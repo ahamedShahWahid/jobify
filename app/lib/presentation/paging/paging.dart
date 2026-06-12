@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kpa_app/presentation/paging/paged_state.dart';
+import 'package:jobify_app/presentation/paging/paged_state.dart';
 
 /// Shape returned by `fetchPage` callbacks. Matches the conventional DTO shape
 /// `{ items: List<T>, next_cursor: String? }` of every list endpoint.

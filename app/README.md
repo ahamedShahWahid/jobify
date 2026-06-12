@@ -1,6 +1,6 @@
-# KPA — Flutter app
+# Jobify — Flutter app
 
-iOS + Android + Web client for the KPA platform. Built on the foundation laid out in `docs/superpowers/specs/2026-05-21-flutter-app-shell-design.md`.
+iOS + Android + Web client for the Jobify platform. Built on the foundation laid out in `docs/superpowers/specs/2026-05-21-flutter-app-shell-design.md`.
 
 ## Stack
 
@@ -18,7 +18,7 @@ flutter pub get
 dart run build_runner build --delete-conflicting-outputs
 ```
 
-Copy `.env.example` → `.env` and fill in `KPA_GOOGLE_WEB_CLIENT_ID` + `KPA_API_BASE_URL` (defaults work for local dev against `http://localhost:8000`).
+Copy `.env.example` → `.env` and fill in `JOBIFY_GOOGLE_WEB_CLIENT_ID` + `JOBIFY_API_BASE_URL` (defaults work for local dev against `http://localhost:8000`).
 
 ### iOS one-time setup
 
@@ -39,7 +39,7 @@ flutter run -d ios --dart-define-from-file=.env
 
 # Android emulator
 flutter run -d emulator-5554 \
-  --dart-define=KPA_API_BASE_URL=http://10.0.2.2:8000 \
+  --dart-define=JOBIFY_API_BASE_URL=http://10.0.2.2:8000 \
   --dart-define-from-file=.env
 
 # Web — pin the port so it matches the Google OAuth allowlist (see below)
@@ -66,7 +66,7 @@ or the button 403s / sign-in fails:
      'https://accounts.google.com/gsi/button?client_id=<WEB_CLIENT_ID>&is_fedcm_supported=true'
    # 403 = origin not allowed yet; 200 = live
    ```
-2. **API CORS** — the backend must allowlist the web origin. `KPA_CORS_ALLOW_ORIGINS`
+2. **API CORS** — the backend must allowlist the web origin. `JOBIFY_CORS_ALLOW_ORIGINS`
    (default `http://localhost:8080`) drives the API's CORS middleware. See `api/README.md`.
 
 The `clientId` is passed to `GoogleSignIn` directly via `--dart-define`, so the

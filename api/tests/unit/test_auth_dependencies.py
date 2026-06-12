@@ -1,4 +1,4 @@
-"""Unit tests for kpa.auth.dependencies — bearer extraction only.
+"""Unit tests for jobify.auth.dependencies — bearer extraction only.
 
 Full current_user happy/sad paths live in tests/integration/test_me.py
 (needs a real DB session).
@@ -10,7 +10,7 @@ import pytest
 from fastapi import HTTPException
 from starlette.requests import Request
 
-from kpa.auth.dependencies import _extract_bearer_or_raise_401
+from jobify.auth.dependencies import _extract_bearer_or_raise_401
 
 
 def _request_with_headers(headers: list[tuple[bytes, bytes]]) -> Request:

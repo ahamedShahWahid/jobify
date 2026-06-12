@@ -1,6 +1,6 @@
 import 'dart:developer' as developer;
 
-import 'package:kpa_app/core/config/env.dart';
+import 'package:jobify_app/core/config/env.dart';
 
 /// Minimal logger. Replace the implementation with a real telemetry
 /// adapter (Sentry / Crashlytics / Fluent Bit forwarder) when that
@@ -11,10 +11,10 @@ import 'package:kpa_app/core/config/env.dart';
 ///   IDE).
 /// - In prod builds, info/debug are silent; warn/error still print so
 ///   they show up in platform-specific crash logs.
-class KpaLogger {
-  KpaLogger(this._name);
+class JobifyLogger {
+  JobifyLogger(this._name);
 
-  factory KpaLogger.named(String name) => KpaLogger(name);
+  factory JobifyLogger.named(String name) => JobifyLogger(name);
 
   final String _name;
 

@@ -1,5 +1,5 @@
-import 'package:kpa_app/data/jobs/recruiter_job_dto.dart';
-import 'package:kpa_app/data/jobs/recruiter_jobs_repository_impl.dart';
+import 'package:jobify_app/data/jobs/recruiter_job_dto.dart';
+import 'package:jobify_app/data/jobs/recruiter_jobs_repository_impl.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'recruiter_dashboard_controller.g.dart';

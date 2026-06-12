@@ -1,7 +1,7 @@
-import 'package:kpa_app/data/jobs/jobs_dto.dart';
-import 'package:kpa_app/data/jobs/jobs_repository_impl.dart';
-import 'package:kpa_app/presentation/job_detail/job_detail_controller.dart';
-import 'package:kpa_app/presentation/saved/saved_controller.dart';
+import 'package:jobify_app/data/jobs/jobs_dto.dart';
+import 'package:jobify_app/data/jobs/jobs_repository_impl.dart';
+import 'package:jobify_app/presentation/job_detail/job_detail_controller.dart';
+import 'package:jobify_app/presentation/saved/saved_controller.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'save_job_controller.g.dart';

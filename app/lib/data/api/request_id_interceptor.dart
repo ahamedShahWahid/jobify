@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
 
-const _kRequestIdExtraKey = 'kpa.requestId';
+const _kRequestIdExtraKey = 'jobify.requestId';
 const _kRequestIdHeader = 'X-Request-Id';
 
 /// Generates a uuid4 per outgoing request, sets it as X-Request-Id, and

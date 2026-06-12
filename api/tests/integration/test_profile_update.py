@@ -9,13 +9,13 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kpa.auth.google_verifier import GoogleClaims
-from kpa.auth.tokens import mint_access_token
-from kpa.db.models import Applicant, User, UserRole
+from jobify.auth.google_verifier import GoogleClaims
+from jobify.auth.tokens import mint_access_token
+from jobify.db.models import Applicant, User, UserRole
 
 pytestmark = pytest.mark.integration
 
-_JWT_SECRET = "x" * 32  # matches KPA_JWT_SECRET set by the integration fixtures
+_JWT_SECRET = "x" * 32  # matches JOBIFY_JWT_SECRET set by the integration fixtures
 
 
 def _claims() -> GoogleClaims:
@@ -139,7 +139,7 @@ async def test_patch_recruiter_returns_403(
 async def test_patch_matching_field_dispatches_rescore(
     async_client: httpx.AsyncClient, google_verifier, monkeypatch
 ) -> None:
-    import kpa.workers.tasks.score_applicant as score_mod
+    import jobify.workers.tasks.score_applicant as score_mod
 
     calls: list[str] = []
     monkeypatch.setattr(score_mod.score_applicant, "delay", lambda aid: calls.append(aid))
@@ -157,7 +157,7 @@ async def test_patch_matching_field_dispatches_rescore(
 async def test_patch_non_matching_field_no_rescore(
     async_client: httpx.AsyncClient, google_verifier, monkeypatch
 ) -> None:
-    import kpa.workers.tasks.score_applicant as score_mod
+    import jobify.workers.tasks.score_applicant as score_mod
 
     calls: list[str] = []
     monkeypatch.setattr(score_mod.score_applicant, "delay", lambda aid: calls.append(aid))

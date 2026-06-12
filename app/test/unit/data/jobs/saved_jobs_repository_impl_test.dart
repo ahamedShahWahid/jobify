@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/jobs/saved_jobs_api.dart';
-import 'package:kpa_app/data/jobs/saved_jobs_repository_impl.dart';
+import 'package:jobify_app/data/jobs/saved_jobs_api.dart';
+import 'package:jobify_app/data/jobs/saved_jobs_repository_impl.dart';
 
 import '../../../helpers/mock_interceptor.dart';
 

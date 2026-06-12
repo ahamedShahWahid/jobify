@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from structlog.testing import capture_logs
 
-from kpa.db.models import Applicant, Application, Resume, User, UserRole
+from jobify.db.models import Applicant, Application, Resume, User, UserRole
 
 pytestmark = pytest.mark.integration
 
@@ -75,7 +75,7 @@ async def test_recruiter_downloads_resume(async_client, session, applicant_user_
 
     from sqlalchemy import select as sa_select
 
-    from kpa.db.models import AuditLog, EmployerUser
+    from jobify.db.models import AuditLog, EmployerUser
 
     # Resolve employer_id for the recruiter (created by _setup_employer_and_job)
     eu_row = (
@@ -107,7 +107,7 @@ async def test_recruiter_at_other_employer_gets_404(
     await session.commit()
 
     # Other recruiter
-    from kpa.auth.tokens import mint_access_token
+    from jobify.auth.tokens import mint_access_token
 
     other = User(email="other@example.com", role=UserRole.APPLICANT)
     session.add(other)

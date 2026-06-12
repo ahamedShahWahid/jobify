@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:kpa_app/presentation/feed/feed_controller.dart';
-import 'package:kpa_app/presentation/feed/feed_item_card.dart';
-import 'package:kpa_app/presentation/routing/routes.dart';
-import 'package:kpa_app/presentation/theme/kpa_spacing.dart';
-import 'package:kpa_app/presentation/widgets/async_value_widget.dart';
-import 'package:kpa_app/presentation/widgets/kpa_empty_state.dart';
-import 'package:kpa_app/presentation/widgets/kpa_loading_view.dart';
+import 'package:jobify_app/presentation/feed/feed_controller.dart';
+import 'package:jobify_app/presentation/feed/feed_item_card.dart';
+import 'package:jobify_app/presentation/routing/routes.dart';
+import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
+import 'package:jobify_app/presentation/widgets/jobify_empty_state.dart';
+import 'package:jobify_app/presentation/widgets/jobify_loading_view.dart';
 
 class FeedScreen extends ConsumerStatefulWidget {
   const FeedScreen({super.key});
@@ -53,7 +53,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         value: value,
         onRetry: () => ref.read(feedControllerProvider.notifier).refresh(),
         isEmpty: (s) => s.items.isEmpty,
-        empty: () => const KpaEmptyState(
+        empty: () => const JobifyEmptyState(
           headline: "We're still looking for matches",
           body: 'Upload a resume to help us find you better roles.',
           icon: Icons.search_off,
@@ -62,20 +62,21 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
           onRefresh: () => ref.read(feedControllerProvider.notifier).refresh(),
           child: ListView.separated(
             controller: _scroll,
-            padding: const EdgeInsets.all(KpaSpacing.lg),
+            padding: const EdgeInsets.all(JobifySpacing.lg),
             itemCount: s.items.length + 1,
-            separatorBuilder: (_, __) => const SizedBox(height: KpaSpacing.md),
+            separatorBuilder: (_, __) =>
+                const SizedBox(height: JobifySpacing.md),
             itemBuilder: (context, i) {
               if (i == s.items.length) {
                 if (s.isLoadingMore) {
                   return const Padding(
-                    padding: EdgeInsets.all(KpaSpacing.lg),
-                    child: KpaLoadingView(),
+                    padding: EdgeInsets.all(JobifySpacing.lg),
+                    child: JobifyLoadingView(),
                   );
                 }
                 if (!s.hasMore) {
                   return Padding(
-                    padding: const EdgeInsets.all(KpaSpacing.lg),
+                    padding: const EdgeInsets.all(JobifySpacing.lg),
                     child: Center(
                       child: Text(
                         "You're all caught up",

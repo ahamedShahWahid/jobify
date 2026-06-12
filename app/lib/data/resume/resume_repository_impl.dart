@@ -2,11 +2,11 @@
 import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:kpa_app/data/api/dio_provider.dart';
-import 'package:kpa_app/data/api/error_mapping.dart';
-import 'package:kpa_app/data/resume/resume_api.dart';
-import 'package:kpa_app/data/resume/resume_dto.dart';
-import 'package:kpa_app/data/resume/resume_repository.dart';
+import 'package:jobify_app/data/api/dio_provider.dart';
+import 'package:jobify_app/data/api/error_mapping.dart';
+import 'package:jobify_app/data/resume/resume_api.dart';
+import 'package:jobify_app/data/resume/resume_dto.dart';
+import 'package:jobify_app/data/resume/resume_repository.dart';
 
 part 'resume_repository_impl.g.dart';
 

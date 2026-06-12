@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/auth/user_role.dart';
+import 'package:jobify_app/data/auth/user_role.dart';
 
 void main() {
   test('fromWire maps known roles', () {

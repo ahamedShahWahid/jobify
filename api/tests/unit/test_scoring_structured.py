@@ -6,7 +6,7 @@ from decimal import Decimal
 
 import pytest
 
-from kpa.scoring.structured import (
+from jobify.scoring.structured import (
     ctc_fit,
     exp_fit,
     location_fit,

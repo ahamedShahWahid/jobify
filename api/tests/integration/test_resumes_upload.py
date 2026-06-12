@@ -11,8 +11,8 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kpa.auth.google_verifier import GoogleClaims
-from kpa.db.models import Resume, ResumeParseStatus
+from jobify.auth.google_verifier import GoogleClaims
+from jobify.db.models import Resume, ResumeParseStatus
 
 _TINY_PDF = b"%PDF-1.4\n%minimal\n"
 
@@ -150,17 +150,17 @@ async def test_upload_resume_rejects_oversized_payload(
     # real applicant row in `session`.
     applicant_id, access = await _signin_as_applicant(async_client, google_verifier)
 
-    # Re-create the app with a stricter KPA_MAX_UPLOAD_BYTES, sharing `session`
+    # Re-create the app with a stricter JOBIFY_MAX_UPLOAD_BYTES, sharing `session`
     # so the user we just signed in as is visible.
-    monkeypatch.setenv("KPA_MAX_UPLOAD_BYTES", "16")  # 16 bytes
-    monkeypatch.setenv("KPA_ENV", "local")
-    monkeypatch.setenv("KPA_SERVICE_NAME", "kpa-api")
-    monkeypatch.setenv("KPA_DB_URL", db_url)
-    monkeypatch.setenv("KPA_STORAGE_ROOT", str(tmp_path))
-    monkeypatch.setenv("KPA_JWT_SECRET", "x" * 32)
+    monkeypatch.setenv("JOBIFY_MAX_UPLOAD_BYTES", "16")  # 16 bytes
+    monkeypatch.setenv("JOBIFY_ENV", "local")
+    monkeypatch.setenv("JOBIFY_SERVICE_NAME", "jobify-api")
+    monkeypatch.setenv("JOBIFY_DB_URL", db_url)
+    monkeypatch.setenv("JOBIFY_STORAGE_ROOT", str(tmp_path))
+    monkeypatch.setenv("JOBIFY_JWT_SECRET", "x" * 32)
 
-    from kpa.app_factory import create_app
-    from kpa.db.session import get_session
+    from jobify.app_factory import create_app
+    from jobify.db.session import get_session
 
     app = create_app()
 

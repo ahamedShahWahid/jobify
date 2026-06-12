@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/resume/resume_api.dart';
-import 'package:kpa_app/data/resume/resume_parse_status.dart';
-import 'package:kpa_app/data/resume/resume_repository_impl.dart';
+import 'package:jobify_app/data/resume/resume_api.dart';
+import 'package:jobify_app/data/resume/resume_parse_status.dart';
+import 'package:jobify_app/data/resume/resume_repository_impl.dart';
 
 import '../../../helpers/mock_interceptor.dart';
 

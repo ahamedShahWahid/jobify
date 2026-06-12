@@ -8,8 +8,8 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kpa.audit import audit_log
-from kpa.db.models import User, UserRole
+from jobify.audit import audit_log
+from jobify.db.models import User, UserRole
 
 pytestmark = pytest.mark.integration
 

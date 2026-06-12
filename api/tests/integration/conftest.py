@@ -31,15 +31,15 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import NullPool
 
-from kpa.auth.google_verifier import (
+from jobify.auth.google_verifier import (
     GoogleClaims,
     InvalidGoogleTokenError,
     get_google_verifier,
 )
-from kpa.auth.tokens import mint_access_token
-from kpa.db.models import User, UserRole
-from kpa.integrations.embeddings import EmbeddingResult, EmbeddingTask
-from kpa.scoring.explainer import ExplainContext
+from jobify.auth.tokens import mint_access_token
+from jobify.db.models import User, UserRole
+from jobify.integrations.embeddings import EmbeddingResult, EmbeddingTask
+from jobify.scoring.explainer import ExplainContext
 
 pytestmark = pytest.mark.integration
 
@@ -115,16 +115,16 @@ def patched_embedding_provider(
     embed tasks use the fake without hitting the network.
 
     Two patches are needed because embed.py imports get_embedding_provider by
-    name at module load time (``from kpa.workers.celery_app import
+    name at module load time (``from jobify.workers.celery_app import
     get_embedding_provider``), creating a local reference that is not affected
     by patching the celery_app module attribute alone.  We therefore patch both
     the celery_app attribute and the embed-module local reference.  We also set
     the module-level ``_embedding_provider`` cache directly so that the original
     (unpatched) function body, if somehow reached, also returns the fake.
     """
-    import kpa.workers.celery_app as cel
-    import kpa.workers.tasks.embed as embed_mod
-    import kpa.workers.tasks.embed_job as embed_job_mod
+    import jobify.workers.celery_app as cel
+    import jobify.workers.tasks.embed as embed_mod
+    import jobify.workers.tasks.embed_job as embed_job_mod
 
     monkeypatch.setattr(cel, "get_embedding_provider", lambda: embedding_provider)
     monkeypatch.setattr(embed_mod, "get_embedding_provider", lambda: embedding_provider)
@@ -167,13 +167,13 @@ def patched_match_explainer(
 
     Mirrors patched_embedding_provider: three patch sites + the cache, because
     score_applicant.py and score_job.py do
-    ``from kpa.workers.celery_app import get_match_explainer`` locally inside
+    ``from jobify.workers.celery_app import get_match_explainer`` locally inside
     the async body. Each local import creates a separate reference; we patch
     both call sites plus the source module, then seed the module-level cache.
     """
-    import kpa.workers.celery_app as cel
-    import kpa.workers.tasks.score_applicant as sa_mod
-    import kpa.workers.tasks.score_job as sj_mod
+    import jobify.workers.celery_app as cel
+    import jobify.workers.tasks.score_applicant as sa_mod
+    import jobify.workers.tasks.score_job as sj_mod
 
     monkeypatch.setattr(cel, "get_match_explainer", lambda: match_explainer)
     monkeypatch.setattr(sa_mod, "get_match_explainer", lambda: match_explainer, raising=False)
@@ -182,7 +182,7 @@ def patched_match_explainer(
     return match_explainer
 
 
-DEFAULT_TEST_DB_URL = "postgresql+asyncpg://kpa:kpa@localhost:5432/kpa_test"
+DEFAULT_TEST_DB_URL = "postgresql+asyncpg://jobify:jobify@localhost:5432/jobify_test"
 
 
 @pytest.fixture(scope="session")
@@ -190,10 +190,10 @@ def db_url() -> str:
     """Connection URL for the integration test database.
 
     Defaults to the local Homebrew Postgres set up in the README. Override
-    via ``KPA_TEST_DB_URL`` in CI (where Postgres runs as a service
+    via ``JOBIFY_TEST_DB_URL`` in CI (where Postgres runs as a service
     container) or on a teammate's machine with a different layout.
     """
-    return os.environ.get("KPA_TEST_DB_URL", DEFAULT_TEST_DB_URL)
+    return os.environ.get("JOBIFY_TEST_DB_URL", DEFAULT_TEST_DB_URL)
 
 
 @pytest.fixture(scope="session")
@@ -206,14 +206,14 @@ def monkeypatch_session() -> Iterator[pytest.MonkeyPatch]:
 @pytest.fixture(scope="session")
 def migrated_db(db_url: str, monkeypatch_session: pytest.MonkeyPatch) -> str:
     """Apply alembic upgrade head against the test database once per session."""
-    monkeypatch_session.setenv("KPA_ENV", "local")
-    monkeypatch_session.setenv("KPA_SERVICE_NAME", "kpa-api")
-    monkeypatch_session.setenv("KPA_DB_URL", db_url)
-    monkeypatch_session.setenv("KPA_REDIS_URL", "redis://localhost:6379/0")
-    monkeypatch_session.setenv("KPA_JWT_SECRET", "x" * 32)
-    monkeypatch_session.setenv("KPA_GEMINI_API_KEY", "test-gemini-key")
+    monkeypatch_session.setenv("JOBIFY_ENV", "local")
+    monkeypatch_session.setenv("JOBIFY_SERVICE_NAME", "jobify-api")
+    monkeypatch_session.setenv("JOBIFY_DB_URL", db_url)
+    monkeypatch_session.setenv("JOBIFY_REDIS_URL", "redis://localhost:6379/0")
+    monkeypatch_session.setenv("JOBIFY_JWT_SECRET", "x" * 32)
+    monkeypatch_session.setenv("JOBIFY_GEMINI_API_KEY", "test-gemini-key")
     monkeypatch_session.setenv(
-        "KPA_GOOGLE_OAUTH_CLIENT_IDS",
+        "JOBIFY_GOOGLE_OAUTH_CLIENT_IDS",
         "test.apps.googleusercontent.com",
     )
     cfg = Config("alembic.ini")
@@ -261,20 +261,20 @@ def client(
 
     For async tests that share a ``session``, use the ``async_client`` fixture.
     """
-    monkeypatch.setenv("KPA_ENV", "local")
-    monkeypatch.setenv("KPA_SERVICE_NAME", "kpa-api")
-    monkeypatch.setenv("KPA_DB_URL", db_url)
-    monkeypatch.setenv("KPA_REDIS_URL", "redis://localhost:6379/0")
-    monkeypatch.setenv("KPA_STORAGE_ROOT", str(tmp_path))
-    monkeypatch.setenv("KPA_JWT_SECRET", "x" * 32)
-    monkeypatch.setenv("KPA_GEMINI_API_KEY", "test-gemini-key")
+    monkeypatch.setenv("JOBIFY_ENV", "local")
+    monkeypatch.setenv("JOBIFY_SERVICE_NAME", "jobify-api")
+    monkeypatch.setenv("JOBIFY_DB_URL", db_url)
+    monkeypatch.setenv("JOBIFY_REDIS_URL", "redis://localhost:6379/0")
+    monkeypatch.setenv("JOBIFY_STORAGE_ROOT", str(tmp_path))
+    monkeypatch.setenv("JOBIFY_JWT_SECRET", "x" * 32)
+    monkeypatch.setenv("JOBIFY_GEMINI_API_KEY", "test-gemini-key")
     monkeypatch.setenv(
-        "KPA_GOOGLE_OAUTH_CLIENT_IDS",
+        "JOBIFY_GOOGLE_OAUTH_CLIENT_IDS",
         "test.apps.googleusercontent.com",
     )
 
-    from kpa.app_factory import create_app
-    from kpa.db.session import get_session
+    from jobify.app_factory import create_app
+    from jobify.db.session import get_session
 
     app = create_app()
 
@@ -305,20 +305,20 @@ async def async_client(
     ``Future attached to a different loop`` error that arises when TestClient's
     blocking portal creates its own event loop.
     """
-    monkeypatch.setenv("KPA_ENV", "local")
-    monkeypatch.setenv("KPA_SERVICE_NAME", "kpa-api")
-    monkeypatch.setenv("KPA_DB_URL", db_url)
-    monkeypatch.setenv("KPA_REDIS_URL", "redis://localhost:6379/0")
-    monkeypatch.setenv("KPA_STORAGE_ROOT", str(tmp_path))
-    monkeypatch.setenv("KPA_JWT_SECRET", "x" * 32)
-    monkeypatch.setenv("KPA_GEMINI_API_KEY", "test-gemini-key")
+    monkeypatch.setenv("JOBIFY_ENV", "local")
+    monkeypatch.setenv("JOBIFY_SERVICE_NAME", "jobify-api")
+    monkeypatch.setenv("JOBIFY_DB_URL", db_url)
+    monkeypatch.setenv("JOBIFY_REDIS_URL", "redis://localhost:6379/0")
+    monkeypatch.setenv("JOBIFY_STORAGE_ROOT", str(tmp_path))
+    monkeypatch.setenv("JOBIFY_JWT_SECRET", "x" * 32)
+    monkeypatch.setenv("JOBIFY_GEMINI_API_KEY", "test-gemini-key")
     monkeypatch.setenv(
-        "KPA_GOOGLE_OAUTH_CLIENT_IDS",
+        "JOBIFY_GOOGLE_OAUTH_CLIENT_IDS",
         "test.apps.googleusercontent.com",
     )
 
-    from kpa.app_factory import create_app
-    from kpa.db.session import get_session
+    from jobify.app_factory import create_app
+    from jobify.db.session import get_session
 
     app = create_app()
 
@@ -382,18 +382,18 @@ async def concurrent_async_client(
     subsequent tests start clean (same guarantee as the savepoint rollback
     strategy used by the other fixtures, just achieved differently).
     """
-    monkeypatch.setenv("KPA_ENV", "local")
-    monkeypatch.setenv("KPA_SERVICE_NAME", "kpa-api")
-    monkeypatch.setenv("KPA_DB_URL", migrated_db)
-    monkeypatch.setenv("KPA_STORAGE_ROOT", str(tmp_path))
-    monkeypatch.setenv("KPA_JWT_SECRET", "x" * 32)
-    monkeypatch.setenv("KPA_GEMINI_API_KEY", "test-gemini-key")
+    monkeypatch.setenv("JOBIFY_ENV", "local")
+    monkeypatch.setenv("JOBIFY_SERVICE_NAME", "jobify-api")
+    monkeypatch.setenv("JOBIFY_DB_URL", migrated_db)
+    monkeypatch.setenv("JOBIFY_STORAGE_ROOT", str(tmp_path))
+    monkeypatch.setenv("JOBIFY_JWT_SECRET", "x" * 32)
+    monkeypatch.setenv("JOBIFY_GEMINI_API_KEY", "test-gemini-key")
     monkeypatch.setenv(
-        "KPA_GOOGLE_OAUTH_CLIENT_IDS",
+        "JOBIFY_GOOGLE_OAUTH_CLIENT_IDS",
         "test.apps.googleusercontent.com",
     )
 
-    from kpa.app_factory import create_app
+    from jobify.app_factory import create_app
 
     app = create_app()
     app.dependency_overrides[get_google_verifier] = lambda: google_verifier
@@ -409,11 +409,11 @@ async def concurrent_async_client(
     async with cleanup_engine.connect() as conn:
         await conn.execute(
             text(
-                "TRUNCATE kpa.notifications, kpa.applications, kpa.saved_jobs,"
-                " kpa.matches, kpa.applicant_embeddings, kpa.job_embeddings,"
-                " kpa.jobs, kpa.employers, kpa.resumes,"
-                " kpa.refresh_tokens, kpa.oauth_identities,"
-                " kpa.applicants, kpa.users RESTART IDENTITY CASCADE"
+                "TRUNCATE jobify.notifications, jobify.applications, jobify.saved_jobs,"
+                " jobify.matches, jobify.applicant_embeddings, jobify.job_embeddings,"
+                " jobify.jobs, jobify.employers, jobify.resumes,"
+                " jobify.refresh_tokens, jobify.oauth_identities,"
+                " jobify.applicants, jobify.users RESTART IDENTITY CASCADE"
             )
         )
         await conn.commit()

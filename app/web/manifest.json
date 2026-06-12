@@ -1,11 +1,11 @@
 {
-    "name": "kpa_app",
-    "short_name": "kpa_app",
+    "name": "Jobify",
+    "short_name": "Jobify",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "KPA applicant app — iOS, Android, Web",
+    "description": "Jobify applicant app — iOS, Android, Web",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

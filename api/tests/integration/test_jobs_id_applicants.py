@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from kpa.db.models import Applicant, Application, User, UserRole
+from jobify.db.models import Applicant, Application, User, UserRole
 
 pytestmark = pytest.mark.integration
 
@@ -72,7 +72,7 @@ async def test_applicants_other_employer_returns_404(
     job_id = await _create_job(async_client, token, emp_id)
 
     # Other recruiter
-    from kpa.auth.tokens import mint_access_token
+    from jobify.auth.tokens import mint_access_token
 
     other = User(email="other@example.com", role=UserRole.APPLICANT)
     session.add(other)
@@ -123,7 +123,7 @@ async def test_applicants_listing_writes_audit_row(async_client, session, applic
 
     from sqlalchemy import select as sa_select
 
-    from kpa.db.models import AuditLog
+    from jobify.db.models import AuditLog
 
     row = (
         await session.execute(

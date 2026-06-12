@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 
-import 'package:kpa_app/data/employers/team/employer_invite_dto.dart';
-import 'package:kpa_app/data/employers/team/member_dto.dart';
+import 'package:jobify_app/data/employers/team/employer_invite_dto.dart';
+import 'package:jobify_app/data/employers/team/member_dto.dart';
 
 /// HTTP surface for R4 employer team management (members + invites).
 class EmployerTeamApi {

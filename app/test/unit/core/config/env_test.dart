@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/core/config/env.dart';
+import 'package:jobify_app/core/config/env.dart';
 
 void main() {
   group('Env', () {
@@ -20,7 +20,8 @@ void main() {
         apiBaseUrl: '',
         googleWebClientId: '',
       );
-      expect(missing, equals(['KPA_API_BASE_URL', 'KPA_GOOGLE_WEB_CLIENT_ID']));
+      expect(missing,
+          equals(['JOBIFY_API_BASE_URL', 'JOBIFY_GOOGLE_WEB_CLIENT_ID']));
     });
 
     test('collectMissing returns empty when everything set', () {
@@ -39,8 +40,8 @@ void main() {
             (e) => e.message,
             'message',
             allOf(
-              contains('KPA_API_BASE_URL'),
-              contains('KPA_GOOGLE_WEB_CLIENT_ID'),
+              contains('JOBIFY_API_BASE_URL'),
+              contains('JOBIFY_GOOGLE_WEB_CLIENT_ID'),
               contains('--dart-define'),
             ),
           ),

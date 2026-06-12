@@ -1,6 +1,6 @@
-import 'package:kpa_app/data/employers/team/employer_team_repository_impl.dart';
-import 'package:kpa_app/presentation/recruiter/team/employer_invites_controller.dart';
-import 'package:kpa_app/presentation/recruiter/team/members_controller.dart';
+import 'package:jobify_app/data/employers/team/employer_team_repository_impl.dart';
+import 'package:jobify_app/presentation/recruiter/team/employer_invites_controller.dart';
+import 'package:jobify_app/presentation/recruiter/team/members_controller.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'team_actions_controller.g.dart';

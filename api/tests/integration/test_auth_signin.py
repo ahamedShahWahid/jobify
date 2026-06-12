@@ -9,8 +9,8 @@ import httpx
 import pytest
 from sqlalchemy import select
 
-from kpa.auth.google_verifier import GoogleClaims
-from kpa.db.models import (
+from jobify.auth.google_verifier import GoogleClaims
+from jobify.db.models import (
     DEFAULT_CONSENTS,
     Applicant,
     AuditLog,
@@ -195,7 +195,7 @@ async def test_signin_email_not_verified_blocked_when_required(
     google_verifier,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """When KPA_AUTH_REQUIRE_EMAIL_VERIFIED=true, an unverified-email sign-in is rejected.
+    """When JOBIFY_AUTH_REQUIRE_EMAIL_VERIFIED=true, an unverified-email sign-in is rejected.
 
     Note: the env var is read at Settings() construction (app startup). Since the
     async_client fixture has already built the app with email_verified gate off,

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/feed/feed_dto.dart';
-import 'package:kpa_app/data/jobs/job_status.dart';
-import 'package:kpa_app/data/jobs/jobs_dto.dart';
-import 'package:kpa_app/data/jobs/saved_jobs_repository_impl.dart';
-import 'package:kpa_app/data/jobs/saved_jobs_repository.dart';
-import 'package:kpa_app/presentation/saved/saved_screen.dart';
+import 'package:jobify_app/data/feed/feed_dto.dart';
+import 'package:jobify_app/data/jobs/job_status.dart';
+import 'package:jobify_app/data/jobs/jobs_dto.dart';
+import 'package:jobify_app/data/jobs/saved_jobs_repository_impl.dart';
+import 'package:jobify_app/data/jobs/saved_jobs_repository.dart';
+import 'package:jobify_app/presentation/saved/saved_screen.dart';
 
 class _FakeRepo implements SavedJobsRepository {
   _FakeRepo(this.page);

@@ -4,9 +4,9 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/api/access_token_holder.dart';
-import 'package:kpa_app/data/api/auth_header_interceptor.dart';
-import 'package:kpa_app/data/api/refresh_on_401_interceptor.dart';
+import 'package:jobify_app/data/api/access_token_holder.dart';
+import 'package:jobify_app/data/api/auth_header_interceptor.dart';
+import 'package:jobify_app/data/api/refresh_on_401_interceptor.dart';
 
 // ---------------------------------------------------------------------------
 // Minimal queue-based mock HTTP adapter.

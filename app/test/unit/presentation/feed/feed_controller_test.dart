@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/feed/feed_dto.dart';
-import 'package:kpa_app/data/feed/feed_repository_impl.dart';
-import 'package:kpa_app/data/feed/feed_repository.dart';
-import 'package:kpa_app/data/jobs/job_status.dart';
-import 'package:kpa_app/presentation/feed/feed_controller.dart';
+import 'package:jobify_app/data/feed/feed_dto.dart';
+import 'package:jobify_app/data/feed/feed_repository_impl.dart';
+import 'package:jobify_app/data/feed/feed_repository.dart';
+import 'package:jobify_app/data/jobs/job_status.dart';
+import 'package:jobify_app/presentation/feed/feed_controller.dart';
 
 class _FakeFeedRepo implements FeedRepository {
   _FakeFeedRepo(this.pages);

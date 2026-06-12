@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 
-import 'package:kpa_app/data/employers/employer_dto.dart';
+import 'package:jobify_app/data/employers/employer_dto.dart';
 
 class EmployersApi {
   EmployersApi(this._dio);

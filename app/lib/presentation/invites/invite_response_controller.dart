@@ -1,6 +1,6 @@
-import 'package:kpa_app/data/auth/auth_repository_provider.dart';
-import 'package:kpa_app/data/employers/team/employer_team_repository_impl.dart';
-import 'package:kpa_app/presentation/invites/my_invites_controller.dart';
+import 'package:jobify_app/data/auth/auth_repository_provider.dart';
+import 'package:jobify_app/data/employers/team/employer_team_repository_impl.dart';
+import 'package:jobify_app/presentation/invites/my_invites_controller.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'invite_response_controller.g.dart';

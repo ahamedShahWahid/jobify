@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import inspect
 
-from kpa.consent import get_consent, seed_default_consents, set_consent
+from jobify.consent import get_consent, seed_default_consents, set_consent
 
 
 def test_get_consent_signature() -> None:

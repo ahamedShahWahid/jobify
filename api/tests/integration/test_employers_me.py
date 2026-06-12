@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 import pytest
 from sqlalchemy import select
 
-from kpa.db.models import EmployerUser
+from jobify.db.models import EmployerUser
 
 pytestmark = pytest.mark.integration
 

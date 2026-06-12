@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/notifications/notification_dto.dart';
+import 'package:jobify_app/data/notifications/notification_dto.dart';
 
 void main() {
   test('parses the NotificationListResponse wire shape', () {

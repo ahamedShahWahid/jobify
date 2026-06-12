@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 
-import 'package:kpa_app/data/consents/consent_dto.dart';
+import 'package:jobify_app/data/consents/consent_dto.dart';
 
 class ConsentApi {
   ConsentApi(this._dio);

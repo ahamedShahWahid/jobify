@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from kpa.integrations.parser.skills_dict import SKILLS
+from jobify.integrations.parser.skills_dict import SKILLS
 
 
 def test_skills_dict_has_minimum_coverage() -> None:

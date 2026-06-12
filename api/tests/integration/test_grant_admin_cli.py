@@ -1,4 +1,4 @@
-"""Integration tests for the kpa-grant-admin CLI's _apply_in_session seam."""
+"""Integration tests for the jobify-grant-admin CLI's _apply_in_session seam."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kpa.db.models import AuditLog, User, UserRole
-from kpa.scripts.grant_admin import _apply_in_session
+from jobify.db.models import AuditLog, User, UserRole
+from jobify.scripts.grant_admin import _apply_in_session
 
 pytestmark = pytest.mark.integration
 

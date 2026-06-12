@@ -15,13 +15,13 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import NullPool
 
-from kpa.db.models import Applicant, Resume, ResumeParseStatus, User, UserRole
-from kpa.integrations.parser.base import (
+from jobify.db.models import Applicant, Resume, ResumeParseStatus, User, UserRole
+from jobify.integrations.parser.base import (
     ParsedResume,
     ParserError,
     TransientParserError,
 )
-from kpa.workers.tasks.parse import _parse_resume_async
+from jobify.workers.tasks.parse import _parse_resume_async
 
 pytestmark = pytest.mark.integration  # uses local Postgres for the session
 
@@ -215,7 +215,7 @@ async def test_mark_failed_skips_when_status_is_not_parsing(
     """If _mark_failed is called on a row that has been mutated externally
     (e.g. admin reset to pending, or another worker already marked it parsed),
     it must not clobber the existing status."""
-    from kpa.workers.tasks.parse import _mark_failed
+    from jobify.workers.tasks.parse import _mark_failed
 
     resume_id = await _make_resume_row(sm, status=ResumeParseStatus.PARSED)
 

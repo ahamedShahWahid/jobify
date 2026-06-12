@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import 'package:kpa_app/core/error/exceptions.dart';
-import 'package:kpa_app/data/resume/resume_dto.dart';
-import 'package:kpa_app/data/resume/resume_parse_status.dart';
-import 'package:kpa_app/presentation/resume/resume_controller.dart';
-import 'package:kpa_app/presentation/theme/kpa_spacing.dart';
-import 'package:kpa_app/presentation/widgets/async_value_widget.dart';
+import 'package:jobify_app/core/error/exceptions.dart';
+import 'package:jobify_app/data/resume/resume_dto.dart';
+import 'package:jobify_app/data/resume/resume_parse_status.dart';
+import 'package:jobify_app/presentation/resume/resume_controller.dart';
+import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
 
 final _dateFormat = DateFormat.yMMMMd();
 
@@ -71,7 +71,7 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> {
     if (e is ApiException && e.statusCode == 413) {
       return 'File too large (max 10 MB).';
     }
-    if (e is NetworkException) return "Couldn't reach KPA.";
+    if (e is NetworkException) return "Couldn't reach Jobify.";
     return "Couldn't upload. Try again.";
   }
 
@@ -84,7 +84,7 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> {
       body: RefreshIndicator(
         onRefresh: () => ref.read(resumeControllerProvider.notifier).refresh(),
         child: ListView(
-          padding: const EdgeInsets.all(KpaSpacing.lg),
+          padding: const EdgeInsets.all(JobifySpacing.lg),
           children: [
             AsyncValueWidget<ResumeDto?>(
               value: state,
@@ -93,7 +93,7 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> {
               data: (resume) =>
                   resume == null ? const _Empty() : _ResumeCard(resume: resume),
             ),
-            const SizedBox(height: KpaSpacing.xl),
+            const SizedBox(height: JobifySpacing.xl),
             FilledButton.icon(
               onPressed: uploading ? null : _pickAndUpload,
               icon: const Icon(Icons.upload_file),
@@ -112,7 +112,7 @@ class _Empty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: KpaSpacing.xl),
+        padding: const EdgeInsets.symmetric(vertical: JobifySpacing.xl),
         child: Text(
           'No r\xe9sum\xe9 yet. Upload one so we can match you to roles.',
           style: Theme.of(context).textTheme.bodyMedium,
@@ -157,22 +157,22 @@ class _ResumeCard extends StatelessWidget {
     final s = _status(context);
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(KpaSpacing.lg),
+        padding: const EdgeInsets.all(JobifySpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(resume.originalFilename, style: theme.textTheme.titleMedium),
-            const SizedBox(height: KpaSpacing.xs),
+            const SizedBox(height: JobifySpacing.xs),
             Text(
               'Uploaded ${_dateFormat.format(resume.createdAt)}',
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
-            const SizedBox(height: KpaSpacing.sm),
+            const SizedBox(height: JobifySpacing.sm),
             Container(
               padding: const EdgeInsets.symmetric(
-                horizontal: KpaSpacing.sm,
-                vertical: KpaSpacing.xs,
+                horizontal: JobifySpacing.sm,
+                vertical: JobifySpacing.xs,
               ),
               decoration: BoxDecoration(
                 color: s.bg,

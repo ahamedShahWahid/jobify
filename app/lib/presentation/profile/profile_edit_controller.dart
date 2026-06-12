@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:kpa_app/data/me/me_repository_impl.dart';
-import 'package:kpa_app/data/me/profile_update_dto.dart';
-import 'package:kpa_app/presentation/profile/me_controller.dart';
+import 'package:jobify_app/data/me/me_repository_impl.dart';
+import 'package:jobify_app/data/me/profile_update_dto.dart';
+import 'package:jobify_app/presentation/profile/me_controller.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'profile_edit_controller.g.dart';

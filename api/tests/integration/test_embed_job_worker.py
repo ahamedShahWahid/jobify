@@ -8,12 +8,12 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from kpa.db.models import Employer, Job, JobEmbedding
-from kpa.integrations.embeddings.base import (
+from jobify.db.models import Employer, Job, JobEmbedding
+from jobify.integrations.embeddings.base import (
     EmbeddingProviderError,
     TransientEmbeddingError,
 )
-from kpa.workers.tasks.embed_job import _embed_job_async, embed_job
+from jobify.workers.tasks.embed_job import _embed_job_async, embed_job
 
 
 def _make_sm(session: AsyncSession) -> async_sessionmaker[AsyncSession]:
@@ -86,7 +86,7 @@ async def test_embed_job_aborts_on_hash_drift_in_txn3(
     # Force canonicalize_job to return one hash on call 1 (Txn 1) and a
     # different hash on call 2 (Txn 3) so the Txn 3 verify fails.
     real_canon = __import__(
-        "kpa.workers.tasks.embed_job", fromlist=["canonicalize_job"]
+        "jobify.workers.tasks.embed_job", fromlist=["canonicalize_job"]
     ).canonicalize_job
     call_count = {"n": 0}
 
@@ -97,7 +97,7 @@ async def test_embed_job_aborts_on_hash_drift_in_txn3(
             return text, "f" * 64  # different hash on the verify
         return text, hash_hex
 
-    monkeypatch.setattr("kpa.workers.tasks.embed_job.canonicalize_job", _drifty)
+    monkeypatch.setattr("jobify.workers.tasks.embed_job.canonicalize_job", _drifty)
     sm = _make_sm(session)
     await _embed_job_async(job.id, sm=sm, provider=patched_embedding_provider)
     rows = (await session.execute(select(JobEmbedding).where(JobEmbedding.job_id == job.id))).all()
@@ -187,9 +187,9 @@ async def test_embed_job_transient_error_retries(
 
     monkeypatch.setattr(embedding_provider, "encode", _flaky)
     # Re-apply the patches because we changed the provider object
-    import kpa.workers.celery_app as cel
-    import kpa.workers.tasks.embed as embed_mod
-    import kpa.workers.tasks.embed_job as embed_job_mod
+    import jobify.workers.celery_app as cel
+    import jobify.workers.tasks.embed as embed_mod
+    import jobify.workers.tasks.embed_job as embed_job_mod
 
     monkeypatch.setattr(cel, "get_embedding_provider", lambda: embedding_provider)
     monkeypatch.setattr(embed_mod, "get_embedding_provider", lambda: embedding_provider)
@@ -214,9 +214,9 @@ async def test_embed_job_permanent_error_does_not_retry(
         raise EmbeddingProviderError("simulated permanent error")
 
     monkeypatch.setattr(embedding_provider, "encode", _broken)
-    import kpa.workers.celery_app as cel
-    import kpa.workers.tasks.embed as embed_mod
-    import kpa.workers.tasks.embed_job as embed_job_mod
+    import jobify.workers.celery_app as cel
+    import jobify.workers.tasks.embed as embed_mod
+    import jobify.workers.tasks.embed_job as embed_job_mod
 
     monkeypatch.setattr(cel, "get_embedding_provider", lambda: embedding_provider)
     monkeypatch.setattr(embed_mod, "get_embedding_provider", lambda: embedding_provider)
@@ -241,7 +241,7 @@ async def test_embed_job_dispatches_score_job(
     def _spy(job_id_str: str) -> None:
         calls.append(job_id_str)
 
-    monkeypatch.setattr("kpa.workers.tasks.score_job.score_job.delay", _spy)
+    monkeypatch.setattr("jobify.workers.tasks.score_job.score_job.delay", _spy)
 
     job = await _make_job(session)
     sm = _make_sm(session)

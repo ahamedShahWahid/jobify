@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:kpa_app/data/me/profile_update_dto.dart';
-import 'package:kpa_app/presentation/profile/me_controller.dart';
-import 'package:kpa_app/presentation/profile/profile_edit_controller.dart';
-import 'package:kpa_app/presentation/theme/kpa_spacing.dart';
+import 'package:jobify_app/data/me/profile_update_dto.dart';
+import 'package:jobify_app/presentation/profile/me_controller.dart';
+import 'package:jobify_app/presentation/profile/profile_edit_controller.dart';
+import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -107,7 +107,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(KpaSpacing.lg),
+          padding: const EdgeInsets.all(JobifySpacing.lg),
           children: [
             TextFormField(
               controller: _fullName,
@@ -119,10 +119,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 return null;
               },
             ),
-            const SizedBox(height: KpaSpacing.lg),
+            const SizedBox(height: JobifySpacing.lg),
             Text('Locations', style: Theme.of(context).textTheme.labelLarge),
             Wrap(
-              spacing: KpaSpacing.sm,
+              spacing: JobifySpacing.sm,
               children: [
                 for (final loc in _locations)
                   Chip(
@@ -147,7 +147,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: KpaSpacing.lg),
+            const SizedBox(height: JobifySpacing.lg),
             TextFormField(
               controller: _experience,
               keyboardType:

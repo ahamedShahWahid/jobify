@@ -12,8 +12,8 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kpa.consent import seed_default_consents, set_consent
-from kpa.db.models import (
+from jobify.consent import seed_default_consents, set_consent
+from jobify.db.models import (
     ConsentScope,
     Notification,
     NotificationChannel,
@@ -21,8 +21,8 @@ from kpa.db.models import (
     User,
     UserRole,
 )
-from kpa.integrations.notifications.base import ChannelResult
-from kpa.workers.tasks.sweep_notifications import _sweep_notifications_async
+from jobify.integrations.notifications.base import ChannelResult
+from jobify.workers.tasks.sweep_notifications import _sweep_notifications_async
 from tests.integration.test_sweep_notifications import (
     _make_sm,
     _seed_notification,

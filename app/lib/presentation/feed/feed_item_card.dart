@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'package:kpa_app/data/feed/feed_dto.dart';
-import 'package:kpa_app/data/jobs/job_status.dart';
-import 'package:kpa_app/presentation/theme/kpa_spacing.dart';
-import 'package:kpa_app/presentation/widgets/kpa_score_badge.dart';
+import 'package:jobify_app/data/feed/feed_dto.dart';
+import 'package:jobify_app/data/jobs/job_status.dart';
+import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/widgets/jobify_score_badge.dart';
 
 class FeedItemCard extends StatelessWidget {
   const FeedItemCard({
@@ -39,7 +39,7 @@ class FeedItemCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(KpaSpacing.lg),
+          padding: const EdgeInsets.all(JobifySpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -54,8 +54,8 @@ class FeedItemCard extends StatelessWidget {
                   if (isClosed)
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: KpaSpacing.sm,
-                        vertical: KpaSpacing.xs,
+                        horizontal: JobifySpacing.sm,
+                        vertical: JobifySpacing.xs,
                       ),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.outlineVariant,
@@ -67,12 +67,12 @@ class FeedItemCard extends StatelessWidget {
                       ),
                     )
                   else if (showScore && match != null)
-                    KpaScoreBadge(score: match!.totalScore),
+                    JobifyScoreBadge(score: match!.totalScore),
                 ],
               ),
-              const SizedBox(height: KpaSpacing.sm),
+              const SizedBox(height: JobifySpacing.sm),
               Text(job.title, style: theme.textTheme.titleMedium),
-              const SizedBox(height: KpaSpacing.xs),
+              const SizedBox(height: JobifySpacing.xs),
               Text(
                 '${job.locations.isEmpty ? '' : '${job.locations.join(', ')} · '}${_ago(job.postedAt)}',
                 style: theme.textTheme.bodySmall?.copyWith(
@@ -80,7 +80,7 @@ class FeedItemCard extends StatelessWidget {
                 ),
               ),
               if (explanation != null) ...[
-                const SizedBox(height: KpaSpacing.md),
+                const SizedBox(height: JobifySpacing.md),
                 Text(
                   explanation!.fit,
                   style: theme.textTheme.bodyMedium,
@@ -88,7 +88,7 @@ class FeedItemCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (explanation!.caveat != null) ...[
-                  const SizedBox(height: KpaSpacing.xs),
+                  const SizedBox(height: JobifySpacing.xs),
                   Text(
                     explanation!.caveat!,
                     style: theme.textTheme.bodySmall?.copyWith(

@@ -19,9 +19,9 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from kpa.db.models import Notification, NotificationChannel, NotificationStatus, User, UserRole
-from kpa.integrations.notifications.base import ChannelResult
-from kpa.workers.tasks.sweep_notifications import _sweep_notifications_async
+from jobify.db.models import Notification, NotificationChannel, NotificationStatus, User, UserRole
+from jobify.integrations.notifications.base import ChannelResult
+from jobify.workers.tasks.sweep_notifications import _sweep_notifications_async
 
 
 def _make_sm(session: AsyncSession) -> async_sessionmaker[AsyncSession]:
@@ -153,8 +153,8 @@ async def test_sweep_retries_on_failed_channel(
     """Failed channel delivery increments attempts and reschedules with backoff.
     After 5 failures the row transitions to FAILED.
     """
-    import kpa.workers.celery_app as cel
-    import kpa.workers.tasks.sweep_notifications as sweep_mod
+    import jobify.workers.celery_app as cel
+    import jobify.workers.tasks.sweep_notifications as sweep_mod
 
     user = await _seed_user(session, email="retry@example.com")
     n = await _seed_notification(session, user, channel=NotificationChannel.EMAIL, attempts=0)

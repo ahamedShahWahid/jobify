@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import 'package:kpa_app/data/auth/google_web_sign_in.dart';
+import 'package:jobify_app/data/auth/google_web_sign_in.dart';
 
 /// Selected on every non-web build. Never invoked at runtime — the sign-in
 /// screen only reaches the web helper behind a `kIsWeb` guard — but it must

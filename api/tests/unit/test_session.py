@@ -13,21 +13,21 @@ from fastapi import Depends, Request
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from kpa.db import session as session_module
+from jobify.db import session as session_module
 
 
 def test_create_engine_uses_settings_db_url(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("KPA_ENV", "local")
-    monkeypatch.setenv("KPA_SERVICE_NAME", "kpa-api")
-    monkeypatch.setenv("KPA_DB_URL", "postgresql+asyncpg://u:p@h:5432/d")
-    monkeypatch.setenv("KPA_REDIS_URL", "redis://localhost:6379/0")
-    monkeypatch.setenv("KPA_JWT_SECRET", "x" * 32)
-    monkeypatch.setenv("KPA_GOOGLE_OAUTH_CLIENT_IDS", "test.apps.googleusercontent.com")
+    monkeypatch.setenv("JOBIFY_ENV", "local")
+    monkeypatch.setenv("JOBIFY_SERVICE_NAME", "jobify-api")
+    monkeypatch.setenv("JOBIFY_DB_URL", "postgresql+asyncpg://u:p@h:5432/d")
+    monkeypatch.setenv("JOBIFY_REDIS_URL", "redis://localhost:6379/0")
+    monkeypatch.setenv("JOBIFY_JWT_SECRET", "x" * 32)
+    monkeypatch.setenv("JOBIFY_GOOGLE_OAUTH_CLIENT_IDS", "test.apps.googleusercontent.com")
 
     engine = session_module.create_engine_from_settings()
 
     assert engine.url.render_as_string(hide_password=False) == "postgresql+asyncpg://u:p@h:5432/d"
-    # Engine is configured for the "kpa" schema.
+    # Engine is configured for the "jobify" schema.
     assert engine.dialect.name == "postgresql"
 
 
@@ -74,14 +74,14 @@ def test_get_session_can_be_used_as_fastapi_dependency(monkeypatch: pytest.Monke
     Regression guard for the original parameter-shape bug. We don't need a
     live DB — we override the dependency with a stub that yields a sentinel.
     """
-    monkeypatch.setenv("KPA_ENV", "local")
-    monkeypatch.setenv("KPA_SERVICE_NAME", "kpa-api")
-    monkeypatch.setenv("KPA_DB_URL", "postgresql+asyncpg://u:p@h:5432/d")
-    monkeypatch.setenv("KPA_REDIS_URL", "redis://localhost:6379/0")
-    monkeypatch.setenv("KPA_JWT_SECRET", "x" * 32)
-    monkeypatch.setenv("KPA_GOOGLE_OAUTH_CLIENT_IDS", "test.apps.googleusercontent.com")
+    monkeypatch.setenv("JOBIFY_ENV", "local")
+    monkeypatch.setenv("JOBIFY_SERVICE_NAME", "jobify-api")
+    monkeypatch.setenv("JOBIFY_DB_URL", "postgresql+asyncpg://u:p@h:5432/d")
+    monkeypatch.setenv("JOBIFY_REDIS_URL", "redis://localhost:6379/0")
+    monkeypatch.setenv("JOBIFY_JWT_SECRET", "x" * 32)
+    monkeypatch.setenv("JOBIFY_GOOGLE_OAUTH_CLIENT_IDS", "test.apps.googleusercontent.com")
 
-    from kpa.app_factory import create_app
+    from jobify.app_factory import create_app
 
     app = create_app()
 

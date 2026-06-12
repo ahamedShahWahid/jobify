@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 
-import 'package:kpa_app/data/feed/feed_dto.dart';
+import 'package:jobify_app/data/feed/feed_dto.dart';
 
 class FeedApi {
   FeedApi(this._dio);

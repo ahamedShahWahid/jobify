@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/auth/auth_state.dart';
-import 'package:kpa_app/data/auth/user_role.dart';
-import 'package:kpa_app/data/employers/employer_dto.dart';
-import 'package:kpa_app/data/employers/team/employer_team_repository_impl.dart';
-import 'package:kpa_app/presentation/auth/auth_providers.dart';
-import 'package:kpa_app/presentation/recruiter/active_employer_provider.dart';
-import 'package:kpa_app/presentation/recruiter/recruiter_employer_screen.dart';
+import 'package:jobify_app/data/auth/auth_state.dart';
+import 'package:jobify_app/data/auth/user_role.dart';
+import 'package:jobify_app/data/employers/employer_dto.dart';
+import 'package:jobify_app/data/employers/team/employer_team_repository_impl.dart';
+import 'package:jobify_app/presentation/auth/auth_providers.dart';
+import 'package:jobify_app/presentation/recruiter/active_employer_provider.dart';
+import 'package:jobify_app/presentation/recruiter/recruiter_employer_screen.dart';
 
 import '../helpers/fake_employer_team_repository.dart';
 

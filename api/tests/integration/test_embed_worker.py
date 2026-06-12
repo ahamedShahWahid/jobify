@@ -24,13 +24,13 @@ from sqlalchemy import text as sql_text
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
-from kpa.auth.google_verifier import GoogleClaims, get_google_verifier
-from kpa.db.models import Resume, ResumeParseStatus, User
-from kpa.integrations.embeddings import EmbeddingTask
+from jobify.auth.google_verifier import GoogleClaims, get_google_verifier
+from jobify.db.models import Resume, ResumeParseStatus, User
+from jobify.integrations.embeddings import EmbeddingTask
 
 pytestmark = pytest.mark.integration
 
-_JWT_SECRET = "x" * 32  # matches KPA_JWT_SECRET set in fixtures
+_JWT_SECRET = "x" * 32  # matches JOBIFY_JWT_SECRET set in fixtures
 
 
 def _tiny_pdf_with_text() -> bytes:
@@ -94,7 +94,7 @@ async def _get_embedding_row_direct(db_url: str, applicant_id: str) -> tuple | N
                     "array_length(embedding::real[], 1), "
                     "length(canonicalized_text_hash), "
                     "input_tokens "
-                    "FROM kpa.applicant_embeddings "
+                    "FROM jobify.applicant_embeddings "
                     "WHERE applicant_id = :aid AND deleted_at IS NULL"
                 ),
                 {"aid": applicant_id},
@@ -134,21 +134,21 @@ async def eager_client(
     Isolation: caller must clean up test rows after each test via
     ``_cleanup_user_by_email``.
     """
-    monkeypatch.setenv("KPA_ENV", "local")
-    monkeypatch.setenv("KPA_SERVICE_NAME", "kpa-api")
-    monkeypatch.setenv("KPA_DB_URL", migrated_db)
-    monkeypatch.setenv("KPA_REDIS_URL", "redis://localhost:6379/0")
-    monkeypatch.setenv("KPA_STORAGE_ROOT", str(tmp_path))
-    monkeypatch.setenv("KPA_JWT_SECRET", _JWT_SECRET)
-    monkeypatch.setenv("KPA_GEMINI_API_KEY", "test-gemini-key")
+    monkeypatch.setenv("JOBIFY_ENV", "local")
+    monkeypatch.setenv("JOBIFY_SERVICE_NAME", "jobify-api")
+    monkeypatch.setenv("JOBIFY_DB_URL", migrated_db)
+    monkeypatch.setenv("JOBIFY_REDIS_URL", "redis://localhost:6379/0")
+    monkeypatch.setenv("JOBIFY_STORAGE_ROOT", str(tmp_path))
+    monkeypatch.setenv("JOBIFY_JWT_SECRET", _JWT_SECRET)
+    monkeypatch.setenv("JOBIFY_GEMINI_API_KEY", "test-gemini-key")
     monkeypatch.setenv(
-        "KPA_GOOGLE_OAUTH_CLIENT_IDS",
+        "JOBIFY_GOOGLE_OAUTH_CLIENT_IDS",
         "test.apps.googleusercontent.com",
     )
 
-    import kpa.workers.celery_app as _celery_mod
-    from kpa.app_factory import create_app
-    from kpa.workers.celery_app import celery_app
+    import jobify.workers.celery_app as _celery_mod
+    from jobify.app_factory import create_app
+    from jobify.workers.celery_app import celery_app
 
     app = create_app()
     app.dependency_overrides[get_google_verifier] = lambda: google_verifier
@@ -233,8 +233,8 @@ async def test_rerun_with_same_content_is_noop(
 ) -> None:
     """Re-running embed_applicant on unchanged parsed_json hits the hash gate and
     skips the provider."""
-    from kpa.workers.celery_app import get_session_maker
-    from kpa.workers.tasks.embed import _embed_applicant_async
+    from jobify.workers.celery_app import get_session_maker
+    from jobify.workers.tasks.embed import _embed_applicant_async
 
     pdf = FPDF()
     pdf.add_page()
@@ -292,8 +292,8 @@ async def test_embed_no_parsed_resume_is_no_op(
     forcing the Txn3 race within a test is fiddly. The "no parsed resume"
     branch exercises the same defensive load-and-check pattern.
     """
-    from kpa.workers.celery_app import get_session_maker
-    from kpa.workers.tasks.embed import _embed_applicant_async
+    from jobify.workers.celery_app import get_session_maker
+    from jobify.workers.tasks.embed import _embed_applicant_async
 
     applicant_id_str, _access = await _signin_as_applicant(eager_client, google_verifier)
     applicant_id = uuid.UUID(applicant_id_str)
@@ -325,7 +325,7 @@ async def test_dispatch_resilient_to_embed_broker_failure(
 ) -> None:
     """If embed_applicant.delay() raises, parse still commits PARSED and no
     embedding row is written."""
-    from kpa.workers.tasks import embed as embed_mod
+    from jobify.workers.tasks import embed as embed_mod
 
     pdf = FPDF()
     pdf.add_page()
@@ -374,14 +374,14 @@ async def test_embed_applicant_dispatches_score_applicant(
     """After embed_applicant Txn 3 commits, score_applicant.delay is called."""
     from sqlalchemy.ext.asyncio import async_sessionmaker
 
-    from kpa.db.models import Applicant, Resume, ResumeParseStatus, User, UserRole
+    from jobify.db.models import Applicant, Resume, ResumeParseStatus, User, UserRole
 
     calls: list[str] = []
 
     def _spy(applicant_id_str: str) -> None:
         calls.append(applicant_id_str)
 
-    monkeypatch.setattr("kpa.workers.tasks.score_applicant.score_applicant.delay", _spy)
+    monkeypatch.setattr("jobify.workers.tasks.score_applicant.score_applicant.delay", _spy)
 
     user = User(email="dispatch@example.com", role=UserRole.APPLICANT)
     session.add(user)
@@ -416,7 +416,7 @@ async def test_embed_applicant_dispatches_score_applicant(
         join_transaction_mode="create_savepoint",
     )
 
-    from kpa.workers.tasks.embed import _embed_applicant_async
+    from jobify.workers.tasks.embed import _embed_applicant_async
 
     await _embed_applicant_async(applicant.id, sm=sm, provider=patched_embedding_provider)
     assert len(calls) == 1

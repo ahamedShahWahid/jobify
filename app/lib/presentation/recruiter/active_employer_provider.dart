@@ -1,5 +1,5 @@
-import 'package:kpa_app/data/employers/employer_dto.dart';
-import 'package:kpa_app/data/employers/employer_repository_impl.dart';
+import 'package:jobify_app/data/employers/employer_dto.dart';
+import 'package:jobify_app/data/employers/employer_repository_impl.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'active_employer_provider.g.dart';

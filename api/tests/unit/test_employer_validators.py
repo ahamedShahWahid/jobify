@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from kpa.routes.employers import EmployerCreate, _normalize_name
+from jobify.routes.employers import EmployerCreate, _normalize_name
 
 
 def test_normalize_name_lowercases() -> None:

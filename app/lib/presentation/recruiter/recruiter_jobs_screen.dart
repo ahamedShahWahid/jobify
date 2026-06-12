@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:kpa_app/presentation/recruiter/recruiter_job_card.dart';
-import 'package:kpa_app/presentation/recruiter/recruiter_jobs_controller.dart';
-import 'package:kpa_app/presentation/theme/kpa_spacing.dart';
-import 'package:kpa_app/presentation/widgets/async_value_widget.dart';
-import 'package:kpa_app/presentation/widgets/kpa_empty_state.dart';
-import 'package:kpa_app/presentation/widgets/kpa_loading_view.dart';
+import 'package:jobify_app/presentation/recruiter/recruiter_job_card.dart';
+import 'package:jobify_app/presentation/recruiter/recruiter_jobs_controller.dart';
+import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
+import 'package:jobify_app/presentation/widgets/jobify_empty_state.dart';
+import 'package:jobify_app/presentation/widgets/jobify_loading_view.dart';
 
 class RecruiterJobsScreen extends ConsumerStatefulWidget {
   const RecruiterJobsScreen({super.key});
@@ -62,7 +62,7 @@ class _RecruiterJobsScreenState extends ConsumerState<RecruiterJobsScreen> {
             title: const Text('Show closed'),
             dense: true,
             contentPadding:
-                const EdgeInsets.symmetric(horizontal: KpaSpacing.lg),
+                const EdgeInsets.symmetric(horizontal: JobifySpacing.lg),
           ),
           Expanded(
             child: AsyncValueWidget<RecruiterJobsState>(
@@ -73,7 +73,7 @@ class _RecruiterJobsScreenState extends ConsumerState<RecruiterJobsScreen> {
                   )
                   .refresh(),
               isEmpty: (s) => s.items.isEmpty,
-              empty: () => KpaEmptyState(
+              empty: () => JobifyEmptyState(
                 headline: 'No jobs yet',
                 body: 'Post your first role to start receiving applicants.',
                 icon: Icons.work_outline,
@@ -90,16 +90,16 @@ class _RecruiterJobsScreenState extends ConsumerState<RecruiterJobsScreen> {
                     .refresh(),
                 child: ListView.separated(
                   controller: _scroll,
-                  padding: const EdgeInsets.all(KpaSpacing.lg),
+                  padding: const EdgeInsets.all(JobifySpacing.lg),
                   itemCount: s.items.length + 1,
                   separatorBuilder: (_, __) =>
-                      const SizedBox(height: KpaSpacing.md),
+                      const SizedBox(height: JobifySpacing.md),
                   itemBuilder: (context, i) {
                     if (i == s.items.length) {
                       if (s.isLoadingMore) {
                         return const Padding(
-                          padding: EdgeInsets.all(KpaSpacing.lg),
-                          child: KpaLoadingView(),
+                          padding: EdgeInsets.all(JobifySpacing.lg),
+                          child: JobifyLoadingView(),
                         );
                       }
                       return const SizedBox.shrink();

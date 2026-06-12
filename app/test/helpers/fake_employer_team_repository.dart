@@ -1,6 +1,6 @@
-import 'package:kpa_app/data/employers/team/employer_invite_dto.dart';
-import 'package:kpa_app/data/employers/team/employer_team_repository.dart';
-import 'package:kpa_app/data/employers/team/member_dto.dart';
+import 'package:jobify_app/data/employers/team/employer_invite_dto.dart';
+import 'package:jobify_app/data/employers/team/employer_team_repository.dart';
+import 'package:jobify_app/data/employers/team/member_dto.dart';
 
 /// Configurable in-memory [EmployerTeamRepository] for widget tests. Records
 /// the last mutating call so assertions can verify the screen forwarded it.

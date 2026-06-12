@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/feed/feed_dto.dart';
-import 'package:kpa_app/data/jobs/application_source.dart';
-import 'package:kpa_app/data/jobs/application_status.dart';
-import 'package:kpa_app/data/jobs/applications_repository_impl.dart';
-import 'package:kpa_app/data/jobs/job_status.dart';
-import 'package:kpa_app/data/jobs/jobs_dto.dart';
-import 'package:kpa_app/data/jobs/applications_repository.dart';
-import 'package:kpa_app/presentation/applications/applications_screen.dart';
+import 'package:jobify_app/data/feed/feed_dto.dart';
+import 'package:jobify_app/data/jobs/application_source.dart';
+import 'package:jobify_app/data/jobs/application_status.dart';
+import 'package:jobify_app/data/jobs/applications_repository_impl.dart';
+import 'package:jobify_app/data/jobs/job_status.dart';
+import 'package:jobify_app/data/jobs/jobs_dto.dart';
+import 'package:jobify_app/data/jobs/applications_repository.dart';
+import 'package:jobify_app/presentation/applications/applications_screen.dart';
 
 class _FakeRepo implements ApplicationsRepository {
   _FakeRepo(this.page);

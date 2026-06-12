@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:kpa_app/core/consent/consent_scope.dart';
-import 'package:kpa_app/presentation/privacy/privacy_controller.dart';
-import 'package:kpa_app/presentation/privacy/privacy_state.dart';
-import 'package:kpa_app/presentation/routing/routes.dart';
-import 'package:kpa_app/presentation/theme/kpa_spacing.dart';
-import 'package:kpa_app/presentation/widgets/async_value_widget.dart';
+import 'package:jobify_app/core/consent/consent_scope.dart';
+import 'package:jobify_app/presentation/privacy/privacy_controller.dart';
+import 'package:jobify_app/presentation/privacy/privacy_state.dart';
+import 'package:jobify_app/presentation/routing/routes.dart';
+import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
 
 class PrivacyScreen extends ConsumerWidget {
   const PrivacyScreen({super.key});
@@ -58,12 +58,12 @@ class _PrivacyBody extends ConsumerWidget {
     return Stack(
       children: [
         ListView(
-          padding: const EdgeInsets.all(KpaSpacing.lg),
+          padding: const EdgeInsets.all(JobifySpacing.lg),
           children: [
             // ── Notification preferences section ──────────────────────────
             Text('Notification preferences',
                 style: theme.textTheme.titleMedium),
-            const SizedBox(height: KpaSpacing.sm),
+            const SizedBox(height: JobifySpacing.sm),
             ...ConsentScope.v0VisibleScopes.map((scope) {
               final granted = consentMap[scope.wire] ?? false;
               final labels = _consentLabel(scope);
@@ -77,20 +77,20 @@ class _PrivacyBody extends ConsumerWidget {
               );
             }),
 
-            const SizedBox(height: KpaSpacing.xl),
+            const SizedBox(height: JobifySpacing.xl),
             const Divider(),
-            const SizedBox(height: KpaSpacing.xl),
+            const SizedBox(height: JobifySpacing.xl),
 
             // ── Your data section ─────────────────────────────────────────
             Text('Your data', style: theme.textTheme.titleMedium),
-            const SizedBox(height: KpaSpacing.sm),
+            const SizedBox(height: JobifySpacing.sm),
             Text(
               'A copy of everything we know about you (JSON).',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: KpaSpacing.md),
+            const SizedBox(height: JobifySpacing.md),
             OutlinedButton.icon(
               icon: const Icon(Icons.download_outlined),
               label: const Text('Download my data'),
@@ -99,20 +99,20 @@ class _PrivacyBody extends ConsumerWidget {
                   : () => _exportData(context, ref),
             ),
 
-            const SizedBox(height: KpaSpacing.xl),
+            const SizedBox(height: JobifySpacing.xl),
             const Divider(),
-            const SizedBox(height: KpaSpacing.xl),
+            const SizedBox(height: JobifySpacing.xl),
 
             // ── Account section ───────────────────────────────────────────
             Text('Account', style: theme.textTheme.titleMedium),
-            const SizedBox(height: KpaSpacing.sm),
+            const SizedBox(height: JobifySpacing.sm),
             Text(
               "Permanently erase your data. This can't be undone.",
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: KpaSpacing.md),
+            const SizedBox(height: JobifySpacing.md),
             FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: theme.colorScheme.error,

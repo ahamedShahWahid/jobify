@@ -1,21 +1,21 @@
-import 'package:kpa_app/data/auth/auth_repository.dart';
-import 'package:kpa_app/data/auth/auth_state.dart';
-import 'package:kpa_app/data/auth/user_role.dart';
-import 'package:kpa_app/data/consents/consent_dto.dart';
-import 'package:kpa_app/data/consents/consents_repository.dart';
-import 'package:kpa_app/data/dsr/dsr_dto.dart';
-import 'package:kpa_app/data/dsr/dsr_repository.dart';
-import 'package:kpa_app/data/feed/feed_dto.dart';
-import 'package:kpa_app/data/feed/feed_repository.dart';
-import 'package:kpa_app/data/jobs/application_source.dart';
-import 'package:kpa_app/data/jobs/application_status.dart';
-import 'package:kpa_app/data/jobs/applications_repository.dart';
-import 'package:kpa_app/data/jobs/jobs_dto.dart';
-import 'package:kpa_app/data/jobs/jobs_repository.dart';
-import 'package:kpa_app/data/jobs/saved_jobs_repository.dart';
-import 'package:kpa_app/data/me/me_dto.dart';
-import 'package:kpa_app/data/me/me_repository.dart';
-import 'package:kpa_app/data/me/profile_update_dto.dart';
+import 'package:jobify_app/data/auth/auth_repository.dart';
+import 'package:jobify_app/data/auth/auth_state.dart';
+import 'package:jobify_app/data/auth/user_role.dart';
+import 'package:jobify_app/data/consents/consent_dto.dart';
+import 'package:jobify_app/data/consents/consents_repository.dart';
+import 'package:jobify_app/data/dsr/dsr_dto.dart';
+import 'package:jobify_app/data/dsr/dsr_repository.dart';
+import 'package:jobify_app/data/feed/feed_dto.dart';
+import 'package:jobify_app/data/feed/feed_repository.dart';
+import 'package:jobify_app/data/jobs/application_source.dart';
+import 'package:jobify_app/data/jobs/application_status.dart';
+import 'package:jobify_app/data/jobs/applications_repository.dart';
+import 'package:jobify_app/data/jobs/jobs_dto.dart';
+import 'package:jobify_app/data/jobs/jobs_repository.dart';
+import 'package:jobify_app/data/jobs/saved_jobs_repository.dart';
+import 'package:jobify_app/data/me/me_dto.dart';
+import 'package:jobify_app/data/me/me_repository.dart';
+import 'package:jobify_app/data/me/profile_update_dto.dart';
 
 class FakeAuthRepository implements AuthRepository {
   FakeAuthRepository({AuthState initial = const SignedOut()})

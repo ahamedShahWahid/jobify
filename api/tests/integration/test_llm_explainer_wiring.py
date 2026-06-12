@@ -11,7 +11,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from kpa.db.models import (
+from jobify.db.models import (
     Applicant,
     ApplicantEmbedding,
     Employer,
@@ -21,7 +21,7 @@ from kpa.db.models import (
     User,
     UserRole,
 )
-from kpa.workers.tasks.score_applicant import _score_applicant_async
+from jobify.workers.tasks.score_applicant import _score_applicant_async
 
 
 def _make_sm(session: AsyncSession) -> async_sessionmaker[AsyncSession]:

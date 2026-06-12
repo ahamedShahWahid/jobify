@@ -18,8 +18,8 @@ import pytest
 import structlog
 import structlog.testing
 
-from kpa.integrations.notifications.base import ChannelResult
-from kpa.integrations.notifications.logging_email import LoggingEmailChannel
+from jobify.integrations.notifications.base import ChannelResult
+from jobify.integrations.notifications.logging_email import LoggingEmailChannel
 
 
 def _make_notification(

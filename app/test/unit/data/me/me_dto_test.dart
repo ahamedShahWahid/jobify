@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/me/me_dto.dart';
+import 'package:jobify_app/data/me/me_dto.dart';
 
-// Fixture mirrors the REAL GET /v1/me wire shape (api/src/kpa/routes/me.py),
+// Fixture mirrors the REAL GET /v1/me wire shape (api/src/jobify/routes/me.py),
 // verified against tests/integration/test_me.py. User fields are flat; the
 // applicant is nested; and Pydantic serializes Decimal CTC/experience to
 // JSON *strings*. Guards the contract so a backend/DTO drift fails here, not

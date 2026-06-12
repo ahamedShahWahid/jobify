@@ -5,8 +5,8 @@ No I/O, no DB, no network.
 
 from __future__ import annotations
 
-from kpa.integrations.embeddings.canonicalize import canonicalize_profile
-from kpa.integrations.parser.base import (
+from jobify.integrations.embeddings.canonicalize import canonicalize_profile
+from jobify.integrations.parser.base import (
     CertificationEntry,
     EducationEntry,
     ExperienceEntry,

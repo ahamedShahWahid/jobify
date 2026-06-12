@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:kpa_app/presentation/recruiter/recruiter_dashboard_controller.dart';
-import 'package:kpa_app/presentation/recruiter/recruiter_job_card.dart';
-import 'package:kpa_app/presentation/routing/routes.dart';
-import 'package:kpa_app/presentation/theme/kpa_spacing.dart';
-import 'package:kpa_app/presentation/widgets/async_value_widget.dart';
-import 'package:kpa_app/presentation/widgets/kpa_empty_state.dart';
+import 'package:jobify_app/presentation/recruiter/recruiter_dashboard_controller.dart';
+import 'package:jobify_app/presentation/recruiter/recruiter_job_card.dart';
+import 'package:jobify_app/presentation/routing/routes.dart';
+import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
+import 'package:jobify_app/presentation/widgets/jobify_empty_state.dart';
 
 class RecruiterDashboardScreen extends ConsumerWidget {
   const RecruiterDashboardScreen({super.key});
@@ -35,7 +35,7 @@ class RecruiterDashboardScreen extends ConsumerWidget {
           onRefresh: () =>
               ref.read(recruiterDashboardControllerProvider.notifier).refresh(),
           child: ListView(
-            padding: const EdgeInsets.all(KpaSpacing.lg),
+            padding: const EdgeInsets.all(JobifySpacing.lg),
             children: [
               Row(
                 children: [
@@ -46,7 +46,7 @@ class RecruiterDashboardScreen extends ConsumerWidget {
                       icon: Icons.work_outline,
                     ),
                   ),
-                  const SizedBox(width: KpaSpacing.md),
+                  const SizedBox(width: JobifySpacing.md),
                   Expanded(
                     child: _SummaryCard(
                       label: 'Applicants',
@@ -54,7 +54,7 @@ class RecruiterDashboardScreen extends ConsumerWidget {
                       icon: Icons.people_outline,
                     ),
                   ),
-                  const SizedBox(width: KpaSpacing.md),
+                  const SizedBox(width: JobifySpacing.md),
                   Expanded(
                     child: _SummaryCard(
                       label: 'Matches',
@@ -64,11 +64,11 @@ class RecruiterDashboardScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: KpaSpacing.xl),
+              const SizedBox(height: JobifySpacing.xl),
               if (summary.recentJobs.isEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(top: KpaSpacing.xxl),
-                  child: KpaEmptyState(
+                  padding: const EdgeInsets.only(top: JobifySpacing.xxl),
+                  child: JobifyEmptyState(
                     headline: 'No jobs yet',
                     body: 'Post your first role to start receiving applicants.',
                     icon: Icons.work_outline,
@@ -93,7 +93,7 @@ class RecruiterDashboardScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: KpaSpacing.sm),
+                const SizedBox(height: JobifySpacing.sm),
                 for (final job in summary.recentJobs) ...[
                   RecruiterJobCard(
                     job: job,
@@ -102,7 +102,7 @@ class RecruiterDashboardScreen extends ConsumerWidget {
                       extra: job,
                     ),
                   ),
-                  const SizedBox(height: KpaSpacing.md),
+                  const SizedBox(height: JobifySpacing.md),
                 ],
               ],
             ],
@@ -129,14 +129,14 @@ class _SummaryCard extends StatelessWidget {
     final theme = Theme.of(context);
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(KpaSpacing.md),
+        padding: const EdgeInsets.all(JobifySpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(icon, size: 20, color: theme.colorScheme.onSurfaceVariant),
-            const SizedBox(height: KpaSpacing.sm),
+            const SizedBox(height: JobifySpacing.sm),
             Text(value, style: theme.textTheme.headlineSmall),
-            const SizedBox(height: KpaSpacing.xs),
+            const SizedBox(height: JobifySpacing.xs),
             Text(
               label,
               style: theme.textTheme.bodySmall?.copyWith(

@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:kpa_app/data/resume/resume_dto.dart';
-import 'package:kpa_app/data/resume/resume_repository_impl.dart';
+import 'package:jobify_app/data/resume/resume_dto.dart';
+import 'package:jobify_app/data/resume/resume_repository_impl.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'resume_controller.g.dart';

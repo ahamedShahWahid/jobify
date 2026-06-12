@@ -1,11 +1,11 @@
 import 'package:dio/dio.dart';
 
-import 'package:kpa_app/data/api/access_token_holder.dart';
+import 'package:jobify_app/data/api/access_token_holder.dart';
 
 /// Extras flag — set `options.extra[kSkipAuth] = true` on requests that
 /// must not carry an Authorization header (the sign-in and refresh
 /// endpoints). The auth repo sets this when issuing those calls.
-const String kSkipAuth = 'kpa.skipAuth';
+const String kSkipAuth = 'jobify.skipAuth';
 
 class AuthHeaderInterceptor extends Interceptor {
   AuthHeaderInterceptor(this._holder);

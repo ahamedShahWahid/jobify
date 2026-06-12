@@ -20,8 +20,8 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kpa.audit import audit_log
-from kpa.db.models import AuditLog, User, UserRole
+from jobify.audit import audit_log
+from jobify.db.models import AuditLog, User, UserRole
 
 
 @pytest.mark.asyncio

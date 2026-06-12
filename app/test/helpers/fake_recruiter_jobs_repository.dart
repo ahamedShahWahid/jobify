@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
-import 'package:kpa_app/data/jobs/applicant_of_job_dto.dart';
-import 'package:kpa_app/data/jobs/recruiter_job_dto.dart';
-import 'package:kpa_app/data/jobs/recruiter_jobs_api.dart';
-import 'package:kpa_app/data/jobs/recruiter_jobs_repository.dart';
+import 'package:jobify_app/data/jobs/applicant_of_job_dto.dart';
+import 'package:jobify_app/data/jobs/recruiter_job_dto.dart';
+import 'package:jobify_app/data/jobs/recruiter_jobs_api.dart';
+import 'package:jobify_app/data/jobs/recruiter_jobs_repository.dart';
 
 /// Configurable in-memory [RecruiterJobsRepository] for widget tests.
 ///

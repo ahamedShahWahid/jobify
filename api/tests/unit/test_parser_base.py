@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from kpa.integrations.parser.base import (
+from jobify.integrations.parser.base import (
     CertificationEntry,
     EducationEntry,
     ExperienceEntry,

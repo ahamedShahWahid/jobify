@@ -1,4 +1,4 @@
-# KPA — Implementation Spec v0.2
+# Jobify — Implementation Spec v0.2
 
 **Source of truth for product scope:** `~/Downloads/KPA_Enhanced_BRD_v1_1.pdf` (BRD/PRD v1.1, dated 2026-05-15).
 **This document:** how we build it. Owner: Ahamed. Status: MVP-first draft.
@@ -151,7 +151,7 @@ For long-running server work (resume parse, first match batch):
 ```
 api/
   pyproject.toml                # uv-managed; ruff, mypy, pytest
-  src/kpa/
+  src/jobify/
     main.py                     # FastAPI app factory
     settings.py                 # pydantic-settings; env-driven
     deps.py                     # request-scoped deps (db, current user)
@@ -195,7 +195,7 @@ api/
 
 ### 4.2 Conventions
 
-- Python 3.12. `uv` for env + dep management. `ruff` (lint+format), `mypy --strict` on `src/kpa/domain/**`.
+- Python 3.12. `uv` for env + dep management. `ruff` (lint+format), `mypy --strict` on `src/jobify/domain/**`.
 - SQLAlchemy 2.x async sessions; never block in request handlers.
 - Pydantic v2 for I/O models. **Never** reuse SQLAlchemy models as response schemas — separate `*Read` / `*Create` / `*Update` Pydantic models per resource.
 - All handlers `async def`. CPU-bound work goes to Celery, never to the request thread.
@@ -212,7 +212,7 @@ api/
 
 ## 5. Data model (v0.1 sketch)
 
-Postgres 16 on RDS. pgvector ≥ 0.7. One database, one schema (`kpa`). Soft delete via `deleted_at TIMESTAMPTZ NULL`; partial indexes `WHERE deleted_at IS NULL` on hot read paths.
+Postgres 16 on RDS. pgvector ≥ 0.7. One database, one schema (`jobify`). Soft delete via `deleted_at TIMESTAMPTZ NULL`; partial indexes `WHERE deleted_at IS NULL` on hot read paths.
 
 Core tables (abridged — full DDL in alembic migrations):
 
@@ -313,7 +313,7 @@ class LLMProvider(Protocol):
 
 Provider impls (`anthropic`, `bedrock`, `openai`) are selected by env. Each domain call (parse, explain) goes through a small prompt module versioned in-repo so we can A/B prompts without changing call sites.
 
-`integrations/embeddings/` is parallel: `EmbeddingProvider.encode(text, task, title) -> vec`. The `EmbeddingProvider.encode()` interface accepts an `EmbeddingTask` enum (`DOCUMENT` / `QUERY`) plus an optional `title` to keep call sites provider-agnostic. Dimension is config-driven via `KPA_EMBEDDING_DIM` (default 1536); the `vector(1536)` in §5 reflects this default and must be migrated if the dimension changes.
+`integrations/embeddings/` is parallel: `EmbeddingProvider.encode(text, task, title) -> vec`. The `EmbeddingProvider.encode()` interface accepts an `EmbeddingTask` enum (`DOCUMENT` / `QUERY`) plus an optional `title` to keep call sites provider-agnostic. Dimension is config-driven via `JOBIFY_EMBEDDING_DIM` (default 1536); the `vector(1536)` in §5 reflects this default and must be migrated if the dimension changes.
 
 > **Note on Gemini provider:** `gemini-embedding-2` does not accept the `task_type` parameter that older Google embedding models used. Task is encoded by prompt prefix in the provider impl (`title: … | text: …` for document side; `task: search result | query: …` for query side).
 
@@ -432,8 +432,8 @@ The MVP path is deliberately small — local first, with one minimal hosted foot
 ### 11.1 MVP runtime
 
 - **Local dev:**
-  - Python service: `uv run uvicorn kpa.main:app --reload` (no container required).
-  - Postgres 16: Homebrew (`brew install postgresql@16`, `brew services start postgresql@16`). One local cluster, two databases: `kpa` (dev) and `kpa_test` (integration tests). pgvector via `CREATE EXTENSION vector;` once we hit P1.
+  - Python service: `uv run uvicorn jobify.main:app --reload` (no container required).
+  - Postgres 16: Homebrew (`brew install postgresql@16`, `brew services start postgresql@16`). One local cluster, two databases: `jobify` (dev) and `jobify_test` (integration tests). pgvector via `CREATE EXTENSION vector;` once we hit P1.
   - Redis: introduced at P1 by the resume parse worker plan (was originally planned for P3; advanced because §6.1 needs async parse). Local Redis via Homebrew (`brew install redis && brew services start redis`). The Celery broker + result backend both point at it.
   - Object storage: local filesystem under `./var/uploads/` during dev; an S3 bucket can be slotted in via `integrations/storage_s3.py` once the parse pipeline lands.
   - Secrets: a git-ignored `.env` file loaded by `uv run --env-file=.env ...`. No AWS at this stage.
@@ -448,7 +448,7 @@ Once MVP traffic and product-market fit are established, the following sections 
 - Compute: EKS, one cluster per env (`dev`, `staging`, `prod`). Node groups: `api-pool`, `worker-pool`. Karpenter for ingest-spike scale-out.
 - Postgres: RDS Postgres 16 with one read replica. Multi-AZ in prod.
 - Redis: ElastiCache replication group; separate logical DBs for cache / broker / rate-limit.
-- Object storage: S3 buckets per purpose (`kpa-resumes-{env}`, `kpa-exports-{env}`, `kpa-static-{env}`). Lifecycle: resumes versioned + 90-day Glacier transition; exports 7-day expiry.
+- Object storage: S3 buckets per purpose (`jobify-resumes-{env}`, `jobify-exports-{env}`, `jobify-static-{env}`). Lifecycle: resumes versioned + 90-day Glacier transition; exports 7-day expiry.
 - CDN: CloudFront in front of the static Flutter web bundle and S3-served public assets.
 - Secrets: AWS Secrets Manager (rotating where supported) + Parameter Store.
 - IaC: Terraform for AWS resources; Helm charts for app deployment. ArgoCD on `infra/` for GitOps.

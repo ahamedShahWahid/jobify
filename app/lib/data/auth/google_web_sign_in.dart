@@ -2,8 +2,8 @@ import 'package:flutter/widgets.dart';
 // Conditional import: the web impl pulls in `google_sign_in_web/web_only.dart`
 // (dart:js_interop), which does NOT compile on mobile or in `flutter test`.
 // The stub is selected everywhere except the web build.
-import 'package:kpa_app/data/auth/google_web_sign_in_stub.dart'
-    if (dart.library.js_interop) 'package:kpa_app/data/auth/google_web_sign_in_web.dart'
+import 'package:jobify_app/data/auth/google_web_sign_in_stub.dart'
+    if (dart.library.js_interop) 'package:jobify_app/data/auth/google_web_sign_in_web.dart'
     as impl;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/auth/user_role.dart';
-import 'package:kpa_app/presentation/routing/role_redirect.dart';
-import 'package:kpa_app/presentation/routing/routes.dart';
+import 'package:jobify_app/data/auth/user_role.dart';
+import 'package:jobify_app/presentation/routing/role_redirect.dart';
+import 'package:jobify_app/presentation/routing/routes.dart';
 
 void main() {
   test('recruiter on applicant route is bounced to dashboard', () {

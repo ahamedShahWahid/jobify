@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:kpa_app/data/jobs/job_status.dart';
-import 'package:kpa_app/presentation/feed/feed_item_card.dart';
-import 'package:kpa_app/presentation/routing/routes.dart';
-import 'package:kpa_app/presentation/saved/saved_controller.dart';
-import 'package:kpa_app/presentation/theme/kpa_spacing.dart';
-import 'package:kpa_app/presentation/widgets/async_value_widget.dart';
-import 'package:kpa_app/presentation/widgets/kpa_empty_state.dart';
-import 'package:kpa_app/presentation/widgets/kpa_loading_view.dart';
+import 'package:jobify_app/data/jobs/job_status.dart';
+import 'package:jobify_app/presentation/feed/feed_item_card.dart';
+import 'package:jobify_app/presentation/routing/routes.dart';
+import 'package:jobify_app/presentation/saved/saved_controller.dart';
+import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
+import 'package:jobify_app/presentation/widgets/jobify_empty_state.dart';
+import 'package:jobify_app/presentation/widgets/jobify_loading_view.dart';
 
 class SavedScreen extends ConsumerStatefulWidget {
   const SavedScreen({super.key});
@@ -45,7 +45,7 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
         value: value,
         onRetry: () => ref.read(savedControllerProvider.notifier).refresh(),
         isEmpty: (s) => s.items.isEmpty,
-        empty: () => const KpaEmptyState(
+        empty: () => const JobifyEmptyState(
           headline: 'Nothing saved yet',
           body: 'Tap the heart on any job to save it for later.',
           icon: Icons.bookmark_outline,
@@ -54,15 +54,16 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
           onRefresh: () => ref.read(savedControllerProvider.notifier).refresh(),
           child: ListView.separated(
             controller: _scroll,
-            padding: const EdgeInsets.all(KpaSpacing.lg),
+            padding: const EdgeInsets.all(JobifySpacing.lg),
             itemCount: s.items.length + 1,
-            separatorBuilder: (_, __) => const SizedBox(height: KpaSpacing.md),
+            separatorBuilder: (_, __) =>
+                const SizedBox(height: JobifySpacing.md),
             itemBuilder: (context, i) {
               if (i == s.items.length) {
                 if (s.isLoadingMore) {
                   return const Padding(
-                    padding: EdgeInsets.all(KpaSpacing.lg),
-                    child: KpaLoadingView(),
+                    padding: EdgeInsets.all(JobifySpacing.lg),
+                    child: JobifyLoadingView(),
                   );
                 }
                 return const SizedBox.shrink();

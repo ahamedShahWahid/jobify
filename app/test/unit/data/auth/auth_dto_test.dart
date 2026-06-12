@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/auth/auth_dto.dart';
+import 'package:jobify_app/data/auth/auth_dto.dart';
 
-// These fixtures mirror the REAL backend wire shape (api/src/kpa/routes/auth.py:
+// These fixtures mirror the REAL backend wire shape (api/src/jobify/routes/auth.py:
 // SignInResponse / RefreshResponse), NOT the Dart field names. They guard the
 // JSON-key contract so a future rename on either side fails loudly here instead
 // of surfacing as a generic "Sign-in failed" snackbar on a 200 OK.

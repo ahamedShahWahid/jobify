@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kpa_app/data/employers/employer_dto.dart';
-import 'package:kpa_app/data/jobs/recruiter_jobs_repository_impl.dart';
-import 'package:kpa_app/presentation/recruiter/active_employer_provider.dart';
-import 'package:kpa_app/presentation/recruiter/job_form_screen.dart';
+import 'package:jobify_app/data/employers/employer_dto.dart';
+import 'package:jobify_app/data/jobs/recruiter_jobs_repository_impl.dart';
+import 'package:jobify_app/presentation/recruiter/active_employer_provider.dart';
+import 'package:jobify_app/presentation/recruiter/job_form_screen.dart';
 
 import '../helpers/fake_recruiter_jobs_repository.dart';
 

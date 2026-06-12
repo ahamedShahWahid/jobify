@@ -1,6 +1,6 @@
 /// Base for all typed exceptions thrown from the data layer.
-sealed class KpaException implements Exception {
-  const KpaException({this.requestId, this.cause});
+sealed class JobifyException implements Exception {
+  const JobifyException({this.requestId, this.cause});
 
   /// X-Request-Id from the response (when present). Pair this with backend
   /// logs to chase a single request end-to-end.
@@ -16,7 +16,7 @@ sealed class KpaException implements Exception {
 /// The refresh interceptor handles 401 → retry transparently; an
 /// [AuthException] reaches the screen only after the refresh itself failed
 /// (or the request was unauthenticated to begin with).
-final class AuthException extends KpaException {
+final class AuthException extends JobifyException {
   const AuthException({
     required this.slug,
     this.detail,
@@ -33,7 +33,7 @@ final class AuthException extends KpaException {
 }
 
 /// Any non-401 4xx/5xx response from the backend.
-final class ApiException extends KpaException {
+final class ApiException extends JobifyException {
   const ApiException({
     required this.statusCode,
     this.slug,
@@ -53,7 +53,7 @@ final class ApiException extends KpaException {
 }
 
 /// Network-layer failure — DNS, connection refused, timeout.
-final class NetworkException extends KpaException {
+final class NetworkException extends JobifyException {
   const NetworkException({this.message, super.cause});
 
   final String? message;

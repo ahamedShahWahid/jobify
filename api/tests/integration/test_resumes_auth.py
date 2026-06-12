@@ -12,13 +12,13 @@ import httpx
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kpa.auth.tokens import mint_access_token
-from kpa.db.models import User, UserRole
+from jobify.auth.tokens import mint_access_token
+from jobify.db.models import User, UserRole
 
 pytestmark = pytest.mark.integration
 
 _TINY_PDF = b"%PDF-1.4\n%minimal\n"
-_JWT_SECRET = "x" * 32  # matches KPA_JWT_SECRET set by the integration fixtures
+_JWT_SECRET = "x" * 32  # matches JOBIFY_JWT_SECRET set by the integration fixtures
 
 
 async def test_upload_missing_bearer_returns_401(

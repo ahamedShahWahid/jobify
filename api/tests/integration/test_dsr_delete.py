@@ -19,10 +19,10 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kpa.auth.google_verifier import GoogleClaims
-from kpa.auth.tokens import mint_access_token
-from kpa.consent import seed_default_consents
-from kpa.db.models import (
+from jobify.auth.google_verifier import GoogleClaims
+from jobify.auth.tokens import mint_access_token
+from jobify.consent import seed_default_consents
+from jobify.db.models import (
     Applicant,
     Application,
     ApplicationStatus,

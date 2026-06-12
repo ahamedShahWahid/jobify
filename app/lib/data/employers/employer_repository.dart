@@ -1,4 +1,4 @@
-import 'package:kpa_app/data/employers/employer_dto.dart';
+import 'package:jobify_app/data/employers/employer_dto.dart';
 
 abstract interface class EmployerRepository {
   Future<EmployerDto> createEmployer({required String name, String? gst});

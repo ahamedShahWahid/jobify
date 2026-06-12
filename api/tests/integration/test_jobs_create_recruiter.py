@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import select
 
-from kpa.db.models import Employer, Job
+from jobify.db.models import Employer, Job
 
 pytestmark = pytest.mark.integration
 
@@ -119,7 +119,7 @@ async def test_create_job_dispatches_embed(async_client, applicant_user_and_toke
         def delay(self, job_id: str) -> None:
             called_with.append(job_id)
 
-    import kpa.workers.tasks.embed_job as _embed_job_mod
+    import jobify.workers.tasks.embed_job as _embed_job_mod
 
     monkeypatch.setattr(_embed_job_mod, "embed_job", _Stub(), raising=False)
 

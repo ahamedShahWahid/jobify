@@ -5,9 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/framework.dart' show Override;
 
-import 'package:kpa_app/core/error/exceptions.dart';
-import 'package:kpa_app/presentation/splash/bootstrap_controller.dart';
-import 'package:kpa_app/presentation/splash/splash_screen.dart';
+import 'package:jobify_app/core/error/exceptions.dart';
+import 'package:jobify_app/presentation/splash/bootstrap_controller.dart';
+import 'package:jobify_app/presentation/splash/splash_screen.dart';
 
 Widget _wrap(Widget child, {required List<Override> overrides}) {
   return ProviderScope(

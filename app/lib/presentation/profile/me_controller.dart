@@ -1,5 +1,5 @@
-import 'package:kpa_app/data/me/me_dto.dart';
-import 'package:kpa_app/data/me/me_repository_impl.dart';
+import 'package:jobify_app/data/me/me_dto.dart';
+import 'package:jobify_app/data/me/me_repository_impl.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'me_controller.g.dart';

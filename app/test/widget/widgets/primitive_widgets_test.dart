@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/core/error/exceptions.dart';
-import 'package:kpa_app/presentation/widgets/kpa_empty_state.dart';
-import 'package:kpa_app/presentation/widgets/kpa_error_view.dart';
-import 'package:kpa_app/presentation/widgets/kpa_loading_view.dart';
-import 'package:kpa_app/presentation/widgets/kpa_score_badge.dart';
+import 'package:jobify_app/core/error/exceptions.dart';
+import 'package:jobify_app/presentation/widgets/jobify_empty_state.dart';
+import 'package:jobify_app/presentation/widgets/jobify_error_view.dart';
+import 'package:jobify_app/presentation/widgets/jobify_loading_view.dart';
+import 'package:jobify_app/presentation/widgets/jobify_score_badge.dart';
 
 // NOTE: tests use ThemeData.light() instead of buildTheme() because
 // buildTheme triggers google_fonts to fetch Inter, which fails in
@@ -17,27 +17,27 @@ Widget _wrap(Widget child) {
 }
 
 void main() {
-  testWidgets('KpaLoadingView renders an adaptive spinner', (tester) async {
+  testWidgets('JobifyLoadingView renders an adaptive spinner', (tester) async {
     await tester.pumpWidget(
-      _wrap(const KpaLoadingView(message: 'Loading…')),
+      _wrap(const JobifyLoadingView(message: 'Loading…')),
     );
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
     expect(find.text('Loading…'), findsOneWidget);
   });
 
-  testWidgets('KpaErrorView with NetworkException shows network copy',
+  testWidgets('JobifyErrorView with NetworkException shows network copy',
       (tester) async {
     await tester.pumpWidget(
-      _wrap(const KpaErrorView(error: NetworkException(message: 'oops'))),
+      _wrap(const JobifyErrorView(error: NetworkException(message: 'oops'))),
     );
-    expect(find.textContaining("Couldn't reach KPA"), findsOneWidget);
+    expect(find.textContaining("Couldn't reach Jobify"), findsOneWidget);
   });
 
-  testWidgets('KpaErrorView with onRetry shows the button', (tester) async {
+  testWidgets('JobifyErrorView with onRetry shows the button', (tester) async {
     var taps = 0;
     await tester.pumpWidget(
       _wrap(
-        KpaErrorView(
+        JobifyErrorView(
           error: const NetworkException(),
           onRetry: () => taps++,
         ),
@@ -47,10 +47,11 @@ void main() {
     expect(taps, 1);
   });
 
-  testWidgets('KpaEmptyState renders headline + body + action', (tester) async {
+  testWidgets('JobifyEmptyState renders headline + body + action',
+      (tester) async {
     await tester.pumpWidget(
       _wrap(
-        KpaEmptyState(
+        JobifyEmptyState(
           headline: 'Nothing here',
           body: 'Try something else',
           primaryAction: FilledButton(
@@ -65,17 +66,17 @@ void main() {
     expect(find.text('Go'), findsOneWidget);
   });
 
-  testWidgets('KpaScoreBadge renders rounded percent', (tester) async {
-    await tester.pumpWidget(_wrap(const KpaScoreBadge(score: 0.857)));
+  testWidgets('JobifyScoreBadge renders rounded percent', (tester) async {
+    await tester.pumpWidget(_wrap(const JobifyScoreBadge(score: 0.857)));
     expect(find.text('86%'), findsOneWidget);
   });
 
-  testWidgets('KpaScoreBadge bands by score', (tester) async {
-    await tester.pumpWidget(_wrap(const KpaScoreBadge(score: 0.5)));
+  testWidgets('JobifyScoreBadge bands by score', (tester) async {
+    await tester.pumpWidget(_wrap(const JobifyScoreBadge(score: 0.5)));
     expect(find.text('50%'), findsOneWidget);
-    await tester.pumpWidget(_wrap(const KpaScoreBadge(score: 0.7)));
+    await tester.pumpWidget(_wrap(const JobifyScoreBadge(score: 0.7)));
     expect(find.text('70%'), findsOneWidget);
-    await tester.pumpWidget(_wrap(const KpaScoreBadge(score: 0.95)));
+    await tester.pumpWidget(_wrap(const JobifyScoreBadge(score: 0.95)));
     expect(find.text('95%'), findsOneWidget);
   });
 }

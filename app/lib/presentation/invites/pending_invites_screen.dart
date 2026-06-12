@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import 'package:kpa_app/data/employers/team/employer_invite_dto.dart';
-import 'package:kpa_app/presentation/invites/invite_response_controller.dart';
-import 'package:kpa_app/presentation/invites/my_invites_controller.dart';
-import 'package:kpa_app/presentation/theme/kpa_spacing.dart';
-import 'package:kpa_app/presentation/widgets/async_value_widget.dart';
-import 'package:kpa_app/presentation/widgets/kpa_empty_state.dart';
+import 'package:jobify_app/data/employers/team/employer_invite_dto.dart';
+import 'package:jobify_app/presentation/invites/invite_response_controller.dart';
+import 'package:jobify_app/presentation/invites/my_invites_controller.dart';
+import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
+import 'package:jobify_app/presentation/widgets/jobify_empty_state.dart';
 
 final _dateFormat = DateFormat.yMMMMd();
 
@@ -28,7 +28,7 @@ class PendingInvitesScreen extends ConsumerWidget {
         value: invites,
         onRetry: () => ref.read(myInvitesControllerProvider.notifier).refresh(),
         isEmpty: (list) => list.isEmpty,
-        empty: () => const KpaEmptyState(
+        empty: () => const JobifyEmptyState(
           headline: 'No invitations',
           body: "When a company invites you to recruit, it'll show up here.",
           icon: Icons.mail_outline,
@@ -37,9 +37,10 @@ class PendingInvitesScreen extends ConsumerWidget {
           onRefresh: () =>
               ref.read(myInvitesControllerProvider.notifier).refresh(),
           child: ListView.separated(
-            padding: const EdgeInsets.all(KpaSpacing.lg),
+            padding: const EdgeInsets.all(JobifySpacing.lg),
             itemCount: list.length,
-            separatorBuilder: (_, __) => const SizedBox(height: KpaSpacing.md),
+            separatorBuilder: (_, __) =>
+                const SizedBox(height: JobifySpacing.md),
             itemBuilder: (_, i) => _InviteCard(invite: list[i]),
           ),
         ),
@@ -58,12 +59,12 @@ class _InviteCard extends ConsumerWidget {
     final busy = ref.watch(inviteResponseControllerProvider).isLoading;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(KpaSpacing.lg),
+        padding: const EdgeInsets.all(JobifySpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(invite.employerName, style: theme.textTheme.titleMedium),
-            const SizedBox(height: KpaSpacing.xs),
+            const SizedBox(height: JobifySpacing.xs),
             Text(
               'Invited as ${invite.role == 'owner' ? 'owner' : 'member'} · '
               'expires ${_dateFormat.format(invite.expiresAt)}',
@@ -71,7 +72,7 @@ class _InviteCard extends ConsumerWidget {
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: KpaSpacing.md),
+            const SizedBox(height: JobifySpacing.md),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -79,7 +80,7 @@ class _InviteCard extends ConsumerWidget {
                   onPressed: busy ? null : () => _decline(context, ref),
                   child: const Text('Decline'),
                 ),
-                const SizedBox(width: KpaSpacing.sm),
+                const SizedBox(width: JobifySpacing.sm),
                 FilledButton(
                   onPressed: busy ? null : () => _accept(context, ref),
                   child: const Text('Accept'),

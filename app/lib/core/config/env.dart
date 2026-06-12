@@ -7,11 +7,11 @@
 /// Call [validateOrThrow] from `main()` before `runApp` — a missing
 /// required var should fail fast with a printable message.
 abstract final class Env {
-  static const apiBaseUrl = String.fromEnvironment('KPA_API_BASE_URL');
+  static const apiBaseUrl = String.fromEnvironment('JOBIFY_API_BASE_URL');
   static const googleWebClientId =
-      String.fromEnvironment('KPA_GOOGLE_WEB_CLIENT_ID');
+      String.fromEnvironment('JOBIFY_GOOGLE_WEB_CLIENT_ID');
   static const buildEnv = String.fromEnvironment(
-    'KPA_BUILD_ENV',
+    'JOBIFY_BUILD_ENV',
     defaultValue: 'local',
   );
 
@@ -40,8 +40,8 @@ abstract final class Env {
     throw StateError(
       'Missing required --dart-define vars: ${missing.join(', ')}. '
       'Pass them on the flutter command line, e.g.:\n'
-      '  flutter run --dart-define=KPA_API_BASE_URL=http://localhost:8000 '
-      '--dart-define=KPA_GOOGLE_WEB_CLIENT_ID=<your-id>\n'
+      '  flutter run --dart-define=JOBIFY_API_BASE_URL=http://localhost:8000 '
+      '--dart-define=JOBIFY_GOOGLE_WEB_CLIENT_ID=<your-id>\n'
       'Or use --dart-define-from-file=.env (see app/.env.example).',
     );
   }
@@ -52,8 +52,8 @@ abstract final class Env {
     required String googleWebClientId,
   }) {
     return [
-      if (apiBaseUrl.isEmpty) 'KPA_API_BASE_URL',
-      if (googleWebClientId.isEmpty) 'KPA_GOOGLE_WEB_CLIENT_ID',
+      if (apiBaseUrl.isEmpty) 'JOBIFY_API_BASE_URL',
+      if (googleWebClientId.isEmpty) 'JOBIFY_GOOGLE_WEB_CLIENT_ID',
     ];
   }
 }

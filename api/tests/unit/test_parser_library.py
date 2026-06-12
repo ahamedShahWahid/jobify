@@ -13,8 +13,8 @@ import pytest
 from docx import Document
 from fpdf import FPDF
 
-from kpa.integrations.parser.base import ParsedResume
-from kpa.integrations.parser.library import LibraryResumeParser
+from jobify.integrations.parser.base import ParsedResume
+from jobify.integrations.parser.library import LibraryResumeParser
 
 PDF_CT = "application/pdf"
 DOCX_CT = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"

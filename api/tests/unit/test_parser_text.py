@@ -9,8 +9,8 @@ from docx import Document
 from fpdf import FPDF
 from pypdf import PdfReader, PdfWriter
 
-from kpa.integrations.parser.base import ParserError
-from kpa.integrations.parser.text import MAX_TEXT_BYTES, extract_text
+from jobify.integrations.parser.base import ParserError
+from jobify.integrations.parser.text import MAX_TEXT_BYTES, extract_text
 
 # --- Fixture generators (in-process; no binary commits) ---
 

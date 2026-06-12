@@ -1,4 +1,4 @@
-import 'package:kpa_app/data/resume/resume_dto.dart';
+import 'package:jobify_app/data/resume/resume_dto.dart';
 
 abstract interface class ResumeRepository {
   /// The applicant's latest resume, or null if none uploaded.

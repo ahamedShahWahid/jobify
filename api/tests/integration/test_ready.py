@@ -8,16 +8,16 @@ from fastapi.testclient import TestClient
 
 @pytest.mark.integration
 def test_ready_returns_200_when_db_reachable(db_url: str, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("KPA_ENV", "local")
-    monkeypatch.setenv("KPA_SERVICE_NAME", "kpa-api")
-    monkeypatch.setenv("KPA_DB_URL", db_url)
-    monkeypatch.setenv("KPA_JWT_SECRET", "x" * 32)
+    monkeypatch.setenv("JOBIFY_ENV", "local")
+    monkeypatch.setenv("JOBIFY_SERVICE_NAME", "jobify-api")
+    monkeypatch.setenv("JOBIFY_DB_URL", db_url)
+    monkeypatch.setenv("JOBIFY_JWT_SECRET", "x" * 32)
     monkeypatch.setenv(
-        "KPA_GOOGLE_OAUTH_CLIENT_IDS",
+        "JOBIFY_GOOGLE_OAUTH_CLIENT_IDS",
         "test.apps.googleusercontent.com",
     )
 
-    from kpa.app_factory import create_app  # import after env is set
+    from jobify.app_factory import create_app  # import after env is set
 
     with TestClient(create_app()) as c:
         response = c.get("/ready")
@@ -27,19 +27,19 @@ def test_ready_returns_200_when_db_reachable(db_url: str, monkeypatch: pytest.Mo
 
 @pytest.mark.integration
 def test_ready_returns_503_when_db_unreachable(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("KPA_ENV", "local")
-    monkeypatch.setenv("KPA_SERVICE_NAME", "kpa-api")
+    monkeypatch.setenv("JOBIFY_ENV", "local")
+    monkeypatch.setenv("JOBIFY_SERVICE_NAME", "jobify-api")
     monkeypatch.setenv(
-        "KPA_DB_URL",
+        "JOBIFY_DB_URL",
         "postgresql+asyncpg://nobody:nobody@127.0.0.1:1/none",  # unreachable
     )
-    monkeypatch.setenv("KPA_JWT_SECRET", "x" * 32)
+    monkeypatch.setenv("JOBIFY_JWT_SECRET", "x" * 32)
     monkeypatch.setenv(
-        "KPA_GOOGLE_OAUTH_CLIENT_IDS",
+        "JOBIFY_GOOGLE_OAUTH_CLIENT_IDS",
         "test.apps.googleusercontent.com",
     )
 
-    from kpa.app_factory import create_app
+    from jobify.app_factory import create_app
 
     # raise_server_exceptions=False is NOT needed — the /ready handler catches all
     # exceptions (including bare OSError from asyncpg) and returns 503 gracefully.

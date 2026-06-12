@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/dsr/dsr_repository_impl.dart';
-import 'package:kpa_app/presentation/privacy/delete_account_screen.dart';
+import 'package:jobify_app/data/dsr/dsr_repository_impl.dart';
+import 'package:jobify_app/presentation/privacy/delete_account_screen.dart';
 
 import '../../../helpers/fake_repositories.dart';
 

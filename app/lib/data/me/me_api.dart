@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 
-import 'package:kpa_app/data/me/me_dto.dart';
-import 'package:kpa_app/data/me/profile_update_dto.dart';
+import 'package:jobify_app/data/me/me_dto.dart';
+import 'package:jobify_app/data/me/profile_update_dto.dart';
 
 class MeApi {
   MeApi(this._dio);

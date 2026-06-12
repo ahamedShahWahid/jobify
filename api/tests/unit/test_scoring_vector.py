@@ -6,7 +6,7 @@ import math
 
 import pytest
 
-from kpa.scoring.vector import cosine_similarity, vector_score
+from jobify.scoring.vector import cosine_similarity, vector_score
 
 
 def test_cosine_identical_vectors_is_one() -> None:

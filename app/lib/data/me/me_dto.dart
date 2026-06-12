@@ -2,7 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'me_dto.g.dart';
 
-/// Mirrors the GET /v1/me response (api/src/kpa/routes/me.py: MeResponse).
+/// Mirrors the GET /v1/me response (api/src/jobify/routes/me.py: MeResponse).
 /// The user fields are FLAT at the top level — there is no `user` wrapper —
 /// and the role-shaped `applicant` is nested. Keep this in lockstep with the
 /// backend; a drift surfaces as a "Something went wrong" screen on a 200 OK.

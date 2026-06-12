@@ -53,15 +53,15 @@ def test_response_has_exactly_one_request_id_header(monkeypatch: pytest.MonkeyPa
     """Regression guard: middleware must upsert, not append. The 500 error handler
     sets X-Request-Id explicitly; without upsert, the middleware would double it.
     """
-    monkeypatch.setenv("KPA_ENV", "local")
-    monkeypatch.setenv("KPA_SERVICE_NAME", "kpa-api")
-    monkeypatch.setenv("KPA_DB_URL", "postgresql+asyncpg://u:p@h:5432/d")
+    monkeypatch.setenv("JOBIFY_ENV", "local")
+    monkeypatch.setenv("JOBIFY_SERVICE_NAME", "jobify-api")
+    monkeypatch.setenv("JOBIFY_DB_URL", "postgresql+asyncpg://u:p@h:5432/d")
 
     from fastapi import FastAPI
     from fastapi.responses import PlainTextResponse
     from fastapi.testclient import TestClient
 
-    from kpa.middleware.request_id import REQUEST_ID_HEADER, RequestIdMiddleware
+    from jobify.middleware.request_id import REQUEST_ID_HEADER, RequestIdMiddleware
 
     app = FastAPI()
     app.add_middleware(RequestIdMiddleware)

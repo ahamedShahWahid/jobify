@@ -1,10 +1,10 @@
 import 'package:dio/dio.dart';
-import 'package:kpa_app/data/api/dio_provider.dart';
-import 'package:kpa_app/data/api/error_mapping.dart';
-import 'package:kpa_app/data/employers/team/employer_invite_dto.dart';
-import 'package:kpa_app/data/employers/team/employer_team_api.dart';
-import 'package:kpa_app/data/employers/team/employer_team_repository.dart';
-import 'package:kpa_app/data/employers/team/member_dto.dart';
+import 'package:jobify_app/data/api/dio_provider.dart';
+import 'package:jobify_app/data/api/error_mapping.dart';
+import 'package:jobify_app/data/employers/team/employer_invite_dto.dart';
+import 'package:jobify_app/data/employers/team/employer_team_api.dart';
+import 'package:jobify_app/data/employers/team/employer_team_repository.dart';
+import 'package:jobify_app/data/employers/team/member_dto.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'employer_team_repository_impl.g.dart';

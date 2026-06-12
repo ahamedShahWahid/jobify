@@ -1,4 +1,4 @@
-import 'package:kpa_app/data/auth/auth_state.dart';
+import 'package:jobify_app/data/auth/auth_state.dart';
 
 abstract interface class AuthRepository {
   AuthState get current;

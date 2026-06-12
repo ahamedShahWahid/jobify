@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from jwt.utils import to_base64url_uint
 
-from kpa.auth.google_verifier import (
+from jobify.auth.google_verifier import (
     GoogleJwksUnavailableError,
     InvalidGoogleTokenError,
     JwksGoogleIdTokenVerifier,

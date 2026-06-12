@@ -2,7 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'employer_dto.g.dart';
 
-/// Mirrors EmployerRead (api/src/kpa/routes/employers.py).
+/// Mirrors EmployerRead (api/src/jobify/routes/employers.py).
 @JsonSerializable()
 class EmployerDto {
   const EmployerDto({

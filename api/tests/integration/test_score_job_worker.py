@@ -9,8 +9,8 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-import kpa.workers.tasks.score_job as score_job_task
-from kpa.db.models import (
+import jobify.workers.tasks.score_job as score_job_task
+from jobify.db.models import (
     Applicant,
     ApplicantEmbedding,
     Employer,
@@ -20,8 +20,8 @@ from kpa.db.models import (
     User,
     UserRole,
 )
-from kpa.scoring.match import TransientScoringError
-from kpa.workers.tasks.score_job import _score_job_async
+from jobify.scoring.match import TransientScoringError
+from jobify.workers.tasks.score_job import _score_job_async
 
 
 def _make_sm(session: AsyncSession) -> async_sessionmaker[AsyncSession]:

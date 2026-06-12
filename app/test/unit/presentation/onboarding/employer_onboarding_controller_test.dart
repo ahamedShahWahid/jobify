@@ -1,14 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/core/error/exceptions.dart';
-import 'package:kpa_app/data/auth/auth_repository.dart';
-import 'package:kpa_app/data/auth/auth_repository_provider.dart';
-import 'package:kpa_app/data/auth/auth_state.dart';
-import 'package:kpa_app/data/auth/user_role.dart';
-import 'package:kpa_app/data/employers/employer_dto.dart';
-import 'package:kpa_app/data/employers/employer_repository.dart';
-import 'package:kpa_app/data/employers/employer_repository_impl.dart';
-import 'package:kpa_app/presentation/onboarding/employer_onboarding_controller.dart';
+import 'package:jobify_app/core/error/exceptions.dart';
+import 'package:jobify_app/data/auth/auth_repository.dart';
+import 'package:jobify_app/data/auth/auth_repository_provider.dart';
+import 'package:jobify_app/data/auth/auth_state.dart';
+import 'package:jobify_app/data/auth/user_role.dart';
+import 'package:jobify_app/data/employers/employer_dto.dart';
+import 'package:jobify_app/data/employers/employer_repository.dart';
+import 'package:jobify_app/data/employers/employer_repository_impl.dart';
+import 'package:jobify_app/presentation/onboarding/employer_onboarding_controller.dart';
 
 // ---------------------------------------------------------------------------
 // Fakes

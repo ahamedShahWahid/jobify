@@ -9,8 +9,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from kpa.scoring.explainer import ExplainContext
-from kpa.scoring.llm_explainer import (
+from jobify.scoring.explainer import ExplainContext
+from jobify.scoring.llm_explainer import (
     LLM_GENERATOR,
     LLM_GENERATOR_VERSION,
     GeminiMatchExplainer,

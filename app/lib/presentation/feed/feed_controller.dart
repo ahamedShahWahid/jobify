@@ -1,7 +1,7 @@
-import 'package:kpa_app/data/feed/feed_dto.dart';
-import 'package:kpa_app/data/feed/feed_repository_impl.dart';
-import 'package:kpa_app/presentation/paging/paged_state.dart';
-import 'package:kpa_app/presentation/paging/paging.dart';
+import 'package:jobify_app/data/feed/feed_dto.dart';
+import 'package:jobify_app/data/feed/feed_repository_impl.dart';
+import 'package:jobify_app/presentation/paging/paged_state.dart';
+import 'package:jobify_app/presentation/paging/paging.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'feed_controller.g.dart';

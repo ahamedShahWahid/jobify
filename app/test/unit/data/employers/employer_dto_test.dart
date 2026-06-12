@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/employers/employer_dto.dart';
+import 'package:jobify_app/data/employers/employer_dto.dart';
 
 void main() {
   test('parses a verified employer', () {

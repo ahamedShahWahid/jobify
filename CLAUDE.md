@@ -4,7 +4,7 @@ Guidance for Claude Code working in this repo.
 
 ## What this repo is
 
-KPA (Khan Placement Agency) — an early-stage placement platform.
+Jobify (Jobify) — an early-stage placement platform.
 
 - `api/` — FastAPI backend (Python 3.12, `uv`). Async SQLAlchemy + Alembic on Postgres 16, Google OAuth + rotating refresh JWTs, resume upload/parse (Celery + Redis), embeddings (Gemini + pgvector), matching/scoring, feed, applications, recruiter jobs CRUD, notifications outbox, admin moderation, consent + DSR (DPDP).
 - `IMPLEMENTATION_SPEC.md` — **how** we build it (engineering spec, v0.2 MVP-first).
@@ -16,22 +16,22 @@ Scope vs "how" conflict: BRD wins on product behavior; spec wins on tech.
 
 ## Commands + setup
 
-Backend commands run from `api/` (the `uv` workspace, `alembic.ini`, `pyproject.toml` live there). **All operational reference lives in the READMEs** — `api/README.md` (run, tests, migrations, DB/Redis/pgvector setup, worker command, seeding, the full `KPA_*` env-var table, endpoint docs) and `app/README.md` (Flutter run/test, web OAuth origins). This file is non-obvious bits only. Boot rules worth pinning here:
+Backend commands run from `api/` (the `uv` workspace, `alembic.ini`, `pyproject.toml` live there). **All operational reference lives in the READMEs** — `api/README.md` (run, tests, migrations, DB/Redis/pgvector setup, worker command, seeding, the full `JOBIFY_*` env-var table, endpoint docs) and `app/README.md` (Flutter run/test, web OAuth origins). This file is non-obvious bits only. Boot rules worth pinning here:
 
-- App refuses to boot if a required `KPA_*` var is missing/invalid (`settings.py`); `KPA_DB_URL` **must** use `postgresql+asyncpg://` (enforced in `Settings._enforce_async_driver`).
-- Integration fixtures inject `KPA_JWT_SECRET="x"*32` + `KPA_GOOGLE_OAUTH_CLIENT_IDS=test.apps.googleusercontent.com` — match these for new apps under test.
+- App refuses to boot if a required `JOBIFY_*` var is missing/invalid (`settings.py`); `JOBIFY_DB_URL` **must** use `postgresql+asyncpg://` (enforced in `Settings._enforce_async_driver`).
+- Integration fixtures inject `JOBIFY_JWT_SECRET="x"*32` + `JOBIFY_GOOGLE_OAUTH_CLIENT_IDS=test.apps.googleusercontent.com` — match these for new apps under test.
 
 ## Architecture — non-obvious bits
 
 > Each subproject has a paired design doc in `docs/superpowers/specs/` (the **why** + full reserved-slug tables). Below = load-bearing rules only: things that cause a bug if violated and aren't obvious from the code.
 
-### App wiring (`src/kpa/app_factory.py`)
+### App wiring (`src/jobify/app_factory.py`)
 
-`create_app()` builds a fresh app per call (test isolation), owning three `app.state` things: `settings`; `db_engine` + `db_sessionmaker` (single async engine, sets `search_path=kpa` via asyncpg `server_settings` so model code does **not** repeat `schema="kpa"`; disposed on `shutdown` — **don't create your own engine in module scope**); `storage` (a `Storage` protocol impl, currently `LocalFileStorage`). Routes read these via `Depends` (`get_session`, `get_storage`); tests swap via `app.dependency_overrides`.
+`create_app()` builds a fresh app per call (test isolation), owning three `app.state` things: `settings`; `db_engine` + `db_sessionmaker` (single async engine, sets `search_path=jobify` via asyncpg `server_settings` so model code does **not** repeat `schema="jobify"`; disposed on `shutdown` — **don't create your own engine in module scope**); `storage` (a `Storage` protocol impl, currently `LocalFileStorage`). Routes read these via `Depends` (`get_session`, `get_storage`); tests swap via `app.dependency_overrides`.
 
 ### Middleware — pure ASGI, not BaseHTTPMiddleware
 
-`RequestIdMiddleware` is pure ASGI on purpose: `BaseHTTPMiddleware` wraps the app in an `anyio` task group → asyncpg raises `Future attached to a different loop`. **New middleware must be pure-ASGI.** Request id = uuid4; client `X-Request-Id` honored only if a valid uuid4, else replaced; on every response (incl. errors) as the only log correlation handle. `CORSMiddleware` mounted **after** `RequestIdMiddleware` (outermost). Origins from `KPA_CORS_ALLOW_ORIGINS` (default `http://localhost:8080`); no cookies → `allow_credentials` off. Only web needs it (mobile sends no `Origin`).
+`RequestIdMiddleware` is pure ASGI on purpose: `BaseHTTPMiddleware` wraps the app in an `anyio` task group → asyncpg raises `Future attached to a different loop`. **New middleware must be pure-ASGI.** Request id = uuid4; client `X-Request-Id` honored only if a valid uuid4, else replaced; on every response (incl. errors) as the only log correlation handle. `CORSMiddleware` mounted **after** `RequestIdMiddleware` (outermost). Origins from `JOBIFY_CORS_ALLOW_ORIGINS` (default `http://localhost:8080`); no cookies → `allow_credentials` off. Only web needs it (mobile sends no `Origin`).
 
 ### Error handling — RFC 7807 problem+json
 
@@ -44,7 +44,7 @@ Backend commands run from `api/` (the `uv` workspace, `alembic.ini`, `pyproject.
 1. **401** Bearer parse + JWT + user re-fetch (`current_user`). Slugs `missing_bearer_token`/`invalid_access_token`/`user_not_found`.
 2. **403** `not_an_applicant` — `require_applicant` (`auth/dependencies.py`, the ONE shared applicant guard — seven inline copies drifted and two lost the `deleted_at` filter, letting DSR-tombstoned applicants through; don't re-inline it) rejects recruiter/admin **before any applicant-row read**.
 3. **500** `applicant_missing` — defense in depth (unreachable; `_upsert_identity` provisions the row at sign-in). Logs `applicant.row-missing-for-applicant-role`.
-4. **415** content-type whitelist (`KPA_ALLOWED_RESUME_CONTENT_TYPES`). **413** size cap (`KPA_MAX_UPLOAD_BYTES`, 10 MiB).
+4. **415** content-type whitelist (`JOBIFY_ALLOWED_RESUME_CONTENT_TYPES`). **413** size cap (`JOBIFY_MAX_UPLOAD_BYTES`, 10 MiB).
 5. **404** `resume not found` (GET) — **uniform** across unknown-id AND owned-by-another (single JOIN). Distinguishing leaks existence. Keep uniform.
 
 Applicant id is **never** from the URL — from `current_user.id`. Prefix `/v1/applicants/me` (`me` literal). Storage key set **after** DB flush (`resumes/{resume.id}{ext}`); ext from `_CONTENT_TYPE_TO_EXT` off the validated content-type — never the filename. Parse dispatch is fire-and-forget post-commit (see Parse worker).
@@ -65,7 +65,7 @@ Every domain table: `id` (uuid4), `created_at`, `updated_at`, `deleted_at TIMEST
 - **`user_consents` = state; `audit_logs` = history.** `set_consent(...)` is the ONLY path writing a `consent.*` audit row (same txn); no-op flips write none. Don't hand-write consent audit rows.
 - **`ON DELETE CASCADE` on `user_id`** (opposite of audit_logs) — consent vanishes with the user; history survives via `actor_user_id SET NULL`.
 - **Eager seeding at signup** — `_upsert_identity` calls `seed_default_consents(...)`; later reads are plain SELECTs. Default changes affect only NEW signups. `email_transactional` defaults `true` — signup UI MUST notify the user.
-- **Sweep gate:** `sweep_notifications._dispatch_one` checks consent between user-load and dispatch. No consent → `status=CANCELLED`, terminal (re-grant doesn't resurrect). `get_consent` raising `LookupError` (seeding skipped — pre-P4-B / DSR-cascaded) → falls back to `DEFAULT_CONSENTS[scope]`; backfill `kpa-seed-consents`. Inbox excludes `CANCELLED` + `FAILED`.
+- **Sweep gate:** `sweep_notifications._dispatch_one` checks consent between user-load and dispatch. No consent → `status=CANCELLED`, terminal (re-grant doesn't resurrect). `get_consent` raising `LookupError` (seeding skipped — pre-P4-B / DSR-cascaded) → falls back to `DEFAULT_CONSENTS[scope]`; backfill `jobify-seed-consents`. Inbox excludes `CANCELLED` + `FAILED`.
 - Scopes are `StrEnum` at the boundary, TEXT in DB; reserved scopes ship default `false` so impls skip an enum migration.
 - **Adding a Postgres enum value** can't share a txn with other DDL. Try `op.get_context().autocommit_block()` first; our async setup trips on `_in_external_transaction` — Alembic 0014's `bind.commit()` + `run_async(...)` is a **documented exception, DO NOT copy unprompted** (document the error first).
 
@@ -73,14 +73,14 @@ Every domain table: `id` (uuid4), `created_at`, `updated_at`, `deleted_at TIMEST
 
 - **Sync HTTP, JSON envelope.** `POST /v1/me/dsr/export` → `application/json`, `Content-Disposition: attachment`, `Cache-Control: no-store`.
 - **`refresh_tokens` are NEVER exported** (session secrets); a `redactions` entry documents it.
-- **Defensive column denylist** in `kpa/dsr/__init__.py` (`_REDACTED_COLUMN_NAMES` + `_REDACTED_COLUMN_SUFFIXES`) strips `*_secret`/`password_hash`/`*_password`/`access_token`/etc from EVERY row. Zero such columns today — **adding a sensitive column to `db/models.py` → extend the denylist** (`test_row_to_dict_drops_redacted_columns` pins it).
+- **Defensive column denylist** in `jobify/dsr/__init__.py` (`_REDACTED_COLUMN_NAMES` + `_REDACTED_COLUMN_SUFFIXES`) strips `*_secret`/`password_hash`/`*_password`/`access_token`/etc from EVERY row. Zero such columns today — **adding a sensitive column to `db/models.py` → extend the denylist** (`test_row_to_dict_drops_redacted_columns` pins it).
 - `audit_history` = `actor_user_id = self.id` only (v0). **Two audit rows:** `user.dsr_export_requested` (flushed BEFORE assembly) + `user.dsr_export_completed` (after, with `section_counts`). Recruiters/admins get different (mostly empty) envelopes.
 
 ### DSR delete — spec `2026-05-29-dsr-delete-design.md`
 
 - **Soft-delete + scrub, NOT hard-delete the User row** — hard-delete CASCADE-wipes applications/matches (lose analytics + eval substrate). Tombstone `users` + `applicants` with PII scrubbed; hard-delete the truly-PII tables around them.
 - **Migration 0015 made `applicants.full_name` + `applicants.locations` nullable** for scrubbing. New PII column on applicants/users/resumes → decide nullability + tombstone, update `delete_user_data` + a migration.
-- **Application-layer deletion graph** (`kpa.dsr.deleter.delete_user_data`), not FK CASCADE — walks the graph for correct counts + order-sensitive blob-delete-before-scrub.
+- **Application-layer deletion graph** (`jobify.dsr.deleter.delete_user_data`), not FK CASCADE — walks the graph for correct counts + order-sensitive blob-delete-before-scrub.
 - **Atomic txn** (handler does explicit `await session.commit()` at success) — partial deletion is worse than none. Re-signup works (email-collision filters `deleted_at IS NULL`). Confirmation token in **body** not query: `DELETE /v1/me/dsr` `{"confirmation": "DELETE_MY_ACCOUNT"}`.
 - Sole-owner employer → a `warnings` entry (employer stays). Blob deletion best-effort (`dsr.blob-delete-failed`, no rollback).
 - **No HTTP idempotency** — later calls 401 `user_not_found` (tombstone soft-deleted); clients treat as "done". The 401-after-delete test uses `concurrent_async_client` (real pool forces a refetch past the identity map).
@@ -95,7 +95,7 @@ SQLAlchemy models are never response models. Define `*Read`/`*Create`/`*Update` 
 - **Sign-in always provisions `role=APPLICANT`.** Tests needing recruiter/admin create the row via `session` + `mint_access_token` (no "sign in as recruiter"; canonical `tests/integration/test_resumes_auth.py`).
 - 401 slugs deliberately generic — `invalid_access_token` never differentiates signature vs claim (timing-oracle countermeasure). Don't add specific slugs.
 - **Refresh rotates every use;** re-presenting a rotated token → full family revocation via `_revoke_family`. The bulk UPDATE relies on Postgres READ COMMITTED + EvalPlanQual — don't switch to a row-at-a-time loop.
-- JWT: ≥32-byte secret, HS256, issuer `kpa-api`, `jti` required. 30s `iat` skew checked manually (PyJWT leeway would relax `exp` too).
+- JWT: ≥32-byte secret, HS256, issuer `jobify-api`, `jti` required. 30s `iat` skew checked manually (PyJWT leeway would relax `exp` too).
 
 ### Admin moderation — spec `2026-05-29-admin-moderation-design.md`
 
@@ -103,12 +103,12 @@ SQLAlchemy models are never response models. Define `*Read`/`*Create`/`*Update` 
 - **Suspended users get 401 `user_suspended`** (not 403) — distinct slug for a suspension message; Flutter signs out cleanly on any non-`invalid_access_token` 401.
 - **`suspended_at` AND `suspension_reason` clear together** on unsuspend (tooling reads `reason IS NOT NULL` as "suspended").
 - `admin.user.suspended` writes a row **every call** (re-suspend reason = evidence); `unsuspended` is no-op-on-noop. Suspending self → 400 `cannot_suspend_self`.
-- **`kpa-grant-admin <email>` bootstraps** (no grant route — chicken-and-egg). The audit-log viewer doesn't self-audit its query.
+- **`jobify-grant-admin <email>` bootstraps** (no grant route — chicken-and-egg). The audit-log viewer doesn't self-audit its query.
 
 ### Parse F1 quality gate
 
 - **Gold dataset `api/data/parse_eval/`** (`<id>.txt` + `<id>.expected.json`); raw text (PDF/DOCX extraction bypassed — gate measures parser heuristics).
-- **`uv run pytest -m eval`** → `test_library_parser_meets_quality_gate` → `kpa.eval.parse_f1.eval_gold_dataset()`. CI runs it (`lint-types-unit-eval`, no DB) before integration.
+- **`uv run pytest -m eval`** → `test_library_parser_meets_quality_gate` → `jobify.eval.parse_f1.eval_gold_dataset()`. CI runs it (`lint-types-unit-eval`, no DB) before integration.
 - **Gate** (spec §13 P1): macro-F1 ≥ 0.85; floors `email ≥ 0.95`/`phone ≥ 0.85`/`name ≥ 0.70`/`skills ≥ 0.75`. **Only those 4 fields gate** (others print only). Set-skills F1 counts FPs (measures `_extract_skills` over-match drift).
 - New gold example: drop a pair with the next id, re-run `-m eval -v -s`; if it tanks a floor, fix the expectation or document the limitation.
 
@@ -117,20 +117,20 @@ SQLAlchemy models are never response models. Define `*Read`/`*Create`/`*Update` 
 - **Fire-and-forget after commit:** `parse_resume.delay()` wrapped in broad `except Exception` + `exc_info=True` (`dispatch.failed`). Broker outage MUST NOT fail an upload (row + blob durable). **Don't tighten the except.**
 - **3-txn split** (`parse.py:_parse_resume_async`): Txn1 load + idempotency gate + mark `parsing`; (no DB) read blob + extract + parse; Txn3 reload, verify still `parsing`, write `parsed_json` + `parsed`. A lock across extraction starves writers — keep the split.
 - **Retry:** `ParserError` → immediate `failed`; `TransientParserError` → autoretry ×3 exp backoff; unknown → wrapped. On exhaustion the row is marked `failed` BEFORE the raise (no wedge at `parsing`).
-- **Eager mode + running loop:** with `KPA_CELERY_TASK_ALWAYS_EAGER=true` inside an async request, `asyncio.run()` would explode — `parse.py` dispatches to a fresh thread. Tests rely on this.
+- **Eager mode + running loop:** with `JOBIFY_CELERY_TASK_ALWAYS_EAGER=true` inside an async request, `asyncio.run()` would explode — `parse.py` dispatches to a fresh thread. Tests rely on this.
 
 ### Embedding worker (Gemini) — spec `2026-05-19-embedding-worker-design.md`
 
 - **One vector per applicant** (`applicant_embeddings.applicant_id UNIQUE`) — the *latest* parsed resume's canonical profile; older resumes unreachable from matching.
 - **Idempotency via `canonicalized_text_hash`** — Txn1 computes text + sha256, bails on match (no provider call). **3-txn split** like parse: Txn1 gate; Txn2 (no DB) Gemini; Txn3 re-verify hash, UPSERT via `pg_insert(...).on_conflict_do_update(...)`. Dispatched from `parse_resume` Txn3, fire-and-forget (don't tighten).
 - **Provider task via prompt prefix:** `gemini-embedding-2` does NOT accept `task_type` (that was `-001`). `encode()` formats internally; call sites pass `EmbeddingTask.DOCUMENT`/`.QUERY` + optional `title`.
-- **Lazy provider resolution:** `embed.py` resolves via `get_embedding_provider()` (lazy-singleton in `celery_app.py`), never importing `GeminiEmbeddingProvider`. The `kpa.integrations.embeddings` `__init__` omits the provider from re-exports so `google.genai` isn't pulled in by test imports; impl users import from `...embeddings.gemini`.
+- **Lazy provider resolution:** `embed.py` resolves via `get_embedding_provider()` (lazy-singleton in `celery_app.py`), never importing `GeminiEmbeddingProvider`. The `jobify.integrations.embeddings` `__init__` omits the provider from re-exports so `google.genai` isn't pulled in by test imports; impl users import from `...embeddings.gemini`.
 - **`from module import name` test-patch gotcha:** modules holding a local `get_embedding_provider` reference aren't intercepted by patching `celery_app.get_embedding_provider` alone. `patched_embedding_provider` patches **three** modules (`celery_app`, `embed_job`, `embed`) + seeds the `_embedding_provider` cache. Mirror for any function imported-by-name across modules.
-- **Pgvector + HNSW + cosine** (Migration 0004, `vector_cosine_ops`). Dim from `KPA_EMBEDDING_DIM` (1536) — must match `Vector(N)` in the migration (mismatch errors on first insert). No `embed_status` column: it exists or doesn't; next parse re-dispatches.
+- **Pgvector + HNSW + cosine** (Migration 0004, `vector_cosine_ops`). Dim from `JOBIFY_EMBEDDING_DIM` (1536) — must match `Vector(N)` in the migration (mismatch errors on first insert). No `embed_status` column: it exists or doesn't; next parse re-dispatches.
 
 ### Seeding — spec `2026-05-20-p2.0-jobs-and-seeding-design.md`
 
-- **`employers`/`jobs` via CLI** (`uv run kpa-seed-jobs` reads `api/data/sample_jobs.json`, upserts), not migrations. Idempotency: `employers.name_norm` (DB partial-UNIQUE) + `(jobs.employer_id, lower(jobs.title))` (script-only). JSON uses `posted_days_ago: int` (→ `now() - timedelta`) so it doesn't age.
+- **`employers`/`jobs` via CLI** (`uv run jobify-seed-jobs` reads `api/data/sample_jobs.json`, upserts), not migrations. Idempotency: `employers.name_norm` (DB partial-UNIQUE) + `(jobs.employer_id, lower(jobs.title))` (script-only). JSON uses `posted_days_ago: int` (→ `now() - timedelta`) so it doesn't age.
 - **Updates preserve human state:** `employers.name` never overwritten; `verified_at` set only when `NULL`.
 - **`_apply_in_session(session, payload, report)` is the test seam** (CLI's `_apply()` opens its own engine; tests pass the savepoint session). `embed_job` dispatch (`_dispatch_embeds(...)`) runs AFTER `_apply` returns (outside `asyncio.run`); same broad-except.
 - **Drift guard** `test_loader_against_sample_jobs_json` asserts `employers==10, jobs==27` — update in the same commit.
@@ -138,30 +138,30 @@ SQLAlchemy models are never response models. Define `*Read`/`*Create`/`*Update` 
 ### Scoring worker — spec `2026-05-20-p2.2-matches-and-scoring-design.md`
 
 - **`matches` = applicant × job embedding join.** One row per `(applicant_id, job_id)` live pair, UPSERT on rescore via partial-UNIQUE `WHERE deleted_at IS NULL`.
-- **Two workers, one `score` queue:** `score_applicant` (from `embed_applicant` Txn3) + `score_job` (from `embed_job` Txn3), post-commit, broad-except. Pure-Python cosine (`kpa.scoring.vector`). Explanations run via bounded `asyncio.gather` (`_EXPLAIN_CONCURRENCY=10`), not per-item awaits.
+- **Two workers, one `score` queue:** `score_applicant` (from `embed_applicant` Txn3) + `score_job` (from `embed_job` Txn3), post-commit, broad-except. Pure-Python cosine (`jobify.scoring.vector`). Explanations run via bounded `asyncio.gather` (`_EXPLAIN_CONCURRENCY=10`), not per-item awaits.
 - **Workers import `settings` from `celery_app`, never construct `Settings()`** — a second module-level instance is invisible to test `monkeypatch.setenv`. The worker engine's `NullPool` is load-bearing (fresh `asyncio.run()` loop per task; pooled asyncpg connections bind to dead loops).
 - **`surfaced_at` preserved on rescore** via `func.coalesce(Match.surfaced_at, case((literal(crosses_threshold), now()), else_=None))` — a later sub-threshold rescore does NOT unset it (feed monotonic).
-- **`score_components` + `model_versions` JSONB** = eval substrate (replay weight/threshold A/B without rescoring). **Two-txn split** (no external call): Txn1 loads all (incl. `Employer.name`), Python computes, Txn2 UPSERTs in one commit. `TransientScoringError` wraps UPSERT failures for autoretry. Threshold `0.55` (`KPA_MATCH_SURFACE_THRESHOLD`) + vector weight `0.6` (`KPA_MATCH_VECTOR_WEIGHT`) env-driven; per-rule weights equal.
+- **`score_components` + `model_versions` JSONB** = eval substrate (replay weight/threshold A/B without rescoring). **Two-txn split** (no external call): Txn1 loads all (incl. `Employer.name`), Python computes, Txn2 UPSERTs in one commit. `TransientScoringError` wraps UPSERT failures for autoretry. Threshold `0.55` (`JOBIFY_MATCH_SURFACE_THRESHOLD`) + vector weight `0.6` (`JOBIFY_MATCH_VECTOR_WEIGHT`) env-driven; per-rule weights equal.
 
 ### Feed + job detail — spec `2026-05-20-p2.3-feed-and-job-detail-design.md`
 
 - **`/v1/feed`** filters `surfaced_at IS NOT NULL` AND `jobs.status='open'` AND both sides `deleted_at IS NULL`; uses `ix_matches_applicant_surfaced (applicant_id, total_score DESC) WHERE ...` for seek + order.
 - **Cursor = opaque base64 `{score, match_id}`** (no server state); compare `(total_score, id) < (cursor...)`; malformed → `400 invalid_cursor`. **Peek-one+1:** `LIMIT limit+1`, trim, set `next_cursor` if the extra was present. **Weak ETag** `W/"<sha256(applicant_id + max(updated_at) + count)>"`.
 - **`/v1/jobs/{id}` returns the match unconditionally** when a row exists (ignores `surfaced_at`) — a pasted URL shows the score. **Uniform 404** across unknown/closed/soft-deleted. All applicant routes use the shared `require_applicant` guard (see Resume route invariants).
-- **Shared route plumbing:** response shapes (`JobRead`, `EmployerRead`, `JobDetail*`) live in `routes/schemas.py` (a leaf module — hosting them in `feed.py` forced a mid-file import split to dodge the cycle); cursor base64+JSON encode/decode + `make_weak_etag` live in `kpa/pagination.py` with typed per-module wrappers. New list routes reuse both.
+- **Shared route plumbing:** response shapes (`JobRead`, `EmployerRead`, `JobDetail*`) live in `routes/schemas.py` (a leaf module — hosting them in `feed.py` forced a mid-file import split to dodge the cycle); cursor base64+JSON encode/decode + `make_weak_etag` live in `jobify/pagination.py` with typed per-module wrappers. New list routes reuse both.
 
 ### Match explanations — specs `p2.4` + `2026-05-28-llm-match-explanations-design.md`
 
 - **`matches.explanation` JSONB** `{fit, caveat, generator, generator_version}`, nullable. Generated inline in both score workers.
 - **`MatchExplainer` Protocol** routes two impls; workers call `await get_match_explainer().explain(ctx)`, call site unchanged. **`explain()` NEVER raises** — scoring is never failed by the explainer.
 - **`TemplatedExplainer`** (`explainer.py`, wraps pure `templated_explanation()`) deterministic. **`GeminiMatchExplainer`** (`llm_explainer.py`) surfaced-only (if `ctx.total < ctx.threshold` returns templated, no Gemini); any failure logs `explain.llm-failed` + falls back to templated.
-- **Selection:** `KPA_MATCH_EXPLAINER` = `"llm"` (default, Gemini) | `"templated"` (dev fallback, no `KPA_GEMINI_API_KEY`). Model `KPA_MATCH_EXPLAINER_MODEL` (`gemini-2.5-flash`). Factory `get_match_explainer()` lazy-singleton. **`explainer.py` does NOT import `google.genai`** (separate module; factory does `from google import genai` lazily). `patched_match_explainer` mirrors the embedding fixture (three modules + cache).
+- **Selection:** `JOBIFY_MATCH_EXPLAINER` = `"llm"` (default, Gemini) | `"templated"` (dev fallback, no `JOBIFY_GEMINI_API_KEY`). Model `JOBIFY_MATCH_EXPLAINER_MODEL` (`gemini-2.5-flash`). Factory `get_match_explainer()` lazy-singleton. **`explainer.py` does NOT import `google.genai`** (separate module; factory does `from google import genai` lazily). `patched_match_explainer` mirrors the embedding fixture (three modules + cache).
 - **`GENERATOR_VERSION` bumps on semantic template/prompt change** — flag template/prompt edits.
 
 ### Notifications outbox — spec `2026-05-20-p3.1-notifications-outbox-design.md`
 
 - **Outbox:** writers insert `notifications` on the event; `sweep_notifications` (beat) claims via `SELECT FOR UPDATE SKIP LOCKED`. Idempotency per `notifications.id`.
-- **Email = `LoggingEmailChannel` stub** (logs `email.sent`, marks `sent`). Real SES: implement `EmailChannel` in `kpa/integrations/email/ses.py`, set `KPA_EMAIL_CHANNEL=ses`.
+- **Email = `LoggingEmailChannel` stub** (logs `email.sent`, marks `sent`). Real SES: implement `EmailChannel` in `jobify/integrations/email/ses.py`, set `JOBIFY_EMAIL_CHANNEL=ses`.
 - **Retry ×5**, backoff `min(60·2^(attempt-1), 3600) + jitter(0,30)` → `send_after`; exhaustion → `failed`.
 - **Apply inserts TWO rows** (`email` + `in_app`); idempotent re-applies and re-apply-after-withdraw insert none. `GET /v1/notifications` excludes `failed` + `cancelled`.
 
@@ -186,11 +186,11 @@ SQLAlchemy models are never response models. Define `*Read`/`*Create`/`*Update` 
 
 ### Employer team management (R4) — spec `2026-06-06-recruiter-employer-experience-design.md` §5
 
-- **Role is DERIVED from membership, never set directly.** `kpa/employers/membership.py`: `flip_to_recruiter` (any join → APPLICANT→RECRUITER, never ADMIN) + `maybe_demote_to_applicant` (zero live memberships left → RECRUITER→APPLICANT) are the only `users.role` writers in this flow. `current_user` re-fetches per request → a removed recruiter loses access within the access-TTL (no token revocation). **Any new join/leave path must call these.**
+- **Role is DERIVED from membership, never set directly.** `jobify/employers/membership.py`: `flip_to_recruiter` (any join → APPLICANT→RECRUITER, never ADMIN) + `maybe_demote_to_applicant` (zero live memberships left → RECRUITER→APPLICANT) are the only `users.role` writers in this flow. `current_user` re-fetches per request → a removed recruiter loses access within the access-TTL (no token revocation). **Any new join/leave path must call these.**
 - **RBAC helpers (`auth/dependencies.py`):** `_require_employer_member` (uniform 404 if no live link — don't leak existence), `_require_employer_owner` (404 if not a member, then 403 `not_an_owner`). Owner mutates members/invites; any member reads. Called BEFORE any resource lookup.
 - **Last-owner guard is lock-based:** `_count_live_owners(..., lock=True)` does `SELECT … FOR UPDATE` on owner rows (aggregates can't carry FOR UPDATE — lock rows, count in Python), used in the demote/remove guards — else two concurrent owner removals both pass `<=1` → zero owners. Membership inserts (`add_member`, `accept_invite`) catch the `ix_employer_users_pair_live` `IntegrityError → 409 already_a_member` (mirrors `create_employer`).
 - **Invites:** `POST …/invites` outboxes a `Notification` (kind `employer_invite`) ONLY when the email maps to an existing user (`notifications.user_id` NOT NULL); brand-new invitees discover via `GET /v1/me/invites`; SES deferred. Invitee routes (`routes/invites.py`) authorize by `invite.email == current_user.email` (NOT membership); lazy expiry (`pending`→`expired` on read/accept, 410); accept verifies the employer is live; decline reuses the `revoked` status. Slugs: `employer.{member_added,member_role_changed,member_removed,invite_created,invite_accepted,invite_revoked}`.
-- **`employer_invites.email` is PII** → DSR export adds `received_invites`/`sent_invites`, delete erases invites where `email==user.email OR accepted_user_id==user.id`. **Any new PII *table* must be added to `kpa/dsr/__init__.py` + `deleter.py` + the `test_user_export_top_level_fields` pin.** No self-leave endpoint yet (direct-add is one-way; removing yourself needs another owner).
+- **`employer_invites.email` is PII** → DSR export adds `received_invites`/`sent_invites`, delete erases invites where `email==user.email OR accepted_user_id==user.id`. **Any new PII *table* must be added to `jobify/dsr/__init__.py` + `deleter.py` + the `test_user_export_top_level_fields` pin.** No self-leave endpoint yet (direct-add is one-way; removing yourself needs another owner).
 
 ## Test patterns
 
@@ -201,8 +201,8 @@ SQLAlchemy models are never response models. Define `*Read`/`*Create`/`*Update` 
 ## Conventions
 
 - **uv only** (don't `pip install` — bypasses `uv.lock`). **No Docker for MVP** (Homebrew `postgresql@16`).
-- **Hand-written migrations** in `src/kpa/db/migrations/versions/` (autogenerate off; excluded from mypy). Edit the revision before `upgrade head`.
-- **structlog only** — `structlog.get_logger(__name__)`, context as kwargs; no `print`/`logging.getLogger`. `KPA_LOG_FORMAT=json` for prod.
+- **Hand-written migrations** in `src/jobify/db/migrations/versions/` (autogenerate off; excluded from mypy). Edit the revision before `upgrade head`.
+- **structlog only** — `structlog.get_logger(__name__)`, context as kwargs; no `print`/`logging.getLogger`. `JOBIFY_LOG_FORMAT=json` for prod.
 - **All handlers `async def`.** Versioned routes under `/v1` except bare `/health` + `/ready` (probes).
 - **Doc ownership.** Operational content (commands, env vars, setup, endpoint docs) lives in `api/README.md` / `app/README.md`; this file holds only code-invariants ("why it's shaped this way / what breaks if changed") + a spec pointer per section. Keep CLAUDE.md well under 40k — it's loaded into every session and truncates silently past the limit.
 
@@ -227,8 +227,8 @@ Applicant iOS + Android + Web. `lib/data/` + `lib/presentation/` + `lib/core/` (
 - **Per-tab nav stacks** — `/jobs/:id` is a child under each branch; JobDetail's 404 uses `context.pop()`.
 - **Widget tests use `ThemeData.light(useMaterial3: true)`, NOT `buildTheme()`** (`buildTheme` calls `GoogleFonts.inter(...)` → network fetch, fails offline/CI).
 - **`PackageInfo.fromPlatform()` in a `keepAlive: true` provider**, not `FutureBuilder.future:` (which re-runs the platform-channel per rebuild). **`DateFormat` instances module-static** (ICU parse at construction).
-- **`--dart-define`, no flavors:** `KPA_API_BASE_URL` + `KPA_GOOGLE_WEB_CLIENT_ID` required at compile time (`Env.validateOrThrow()` in `main()`). Light theme only in v0. Shared test infra in `test/helpers/` (`MockInterceptor`, `fake_repositories.dart`).
+- **`--dart-define`, no flavors:** `JOBIFY_API_BASE_URL` + `JOBIFY_GOOGLE_WEB_CLIENT_ID` required at compile time (`Env.validateOrThrow()` in `main()`). Light theme only in v0. Shared test infra in `test/helpers/` (`MockInterceptor`, `fake_repositories.dart`).
 - **Google sign-in is two flows** (detail: `specs/2026-05-21-flutter-app-shell-design.md`). Mobile: imperative `GoogleSignInDataSource.getIdToken()`. Web: GIS `signIn()` returns no `idToken`, so `google_web_sign_in.dart` uses `renderButton()` via `googleWebSignInProvider` (`keepAlive FutureProvider` awaiting `initialize()`); impl by conditional import (`_web.dart` / `_stub.dart` keeps `dart:js_interop` off mobile/test); `SignInScreen` branches on `kIsWeb`. `completeWebSignIn(idToken)` lives on the impl, reached via downcast. `GoogleSignInDataSourceImpl` builds `GoogleSignIn` platform-conditionally (`clientId:` web / `serverClientId:` mobile).
-- **Local web sign-in** needs an Authorized-JS-origin on the web OAuth client + API CORS (`KPA_CORS_ALLOW_ORIGINS`) — full setup + curl probe in `app/README.md` ("Web Google sign-in").
+- **Local web sign-in** needs an Authorized-JS-origin on the web OAuth client + API CORS (`JOBIFY_CORS_ALLOW_ORIGINS`) — full setup + curl probe in `app/README.md` ("Web Google sign-in").
 - **Privacy screen** (`presentation/privacy/`) = consent toggles + DSR export + DSR delete nav. Reserved scopes (`whatsapp_notifications` etc.) deliberately HIDDEN (no Dart gate yet). DSR export uses the clipboard in v0. DSR delete is a separate screen `/profile/privacy/delete` with a `DELETE_MY_ACCOUNT` guard; success → clear `AccessTokenHolder`, push `SignedOut`. Turning OFF `email_transactional` triggers a confirmation dialog.
 - **Recruiter feature** (`presentation/recruiter/` + `data/jobs/recruiter_*` + `data/employers/team/`; spec `2026-06-06-recruiter-employer-experience-design.md`). Second `StatefulShellRoute` under `/recruiter/*`; `roleAwareRedirect` (`role_redirect.dart`) flips shells on `SignedIn.role`. Team tab (`recruiter_employer_screen.dart`) derives owner-ness from the caller's own roster row via `SignedIn.userId` (UI gating is defense-in-depth) and HIDES change-role/remove on your own row. Invitee `PendingInvitesScreen` (`/profile/invites`) accepts → `refreshSession()` → role flips → redirect to recruiter shell; **`accept()` treats `acceptInvite` as the success boundary** (a failed post-accept refresh is swallowed — re-accepting 404s). `/recruiter/jobs/:id/edit` with null `extra` resolves the job from the include-closed list via `EditJobResolver` (no blank create form). Dashboard sums `listMyJobs(status:'closed')` (open+closed) client-side.

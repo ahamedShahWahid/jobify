@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import inspect
 
-from kpa.dsr.deleter import DeleteReport, OwnerlessEmployerWarning, delete_user_data
+from jobify.dsr.deleter import DeleteReport, OwnerlessEmployerWarning, delete_user_data
 
 
 def test_delete_user_data_signature() -> None:

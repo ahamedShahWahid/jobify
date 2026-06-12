@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/consents/consents_repository_impl.dart';
-import 'package:kpa_app/data/dsr/dsr_repository_impl.dart';
-import 'package:kpa_app/presentation/privacy/privacy_screen.dart';
+import 'package:jobify_app/data/consents/consents_repository_impl.dart';
+import 'package:jobify_app/data/dsr/dsr_repository_impl.dart';
+import 'package:jobify_app/presentation/privacy/privacy_screen.dart';
 
 import '../../../helpers/fake_repositories.dart';
 

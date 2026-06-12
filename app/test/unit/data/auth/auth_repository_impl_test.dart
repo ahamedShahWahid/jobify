@@ -1,11 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/api/access_token_holder.dart';
-import 'package:kpa_app/data/auth/auth_repository_impl.dart';
-import 'package:kpa_app/data/auth/google_sign_in_data_source.dart';
-import 'package:kpa_app/data/auth/token_storage.dart';
-import 'package:kpa_app/data/auth/auth_state.dart';
-import 'package:kpa_app/data/auth/user_role.dart';
+import 'package:jobify_app/data/api/access_token_holder.dart';
+import 'package:jobify_app/data/auth/auth_repository_impl.dart';
+import 'package:jobify_app/data/auth/google_sign_in_data_source.dart';
+import 'package:jobify_app/data/auth/token_storage.dart';
+import 'package:jobify_app/data/auth/auth_state.dart';
+import 'package:jobify_app/data/auth/user_role.dart';
 
 import '../../../helpers/mock_interceptor.dart';
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kpa_app/core/error/exceptions.dart';
-import 'package:kpa_app/presentation/onboarding/employer_onboarding_controller.dart';
+import 'package:jobify_app/core/error/exceptions.dart';
+import 'package:jobify_app/presentation/onboarding/employer_onboarding_controller.dart';
 
 class EmployerOnboardingScreen extends ConsumerStatefulWidget {
   const EmployerOnboardingScreen({super.key});

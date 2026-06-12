@@ -1,4 +1,4 @@
-"""Integration test for the kpa-seed-consents CLI's _apply_in_session
+"""Integration test for the jobify-seed-consents CLI's _apply_in_session
 test seam. Mirrors test_seed_jobs_idempotent pattern.
 """
 
@@ -10,9 +10,9 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kpa.consent import seed_default_consents
-from kpa.db.models import DEFAULT_CONSENTS, User, UserConsent, UserRole
-from kpa.scripts.seed_consents import SeedReport, _apply_in_session
+from jobify.consent import seed_default_consents
+from jobify.db.models import DEFAULT_CONSENTS, User, UserConsent, UserRole
+from jobify.scripts.seed_consents import SeedReport, _apply_in_session
 
 pytestmark = pytest.mark.integration
 

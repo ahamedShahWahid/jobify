@@ -1,11 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/jobs/applicant_of_job_dto.dart';
-import 'package:kpa_app/data/jobs/recruiter_job_dto.dart';
-import 'package:kpa_app/data/jobs/recruiter_jobs_api.dart';
-import 'package:kpa_app/data/jobs/recruiter_jobs_repository.dart';
-import 'package:kpa_app/data/jobs/recruiter_jobs_repository_impl.dart';
-import 'package:kpa_app/presentation/recruiter/recruiter_jobs_controller.dart';
+import 'package:jobify_app/data/jobs/applicant_of_job_dto.dart';
+import 'package:jobify_app/data/jobs/recruiter_job_dto.dart';
+import 'package:jobify_app/data/jobs/recruiter_jobs_api.dart';
+import 'package:jobify_app/data/jobs/recruiter_jobs_repository.dart';
+import 'package:jobify_app/data/jobs/recruiter_jobs_repository_impl.dart';
+import 'package:jobify_app/presentation/recruiter/recruiter_jobs_controller.dart';
 
 class FakeRecruiterJobsRepository implements RecruiterJobsRepository {
   FakeRecruiterJobsRepository({required this.pages});

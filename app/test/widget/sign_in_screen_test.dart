@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/framework.dart' show Override;
 
-import 'package:kpa_app/presentation/auth/sign_in_controller.dart';
-import 'package:kpa_app/presentation/auth/sign_in_screen.dart';
+import 'package:jobify_app/presentation/auth/sign_in_controller.dart';
+import 'package:jobify_app/presentation/auth/sign_in_screen.dart';
 
 Widget _wrap(Widget child, {List<Override> overrides = const []}) {
   return ProviderScope(
@@ -24,10 +24,10 @@ class _LoadingStub extends SignInController {
 }
 
 void main() {
-  testWidgets('renders KPA wordmark + Continue button', (tester) async {
+  testWidgets('renders Jobify wordmark + Continue button', (tester) async {
     await tester.pumpWidget(_wrap(const SignInScreen()));
     await tester.pumpAndSettle();
-    expect(find.text('KPA'), findsOneWidget);
+    expect(find.text('Jobify'), findsOneWidget);
     expect(find.text('Continue with Google'), findsOneWidget);
   });
 

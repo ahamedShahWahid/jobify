@@ -1,6 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import 'package:kpa_app/data/consents/consent_dto.dart';
+import 'package:jobify_app/data/consents/consent_dto.dart';
 
 part 'privacy_state.freezed.dart';
 

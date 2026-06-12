@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/jobs/applicant_of_job_dto.dart';
+import 'package:jobify_app/data/jobs/applicant_of_job_dto.dart';
 
 void main() {
   group('ApplicantOfJobDto.fromJson', () {

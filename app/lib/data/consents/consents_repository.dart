@@ -1,4 +1,4 @@
-import 'package:kpa_app/data/consents/consent_dto.dart';
+import 'package:jobify_app/data/consents/consent_dto.dart';
 
 abstract interface class ConsentsRepository {
   Future<ConsentListResponse> list();

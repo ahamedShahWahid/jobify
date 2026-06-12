@@ -1,6 +1,6 @@
-import 'package:kpa_app/data/auth/auth_repository_provider.dart';
-import 'package:kpa_app/data/employers/employer_dto.dart';
-import 'package:kpa_app/data/employers/employer_repository_impl.dart';
+import 'package:jobify_app/data/auth/auth_repository_provider.dart';
+import 'package:jobify_app/data/employers/employer_dto.dart';
+import 'package:jobify_app/data/employers/employer_repository_impl.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'employer_onboarding_controller.g.dart';

@@ -9,12 +9,12 @@ from fpdf import FPDF
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kpa.auth.tokens import mint_access_token
-from kpa.db.models import Applicant, Resume, ResumeParseStatus, User, UserRole
+from jobify.auth.tokens import mint_access_token
+from jobify.db.models import Applicant, Resume, ResumeParseStatus, User, UserRole
 
 pytestmark = pytest.mark.integration
 
-_JWT_SECRET = "x" * 32  # matches KPA_JWT_SECRET in the integration fixtures
+_JWT_SECRET = "x" * 32  # matches JOBIFY_JWT_SECRET in the integration fixtures
 
 
 def _tiny_pdf() -> bytes:
@@ -49,7 +49,7 @@ async def test_upload_returns_201_even_if_broker_dispatch_raises(
 ) -> None:
     """If parse_resume.delay() raises (broker down), upload still returns 201
     and the row exists with parse_status=pending."""
-    from kpa.workers.tasks import parse as parse_module
+    from jobify.workers.tasks import parse as parse_module
 
     def _raise_broker_down(*args, **kwargs):  # type: ignore[no-untyped-def]
         raise ConnectionError("broker unreachable")

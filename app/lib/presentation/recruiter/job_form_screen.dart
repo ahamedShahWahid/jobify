@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:kpa_app/core/error/exceptions.dart';
-import 'package:kpa_app/data/employers/employer_dto.dart';
-import 'package:kpa_app/data/jobs/recruiter_job_dto.dart';
-import 'package:kpa_app/presentation/recruiter/active_employer_provider.dart';
-import 'package:kpa_app/presentation/recruiter/job_form_controller.dart';
-import 'package:kpa_app/presentation/recruiter/recruiter_jobs_controller.dart';
-import 'package:kpa_app/presentation/routing/routes.dart';
-import 'package:kpa_app/presentation/theme/kpa_spacing.dart';
-import 'package:kpa_app/presentation/widgets/async_value_widget.dart';
-import 'package:kpa_app/presentation/widgets/kpa_empty_state.dart';
-import 'package:kpa_app/presentation/widgets/kpa_loading_view.dart';
+import 'package:jobify_app/core/error/exceptions.dart';
+import 'package:jobify_app/data/employers/employer_dto.dart';
+import 'package:jobify_app/data/jobs/recruiter_job_dto.dart';
+import 'package:jobify_app/presentation/recruiter/active_employer_provider.dart';
+import 'package:jobify_app/presentation/recruiter/job_form_controller.dart';
+import 'package:jobify_app/presentation/recruiter/recruiter_jobs_controller.dart';
+import 'package:jobify_app/presentation/routing/routes.dart';
+import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
+import 'package:jobify_app/presentation/widgets/jobify_empty_state.dart';
+import 'package:jobify_app/presentation/widgets/jobify_loading_view.dart';
 
 /// Edit-route entry. When navigated from the detail screen the full
 /// [RecruiterJobDto] arrives via `extra`. On a deep link / refresh `extra` is
@@ -32,7 +32,7 @@ class EditJobResolver extends ConsumerWidget {
 
     final value = ref.watch(recruiterJobsControllerProvider(true));
     return value.when(
-      loading: () => const Scaffold(body: KpaLoadingView()),
+      loading: () => const Scaffold(body: JobifyLoadingView()),
       error: (_, __) => _notFound(context),
       data: (state) {
         for (final j in state.items) {
@@ -45,7 +45,7 @@ class EditJobResolver extends ConsumerWidget {
 
   Widget _notFound(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('Edit job')),
-        body: KpaEmptyState(
+        body: JobifyEmptyState(
           headline: 'Job not found',
           body: 'Open it from your jobs list to edit.',
           icon: Icons.search_off_outlined,
@@ -207,7 +207,7 @@ class _JobFormScreenState extends ConsumerState<JobFormScreen> {
             appBar: AppBar(title: const Text('Post a job')),
             body: const Center(
               child: Padding(
-                padding: EdgeInsets.all(KpaSpacing.xl),
+                padding: EdgeInsets.all(JobifySpacing.xl),
                 child: Text('Create an employer before posting a job.'),
               ),
             ),
@@ -243,7 +243,7 @@ class _JobFormScreenState extends ConsumerState<JobFormScreen> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(KpaSpacing.lg),
+          padding: const EdgeInsets.all(JobifySpacing.lg),
           children: [
             employerSelector,
             TextFormField(
@@ -256,7 +256,7 @@ class _JobFormScreenState extends ConsumerState<JobFormScreen> {
                 return null;
               },
             ),
-            const SizedBox(height: KpaSpacing.md),
+            const SizedBox(height: JobifySpacing.md),
             TextFormField(
               controller: _description,
               minLines: 4,
@@ -272,10 +272,10 @@ class _JobFormScreenState extends ConsumerState<JobFormScreen> {
                 return null;
               },
             ),
-            const SizedBox(height: KpaSpacing.lg),
+            const SizedBox(height: JobifySpacing.lg),
             Text('Locations', style: Theme.of(context).textTheme.labelLarge),
             Wrap(
-              spacing: KpaSpacing.sm,
+              spacing: JobifySpacing.sm,
               children: [
                 for (final loc in _locations)
                   Chip(
@@ -300,7 +300,7 @@ class _JobFormScreenState extends ConsumerState<JobFormScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: KpaSpacing.lg),
+            const SizedBox(height: JobifySpacing.lg),
             Row(
               children: [
                 Expanded(
@@ -312,7 +312,7 @@ class _JobFormScreenState extends ConsumerState<JobFormScreen> {
                     validator: _validateExp,
                   ),
                 ),
-                const SizedBox(width: KpaSpacing.md),
+                const SizedBox(width: JobifySpacing.md),
                 Expanded(
                   child: TextFormField(
                     controller: _maxExp,
@@ -333,7 +333,7 @@ class _JobFormScreenState extends ConsumerState<JobFormScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: KpaSpacing.md),
+            const SizedBox(height: JobifySpacing.md),
             Row(
               children: [
                 Expanded(
@@ -345,7 +345,7 @@ class _JobFormScreenState extends ConsumerState<JobFormScreen> {
                     validator: _validateCtc,
                   ),
                 ),
-                const SizedBox(width: KpaSpacing.md),
+                const SizedBox(width: JobifySpacing.md),
                 Expanded(
                   child: TextFormField(
                     controller: _ctcMax,
@@ -367,9 +367,9 @@ class _JobFormScreenState extends ConsumerState<JobFormScreen> {
               ],
             ),
             if (widget.isEdit) ...[
-              const SizedBox(height: KpaSpacing.lg),
+              const SizedBox(height: JobifySpacing.lg),
               Text('Status', style: Theme.of(context).textTheme.labelLarge),
-              const SizedBox(height: KpaSpacing.sm),
+              const SizedBox(height: JobifySpacing.sm),
               SegmentedButton<String>(
                 segments: const [
                   ButtonSegment(value: 'open', label: Text('Open')),
@@ -413,7 +413,7 @@ class _EmployerDropdown extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: KpaSpacing.md),
+      padding: const EdgeInsets.only(bottom: JobifySpacing.md),
       child: DropdownButtonFormField<String>(
         initialValue: active.id,
         decoration: const InputDecoration(labelText: 'Company'),

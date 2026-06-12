@@ -1,7 +1,7 @@
 # Parse F1 gold dataset
 
 Eight hand-crafted synthetic resumes covering realistic patterns for the
-Indian placement-market context KPA targets. Each example is two files:
+Indian placement-market context Jobify targets. Each example is two files:
 
 - `<id>-<name-slug>.txt` — raw resume text (UTF-8, no extraction needed).
 - `<id>-<name-slug>.expected.json` — expected `name`, `email`, `phone`, and

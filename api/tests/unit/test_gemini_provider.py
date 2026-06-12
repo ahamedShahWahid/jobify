@@ -10,12 +10,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from kpa.integrations.embeddings.base import (
+from jobify.integrations.embeddings.base import (
     EmbeddingProviderError,
     EmbeddingTask,
     TransientEmbeddingError,
 )
-from kpa.integrations.embeddings.gemini import GeminiEmbeddingProvider
+from jobify.integrations.embeddings.gemini import GeminiEmbeddingProvider
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -34,7 +34,7 @@ def _make_provider(output_dim: int = 3072) -> tuple[GeminiEmbeddingProvider, Asy
     mock_client = MagicMock()
     mock_client.aio.models.embed_content = embed_mock
 
-    with patch("kpa.integrations.embeddings.gemini.genai.Client", return_value=mock_client):
+    with patch("jobify.integrations.embeddings.gemini.genai.Client", return_value=mock_client):
         provider = GeminiEmbeddingProvider(
             api_key="test-key",
             model="gemini-embedding-2",

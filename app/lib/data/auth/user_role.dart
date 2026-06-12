@@ -2,7 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'user_role.g.dart';
 
-/// Mirrors the backend UserRole StrEnum (api/src/kpa/db/models.py:UserRole).
+/// Mirrors the backend UserRole StrEnum (api/src/jobify/db/models.py:UserRole).
 /// `unknown` is the forward-compat sentinel for a wire value this client
 /// does not yet know about — never sent, only parsed.
 @JsonEnum(alwaysCreate: true)

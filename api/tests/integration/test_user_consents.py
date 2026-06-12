@@ -17,8 +17,8 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kpa.consent import get_consent, seed_default_consents, set_consent
-from kpa.db.models import (
+from jobify.consent import get_consent, seed_default_consents, set_consent
+from jobify.db.models import (
     DEFAULT_CONSENTS,
     AuditLog,
     ConsentScope,

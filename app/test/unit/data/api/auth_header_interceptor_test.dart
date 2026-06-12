@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/api/access_token_holder.dart';
-import 'package:kpa_app/data/api/auth_header_interceptor.dart';
+import 'package:jobify_app/data/api/access_token_holder.dart';
+import 'package:jobify_app/data/api/auth_header_interceptor.dart';
 
 class _TestHandler extends RequestInterceptorHandler {
   late RequestOptions capturedOptions;

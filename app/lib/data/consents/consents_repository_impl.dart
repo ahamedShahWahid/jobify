@@ -2,11 +2,11 @@
 import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:kpa_app/data/api/dio_provider.dart';
-import 'package:kpa_app/data/api/error_mapping.dart';
-import 'package:kpa_app/data/consents/consent_api.dart';
-import 'package:kpa_app/data/consents/consent_dto.dart';
-import 'package:kpa_app/data/consents/consents_repository.dart';
+import 'package:jobify_app/data/api/dio_provider.dart';
+import 'package:jobify_app/data/api/error_mapping.dart';
+import 'package:jobify_app/data/consents/consent_api.dart';
+import 'package:jobify_app/data/consents/consent_dto.dart';
+import 'package:jobify_app/data/consents/consents_repository.dart';
 
 part 'consents_repository_impl.g.dart';
 

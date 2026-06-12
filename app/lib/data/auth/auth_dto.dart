@@ -14,7 +14,7 @@ class SignInResponseDto {
   factory SignInResponseDto.fromJson(Map<String, dynamic> json) =>
       _$SignInResponseDtoFromJson(json);
 
-  // The backend uses OAuth-conventional wire keys (api/src/kpa/routes/auth.py:
+  // The backend uses OAuth-conventional wire keys (api/src/jobify/routes/auth.py:
   // SignInResponse); the Dart field names are shorter. Map explicitly.
   @JsonKey(name: 'access_token')
   final String access;

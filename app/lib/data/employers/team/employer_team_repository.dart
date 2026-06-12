@@ -1,5 +1,5 @@
-import 'package:kpa_app/data/employers/team/employer_invite_dto.dart';
-import 'package:kpa_app/data/employers/team/member_dto.dart';
+import 'package:jobify_app/data/employers/team/employer_invite_dto.dart';
+import 'package:jobify_app/data/employers/team/member_dto.dart';
 
 abstract interface class EmployerTeamRepository {
   Future<List<MemberDto>> listMembers(String employerId);

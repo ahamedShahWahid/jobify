@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import select
 
-from kpa.db.models import Job
+from jobify.db.models import Job
 
 pytestmark = pytest.mark.integration
 
@@ -58,8 +58,8 @@ async def test_delete_other_employer_returns_404(async_client, session, applican
     _, token = applicant_user_and_token
     job_id = await _setup_job(async_client, token)
 
-    from kpa.auth.tokens import mint_access_token
-    from kpa.db.models import User, UserRole
+    from jobify.auth.tokens import mint_access_token
+    from jobify.db.models import User, UserRole
 
     other = User(email="other@example.com", role=UserRole.APPLICANT)
     session.add(other)

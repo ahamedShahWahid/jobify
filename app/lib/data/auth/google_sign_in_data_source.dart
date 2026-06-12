@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 
-import 'package:kpa_app/core/config/env.dart';
-import 'package:kpa_app/core/error/auth_slugs.dart';
-import 'package:kpa_app/core/error/exceptions.dart';
+import 'package:jobify_app/core/config/env.dart';
+import 'package:jobify_app/core/error/auth_slugs.dart';
+import 'package:jobify_app/core/error/exceptions.dart';
 
 abstract interface class GoogleSignInDataSource {
   /// Runs the platform-correct Google flow and returns the resulting

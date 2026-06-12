@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/auth/token_storage.dart';
+import 'package:jobify_app/data/auth/token_storage.dart';
 
 /// In-memory implementation. We don't test SecureTokenStorage directly
 /// because flutter_secure_storage uses platform channels not available

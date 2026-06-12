@@ -4,15 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:kpa_app/data/auth/user_role.dart';
-import 'package:kpa_app/presentation/auth/current_role_provider.dart';
-import 'package:kpa_app/presentation/profile/ctc_format.dart';
-import 'package:kpa_app/presentation/profile/me_controller.dart';
-import 'package:kpa_app/presentation/profile/package_info_provider.dart';
-import 'package:kpa_app/presentation/profile/sign_out_controller.dart';
-import 'package:kpa_app/presentation/routing/routes.dart';
-import 'package:kpa_app/presentation/theme/kpa_spacing.dart';
-import 'package:kpa_app/presentation/widgets/async_value_widget.dart';
+import 'package:jobify_app/data/auth/user_role.dart';
+import 'package:jobify_app/presentation/auth/current_role_provider.dart';
+import 'package:jobify_app/presentation/profile/ctc_format.dart';
+import 'package:jobify_app/presentation/profile/me_controller.dart';
+import 'package:jobify_app/presentation/profile/package_info_provider.dart';
+import 'package:jobify_app/presentation/profile/sign_out_controller.dart';
+import 'package:jobify_app/presentation/routing/routes.dart';
+import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -37,13 +37,13 @@ class ProfileScreen extends ConsumerWidget {
         value: me,
         onRetry: () => ref.read(meControllerProvider.notifier).refresh(),
         data: (data) => ListView(
-          padding: const EdgeInsets.all(KpaSpacing.lg),
+          padding: const EdgeInsets.all(JobifySpacing.lg),
           children: [
             Text(
               data.displayName ?? data.email ?? 'Profile',
               style: theme.textTheme.headlineSmall,
             ),
-            const SizedBox(height: KpaSpacing.xs),
+            const SizedBox(height: JobifySpacing.xs),
             if (data.email case final email?)
               Text(
                 email,
@@ -52,7 +52,7 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
             if (ref.watch(currentRoleProvider) == UserRole.applicant) ...[
-              const SizedBox(height: KpaSpacing.xl),
+              const SizedBox(height: JobifySpacing.xl),
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.business_center_outlined),
@@ -66,7 +66,7 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 12),
             ],
             if (data.applicant case final a?) ...[
-              const SizedBox(height: KpaSpacing.xl),
+              const SizedBox(height: JobifySpacing.xl),
               _DetailRow(
                 label: 'Locations',
                 value: a.locations.isEmpty ? '—' : a.locations.join(', '),
@@ -87,9 +87,9 @@ class ProfileScreen extends ConsumerWidget {
                 value: formatCtc(a.expectedCtc),
               ),
             ],
-            const SizedBox(height: KpaSpacing.xl),
+            const SizedBox(height: JobifySpacing.xl),
             Text('Account', style: theme.textTheme.titleMedium),
-            const SizedBox(height: KpaSpacing.sm),
+            const SizedBox(height: JobifySpacing.sm),
             ListTile(
               leading: const Icon(Icons.description_outlined),
               title: const Text('Résumé'),
@@ -115,14 +115,14 @@ class ProfileScreen extends ConsumerWidget {
               subtitle: const Text('Preferences, export, delete'),
               onTap: () => context.go(Routes.privacy),
             ),
-            const SizedBox(height: KpaSpacing.xxl),
+            const SizedBox(height: JobifySpacing.xxl),
             OutlinedButton(
               onPressed: signOut.isLoading
                   ? null
                   : () => _confirmSignOut(context, ref),
               child: Text(signOut.isLoading ? 'Signing out…' : 'Sign out'),
             ),
-            const SizedBox(height: KpaSpacing.xxl),
+            const SizedBox(height: JobifySpacing.xxl),
             ref.watch(packageInfoProvider).when(
                   data: (info) => Center(
                     child: Text(
@@ -176,7 +176,7 @@ class _DetailRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: KpaSpacing.xs),
+      padding: const EdgeInsets.symmetric(vertical: JobifySpacing.xs),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -2,7 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'employer_invite_dto.g.dart';
 
-/// Mirrors InviteRead (api/src/kpa/routes/employers.py) — an owner's view of a
+/// Mirrors InviteRead (api/src/jobify/routes/employers.py) — an owner's view of a
 /// pending invite under GET/POST /v1/employers/{id}/invites.
 @JsonSerializable()
 class InviteDto {
@@ -41,7 +41,7 @@ class InviteDto {
   Map<String, dynamic> toJson() => _$InviteDtoToJson(this);
 }
 
-/// Mirrors MyInviteRead (api/src/kpa/routes/invites.py) — the invitee's view of
+/// Mirrors MyInviteRead (api/src/jobify/routes/invites.py) — the invitee's view of
 /// a pending invite under GET /v1/me/invites.
 @JsonSerializable()
 class MyInviteDto {
@@ -76,7 +76,7 @@ class MyInviteDto {
   Map<String, dynamic> toJson() => _$MyInviteDtoToJson(this);
 }
 
-/// Mirrors AcceptResult (api/src/kpa/routes/invites.py) — accept/decline reply.
+/// Mirrors AcceptResult (api/src/jobify/routes/invites.py) — accept/decline reply.
 @JsonSerializable()
 class AcceptResultDto {
   const AcceptResultDto({

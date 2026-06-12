@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import select
 
-from kpa.db.models import EmployerUser, User, UserRole
+from jobify.db.models import EmployerUser, User, UserRole
 
 pytestmark = pytest.mark.integration
 
@@ -51,8 +51,8 @@ async def test_create_employer_duplicate_name_returns_409(
     assert r1.status_code == 201, r1.text
 
     # Second user attempts the same name
-    from kpa.auth.tokens import mint_access_token
-    from kpa.db.models import User, UserRole
+    from jobify.auth.tokens import mint_access_token
+    from jobify.db.models import User, UserRole
 
     other = User(email="other@example.com", role=UserRole.APPLICANT)
     session.add(other)

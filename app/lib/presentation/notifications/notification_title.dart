@@ -1,4 +1,4 @@
-import 'package:kpa_app/data/notifications/notification_dto.dart';
+import 'package:jobify_app/data/notifications/notification_dto.dart';
 
 /// Human-readable title for a notification, from its kind + payload. Every
 /// payload read is null-guarded (payload is an untyped wire dict).

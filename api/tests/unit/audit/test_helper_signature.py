@@ -11,7 +11,7 @@ import inspect
 
 import pytest
 
-from kpa.audit import audit_log
+from jobify.audit import audit_log
 
 
 def test_helper_signature_has_keyword_only_args() -> None:

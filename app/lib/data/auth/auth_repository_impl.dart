@@ -1,19 +1,19 @@
 // ignore_for_file: directives_ordering
 import 'package:dio/dio.dart';
 
-import 'package:kpa_app/core/error/auth_slugs.dart';
-import 'package:kpa_app/data/api/error_mapping.dart';
-import 'package:kpa_app/core/error/exceptions.dart';
-import 'package:kpa_app/core/log/logger.dart';
-import 'package:kpa_app/data/api/access_token_holder.dart';
-import 'package:kpa_app/data/api/auth_header_interceptor.dart';
-import 'package:kpa_app/data/auth/auth_dto.dart';
-import 'package:kpa_app/data/auth/google_sign_in_data_source.dart';
-import 'package:kpa_app/data/auth/token_storage.dart';
-import 'package:kpa_app/data/auth/auth_repository.dart';
-import 'package:kpa_app/data/me/me_dto.dart';
-import 'package:kpa_app/data/auth/auth_state.dart';
-import 'package:kpa_app/data/auth/user_role.dart';
+import 'package:jobify_app/core/error/auth_slugs.dart';
+import 'package:jobify_app/data/api/error_mapping.dart';
+import 'package:jobify_app/core/error/exceptions.dart';
+import 'package:jobify_app/core/log/logger.dart';
+import 'package:jobify_app/data/api/access_token_holder.dart';
+import 'package:jobify_app/data/api/auth_header_interceptor.dart';
+import 'package:jobify_app/data/auth/auth_dto.dart';
+import 'package:jobify_app/data/auth/google_sign_in_data_source.dart';
+import 'package:jobify_app/data/auth/token_storage.dart';
+import 'package:jobify_app/data/auth/auth_repository.dart';
+import 'package:jobify_app/data/me/me_dto.dart';
+import 'package:jobify_app/data/auth/auth_state.dart';
+import 'package:jobify_app/data/auth/user_role.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({
@@ -36,7 +36,7 @@ class AuthRepositoryImpl implements AuthRepository {
   final GoogleSignInDataSource _google;
   final void Function(AuthState) _emit;
   final AuthState Function() _readState;
-  final _log = KpaLogger.named('auth.repo');
+  final _log = JobifyLogger.named('auth.repo');
 
   @override
   AuthState get current => _readState();
@@ -67,7 +67,7 @@ class AuthRepositoryImpl implements AuthRepository {
     return _exchangeGoogleIdToken(idToken);
   }
 
-  /// Trade a Google ID token for a KPA session. Shared by the mobile imperative
+  /// Trade a Google ID token for a Jobify session. Shared by the mobile imperative
   /// path and the web rendered-button path.
   Future<SignedIn> _exchangeGoogleIdToken(String idToken) async {
     try {

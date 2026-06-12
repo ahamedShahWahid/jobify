@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/notifications/notification_api.dart';
-import 'package:kpa_app/data/notifications/notifications_repository_impl.dart';
+import 'package:jobify_app/data/notifications/notification_api.dart';
+import 'package:jobify_app/data/notifications/notifications_repository_impl.dart';
 
 import '../../../helpers/mock_interceptor.dart';
 

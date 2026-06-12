@@ -1,10 +1,10 @@
 import 'package:flutter/services.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:kpa_app/data/consents/consent_dto.dart';
-import 'package:kpa_app/data/consents/consents_repository_impl.dart';
-import 'package:kpa_app/data/dsr/dsr_repository_impl.dart';
-import 'package:kpa_app/presentation/privacy/privacy_state.dart';
+import 'package:jobify_app/data/consents/consent_dto.dart';
+import 'package:jobify_app/data/consents/consents_repository_impl.dart';
+import 'package:jobify_app/data/dsr/dsr_repository_impl.dart';
+import 'package:jobify_app/presentation/privacy/privacy_state.dart';
 
 part 'privacy_controller.g.dart';
 

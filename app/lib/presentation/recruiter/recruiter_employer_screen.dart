@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:kpa_app/core/error/exceptions.dart';
-import 'package:kpa_app/data/auth/auth_state.dart';
-import 'package:kpa_app/data/employers/employer_dto.dart';
-import 'package:kpa_app/data/employers/team/employer_invite_dto.dart';
-import 'package:kpa_app/data/employers/team/member_dto.dart';
-import 'package:kpa_app/presentation/auth/auth_providers.dart';
-import 'package:kpa_app/presentation/recruiter/active_employer_provider.dart';
-import 'package:kpa_app/presentation/recruiter/team/employer_invites_controller.dart';
-import 'package:kpa_app/presentation/recruiter/team/members_controller.dart';
-import 'package:kpa_app/presentation/recruiter/team/team_actions_controller.dart';
-import 'package:kpa_app/presentation/theme/kpa_spacing.dart';
-import 'package:kpa_app/presentation/widgets/async_value_widget.dart';
+import 'package:jobify_app/core/error/exceptions.dart';
+import 'package:jobify_app/data/auth/auth_state.dart';
+import 'package:jobify_app/data/employers/employer_dto.dart';
+import 'package:jobify_app/data/employers/team/employer_invite_dto.dart';
+import 'package:jobify_app/data/employers/team/member_dto.dart';
+import 'package:jobify_app/presentation/auth/auth_providers.dart';
+import 'package:jobify_app/presentation/recruiter/active_employer_provider.dart';
+import 'package:jobify_app/presentation/recruiter/team/employer_invites_controller.dart';
+import 'package:jobify_app/presentation/recruiter/team/members_controller.dart';
+import 'package:jobify_app/presentation/recruiter/team/team_actions_controller.dart';
+import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
 
 String _roleLabel(String role) => role == 'owner' ? 'Owner' : 'Member';
 
@@ -31,7 +31,7 @@ class RecruiterEmployerScreen extends ConsumerWidget {
         isEmpty: (list) => list.isEmpty,
         empty: () => const Center(
           child: Padding(
-            padding: EdgeInsets.all(KpaSpacing.xl),
+            padding: EdgeInsets.all(JobifySpacing.xl),
             child: Text('You are not part of any company yet.'),
           ),
         ),
@@ -71,16 +71,16 @@ class _TeamView extends ConsumerWidget {
           ..invalidate(employerInvitesControllerProvider(active.id));
       },
       child: ListView(
-        padding: const EdgeInsets.all(KpaSpacing.lg),
+        padding: const EdgeInsets.all(JobifySpacing.lg),
         children: [
           if (employers.length > 1) ...[
             _EmployerSwitcher(employers: employers, active: active),
-            const SizedBox(height: KpaSpacing.lg),
+            const SizedBox(height: JobifySpacing.lg),
           ],
           // --- Company details ---
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(KpaSpacing.lg),
+              padding: const EdgeInsets.all(JobifySpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -101,7 +101,7 @@ class _TeamView extends ConsumerWidget {
                     ],
                   ),
                   if (active.gst != null) ...[
-                    const SizedBox(height: KpaSpacing.xs),
+                    const SizedBox(height: JobifySpacing.xs),
                     Text(
                       'GST: ${active.gst}',
                       style: theme.textTheme.bodySmall?.copyWith(
@@ -113,9 +113,9 @@ class _TeamView extends ConsumerWidget {
               ),
             ),
           ),
-          const SizedBox(height: KpaSpacing.xl),
+          const SizedBox(height: JobifySpacing.xl),
           Text('Members', style: theme.textTheme.titleMedium),
-          const SizedBox(height: KpaSpacing.sm),
+          const SizedBox(height: JobifySpacing.sm),
           AsyncValueWidget<List<MemberDto>>(
             value: members,
             onRetry: () => ref.invalidate(membersControllerProvider(active.id)),
@@ -132,20 +132,20 @@ class _TeamView extends ConsumerWidget {
                       isSelf: m.userId == myUserId,
                     ),
                   if (amOwner) ...[
-                    const SizedBox(height: KpaSpacing.xl),
+                    const SizedBox(height: JobifySpacing.xl),
                     Text(
                       'Invite a recruiter',
                       style: theme.textTheme.titleMedium,
                     ),
-                    const SizedBox(height: KpaSpacing.sm),
+                    const SizedBox(height: JobifySpacing.sm),
                     _InviteForm(employerId: active.id),
                   ],
-                  const SizedBox(height: KpaSpacing.xl),
+                  const SizedBox(height: JobifySpacing.xl),
                   Text(
                     'Pending invitations',
                     style: theme.textTheme.titleMedium,
                   ),
-                  const SizedBox(height: KpaSpacing.sm),
+                  const SizedBox(height: JobifySpacing.sm),
                   _PendingInvites(employerId: active.id, amOwner: amOwner),
                 ],
               );
@@ -322,7 +322,7 @@ class _InviteFormState extends ConsumerState<_InviteForm> {
           keyboardType: TextInputType.emailAddress,
           decoration: const InputDecoration(labelText: 'Email'),
         ),
-        const SizedBox(height: KpaSpacing.sm),
+        const SizedBox(height: JobifySpacing.sm),
         Row(
           children: [
             Expanded(
@@ -336,7 +336,7 @@ class _InviteFormState extends ConsumerState<_InviteForm> {
                 onChanged: (v) => setState(() => _role = v ?? 'member'),
               ),
             ),
-            const SizedBox(width: KpaSpacing.md),
+            const SizedBox(width: JobifySpacing.md),
             FilledButton(
               onPressed: busy ? null : _submit,
               child: const Text('Send'),
@@ -363,7 +363,7 @@ class _PendingInvites extends ConsumerWidget {
           ref.invalidate(employerInvitesControllerProvider(employerId)),
       isEmpty: (list) => list.isEmpty,
       empty: () => Padding(
-        padding: const EdgeInsets.symmetric(vertical: KpaSpacing.sm),
+        padding: const EdgeInsets.symmetric(vertical: JobifySpacing.sm),
         child: Text(
           'No pending invitations.',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -441,7 +441,7 @@ String _actionError(WidgetRef ref) {
       'last_owner' => 'A company must keep at least one owner.',
       'already_a_member' => 'That person is already on the team.',
       'user_not_found' =>
-        'No KPA account uses that email — send an invite instead.',
+        'No Jobify account uses that email — send an invite instead.',
       'invite_already_pending' =>
         'An invitation is already pending for that email.',
       _ => 'Something went wrong. Try again.',

@@ -1,4 +1,4 @@
-import 'package:kpa_app/data/auth/user_role.dart';
+import 'package:jobify_app/data/auth/user_role.dart';
 
 /// The three states the app's auth lifecycle can be in.
 /// Watched by the router for redirect decisions and by every screen

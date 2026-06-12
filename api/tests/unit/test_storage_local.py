@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from kpa.integrations.storage.local import LocalFileStorage
+from jobify.integrations.storage.local import LocalFileStorage
 
 
 async def test_save_and_read_round_trip(tmp_path: Path) -> None:

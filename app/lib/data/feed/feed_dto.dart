@@ -1,7 +1,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
-import 'package:kpa_app/data/feed/match_generator.dart';
-import 'package:kpa_app/data/jobs/job_status.dart';
+import 'package:jobify_app/data/feed/match_generator.dart';
+import 'package:jobify_app/data/jobs/job_status.dart';
 
 part 'feed_dto.g.dart';
 

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/me/me_dto.dart';
-import 'package:kpa_app/data/me/me_repository.dart';
-import 'package:kpa_app/data/me/me_repository_impl.dart';
-import 'package:kpa_app/data/me/profile_update_dto.dart';
-import 'package:kpa_app/presentation/recruiter/recruiter_profile_screen.dart';
+import 'package:jobify_app/data/me/me_dto.dart';
+import 'package:jobify_app/data/me/me_repository.dart';
+import 'package:jobify_app/data/me/me_repository_impl.dart';
+import 'package:jobify_app/data/me/profile_update_dto.dart';
+import 'package:jobify_app/presentation/recruiter/recruiter_profile_screen.dart';
 
 class _FakeMeRepo implements MeRepository {
   @override

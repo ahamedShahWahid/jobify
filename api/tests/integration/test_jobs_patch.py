@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-import kpa.workers.tasks.embed_job as _embed_job_mod
+import jobify.workers.tasks.embed_job as _embed_job_mod
 
 pytestmark = pytest.mark.integration
 
@@ -108,8 +108,8 @@ async def test_patch_other_employer_returns_404(async_client, session, applicant
     _, job_id = await _make_recruiter_and_job(async_client, token)
 
     # Second recruiter from a different employer
-    from kpa.auth.tokens import mint_access_token
-    from kpa.db.models import User, UserRole
+    from jobify.auth.tokens import mint_access_token
+    from jobify.db.models import User, UserRole
 
     other = User(email="other@example.com", role=UserRole.APPLICANT)
     session.add(other)

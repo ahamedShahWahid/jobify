@@ -1,7 +1,7 @@
 // ignore_for_file: directives_ordering
 import 'package:dio/dio.dart';
 
-import 'package:kpa_app/data/jobs/jobs_dto.dart';
+import 'package:jobify_app/data/jobs/jobs_dto.dart';
 
 class ApplicationsApi {
   ApplicationsApi(this._dio);

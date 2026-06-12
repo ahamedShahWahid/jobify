@@ -14,8 +14,8 @@ from httpx import AsyncClient
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kpa.auth.tokens import mint_access_token
-from kpa.db.models import (
+from jobify.auth.tokens import mint_access_token
+from jobify.db.models import (
     Applicant,
     AuditLog,
     EmployerInvite,

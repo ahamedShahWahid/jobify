@@ -1,11 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/core/error/exceptions.dart';
-import 'package:kpa_app/data/me/me_dto.dart';
-import 'package:kpa_app/data/me/me_repository.dart';
-import 'package:kpa_app/data/me/me_repository_impl.dart';
-import 'package:kpa_app/data/me/profile_update_dto.dart';
-import 'package:kpa_app/presentation/profile/profile_edit_controller.dart';
+import 'package:jobify_app/core/error/exceptions.dart';
+import 'package:jobify_app/data/me/me_dto.dart';
+import 'package:jobify_app/data/me/me_repository.dart';
+import 'package:jobify_app/data/me/me_repository_impl.dart';
+import 'package:jobify_app/data/me/profile_update_dto.dart';
+import 'package:jobify_app/presentation/profile/profile_edit_controller.dart';
 
 class _OkRepo implements MeRepository {
   @override

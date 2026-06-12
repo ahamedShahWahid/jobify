@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:kpa_app/presentation/privacy/delete_account_controller.dart';
-import 'package:kpa_app/presentation/routing/routes.dart';
-import 'package:kpa_app/presentation/theme/kpa_spacing.dart';
+import 'package:jobify_app/presentation/privacy/delete_account_controller.dart';
+import 'package:jobify_app/presentation/routing/routes.dart';
+import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
 
 class DeleteAccountScreen extends ConsumerStatefulWidget {
   const DeleteAccountScreen({super.key});
@@ -50,13 +50,13 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Delete my account')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(KpaSpacing.lg),
+        padding: const EdgeInsets.all(JobifySpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Warning banner.
             Container(
-              padding: const EdgeInsets.all(KpaSpacing.md),
+              padding: const EdgeInsets.all(JobifySpacing.md),
               decoration: BoxDecoration(
                 color: theme.colorScheme.errorContainer,
                 borderRadius: BorderRadius.circular(8),
@@ -66,10 +66,10 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                 children: [
                   Icon(Icons.warning_amber_outlined,
                       color: theme.colorScheme.onErrorContainer),
-                  const SizedBox(width: KpaSpacing.sm),
+                  const SizedBox(width: JobifySpacing.sm),
                   Expanded(
                     child: Text(
-                      'This will permanently delete your personal data on KPA. This action is irreversible.',
+                      'This will permanently delete your personal data on Jobify. This action is irreversible.',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onErrorContainer,
                       ),
@@ -79,18 +79,18 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
               ),
             ),
 
-            const SizedBox(height: KpaSpacing.xl),
+            const SizedBox(height: JobifySpacing.xl),
             Text('What will happen:', style: theme.textTheme.titleSmall),
-            const SizedBox(height: KpaSpacing.sm),
+            const SizedBox(height: JobifySpacing.sm),
             ..._bullets(theme),
 
-            const SizedBox(height: KpaSpacing.xl),
+            const SizedBox(height: JobifySpacing.xl),
             OutlinedButton.icon(
               icon: const Icon(Icons.download_outlined),
               label: const Text('Download my data'),
               onPressed: () => context.go(Routes.privacy),
             ),
-            const SizedBox(height: KpaSpacing.xs),
+            const SizedBox(height: JobifySpacing.xs),
             Text(
               "Before you continue, we recommend downloading your data.",
               style: theme.textTheme.bodySmall?.copyWith(
@@ -98,12 +98,12 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
               ),
             ),
 
-            const SizedBox(height: KpaSpacing.xl),
+            const SizedBox(height: JobifySpacing.xl),
             Text(
               'To confirm, type $_requiredPhrase below:',
               style: theme.textTheme.bodyMedium,
             ),
-            const SizedBox(height: KpaSpacing.sm),
+            const SizedBox(height: JobifySpacing.sm),
             TextField(
               controller: _confirmationController,
               enabled: !isLoading,
@@ -115,7 +115,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
               ),
             ),
 
-            const SizedBox(height: KpaSpacing.xl),
+            const SizedBox(height: JobifySpacing.xl),
 
             // The submit button — enabled only when the text matches exactly.
             ValueListenableBuilder<TextEditingValue>(
@@ -141,7 +141,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                 );
               },
             ),
-            const SizedBox(height: KpaSpacing.md),
+            const SizedBox(height: JobifySpacing.md),
             OutlinedButton(
               onPressed: isLoading ? null : () => context.pop(),
               child: const Text('Cancel'),
@@ -161,7 +161,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
     return items
         .map(
           (text) => Padding(
-            padding: const EdgeInsets.only(bottom: KpaSpacing.xs),
+            padding: const EdgeInsets.only(bottom: JobifySpacing.xs),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

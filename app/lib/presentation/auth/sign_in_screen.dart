@@ -2,11 +2,11 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:kpa_app/core/error/exceptions.dart';
-import 'package:kpa_app/data/auth/google_web_sign_in.dart';
-import 'package:kpa_app/presentation/auth/delete_success_snackbar_provider.dart';
-import 'package:kpa_app/presentation/auth/sign_in_controller.dart';
-import 'package:kpa_app/presentation/theme/kpa_spacing.dart';
+import 'package:jobify_app/core/error/exceptions.dart';
+import 'package:jobify_app/data/auth/google_web_sign_in.dart';
+import 'package:jobify_app/presentation/auth/delete_success_snackbar_provider.dart';
+import 'package:jobify_app/presentation/auth/sign_in_controller.dart';
+import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
 
 class SignInScreen extends ConsumerWidget {
   const SignInScreen({super.key});
@@ -30,7 +30,8 @@ class SignInScreen extends ConsumerWidget {
             AuthException(:final slug)
                 when slug == 'google_sign_in_cancelled' =>
               null,
-            NetworkException _ => "Couldn't reach KPA. Check your connection.",
+            NetworkException _ =>
+              "Couldn't reach Jobify. Check your connection.",
             AuthException(:final detail) =>
               detail ?? 'Sign-in failed. Try again.',
             _ => 'Sign-in failed. Try again.',
@@ -51,18 +52,18 @@ class SignInScreen extends ConsumerWidget {
     return Scaffold(
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: KpaSpacing.xl),
+          padding: const EdgeInsets.symmetric(horizontal: JobifySpacing.xl),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('KPA', style: theme.textTheme.displayMedium),
-              const SizedBox(height: KpaSpacing.sm),
+              Text('Jobify', style: theme.textTheme.displayMedium),
+              const SizedBox(height: JobifySpacing.sm),
               Text(
                 'Roles that match you, not the other way around.',
                 style: theme.textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: KpaSpacing.xxl),
+              const SizedBox(height: JobifySpacing.xxl),
               // Web authenticates via Google's rendered button (the only web
               // path that yields an ID token); mobile uses the imperative flow.
               if (kIsWeb)

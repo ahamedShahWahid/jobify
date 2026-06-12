@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import pytest
 
-from kpa.eval.parse_f1 import eval_gold_dataset
+from jobify.eval.parse_f1 import eval_gold_dataset
 
 pytestmark = pytest.mark.eval
 

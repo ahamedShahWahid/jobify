@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import 'package:kpa_app/data/jobs/application_status.dart';
-import 'package:kpa_app/presentation/applications/applications_controller.dart';
-import 'package:kpa_app/presentation/routing/routes.dart';
-import 'package:kpa_app/presentation/theme/kpa_spacing.dart';
-import 'package:kpa_app/presentation/widgets/async_value_widget.dart';
-import 'package:kpa_app/presentation/widgets/kpa_empty_state.dart';
-import 'package:kpa_app/presentation/widgets/kpa_loading_view.dart';
+import 'package:jobify_app/data/jobs/application_status.dart';
+import 'package:jobify_app/presentation/applications/applications_controller.dart';
+import 'package:jobify_app/presentation/routing/routes.dart';
+import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
+import 'package:jobify_app/presentation/widgets/jobify_empty_state.dart';
+import 'package:jobify_app/presentation/widgets/jobify_loading_view.dart';
 
 final _dateFormat = DateFormat.yMMMMd();
 
@@ -48,7 +48,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
         onRetry: () =>
             ref.read(applicationsControllerProvider.notifier).refresh(),
         isEmpty: (s) => s.items.isEmpty,
-        empty: () => KpaEmptyState(
+        empty: () => JobifyEmptyState(
           headline: 'No applications yet',
           body: 'Browse the feed and apply to roles you like.',
           icon: Icons.assignment_outlined,
@@ -62,15 +62,16 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
               ref.read(applicationsControllerProvider.notifier).refresh(),
           child: ListView.separated(
             controller: _scroll,
-            padding: const EdgeInsets.all(KpaSpacing.lg),
+            padding: const EdgeInsets.all(JobifySpacing.lg),
             itemCount: s.items.length + 1,
-            separatorBuilder: (_, __) => const SizedBox(height: KpaSpacing.md),
+            separatorBuilder: (_, __) =>
+                const SizedBox(height: JobifySpacing.md),
             itemBuilder: (context, i) {
               if (i == s.items.length) {
                 if (s.isLoadingMore) {
                   return const Padding(
-                    padding: EdgeInsets.all(KpaSpacing.lg),
-                    child: KpaLoadingView(),
+                    padding: EdgeInsets.all(JobifySpacing.lg),
+                    child: JobifyLoadingView(),
                   );
                 }
                 return const SizedBox.shrink();
@@ -82,7 +83,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                     '${Routes.applications}/jobs/${item.job.id}',
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(KpaSpacing.lg),
+                    padding: const EdgeInsets.all(JobifySpacing.lg),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -97,12 +98,12 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                             _StatusPill(status: item.application.status),
                           ],
                         ),
-                        const SizedBox(height: KpaSpacing.sm),
+                        const SizedBox(height: JobifySpacing.sm),
                         Text(
                           item.job.title,
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
-                        const SizedBox(height: KpaSpacing.xs),
+                        const SizedBox(height: JobifySpacing.xs),
                         Text(
                           () {
                             final isWithdrawn = item.application.status ==
@@ -154,8 +155,8 @@ class _StatusPill extends StatelessWidget {
           );
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: KpaSpacing.sm,
-        vertical: KpaSpacing.xs,
+        horizontal: JobifySpacing.sm,
+        vertical: JobifySpacing.xs,
       ),
       decoration: BoxDecoration(
         color: bg,

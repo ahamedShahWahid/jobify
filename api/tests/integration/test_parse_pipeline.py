@@ -21,12 +21,12 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
-from kpa.auth.tokens import mint_access_token
-from kpa.db.models import Applicant, Resume, ResumeParseStatus, User, UserRole
+from jobify.auth.tokens import mint_access_token
+from jobify.db.models import Applicant, Resume, ResumeParseStatus, User, UserRole
 
 pytestmark = pytest.mark.integration
 
-_JWT_SECRET = "x" * 32  # matches KPA_JWT_SECRET set by pipeline_client
+_JWT_SECRET = "x" * 32  # matches JOBIFY_JWT_SECRET set by pipeline_client
 
 
 def _tiny_pdf_with(text_lines: list[str]) -> bytes:
@@ -50,16 +50,16 @@ async def pipeline_client(
     thread (Celery eager mode) can read the row via its own connection.
     Isolation is achieved by cleaning up test rows after each test.
     """
-    monkeypatch.setenv("KPA_ENV", "local")
-    monkeypatch.setenv("KPA_SERVICE_NAME", "kpa-api")
-    monkeypatch.setenv("KPA_DB_URL", migrated_db)
-    monkeypatch.setenv("KPA_REDIS_URL", "redis://localhost:6379/0")
-    monkeypatch.setenv("KPA_STORAGE_ROOT", str(tmp_path))
-    monkeypatch.setenv("KPA_JWT_SECRET", _JWT_SECRET)
+    monkeypatch.setenv("JOBIFY_ENV", "local")
+    monkeypatch.setenv("JOBIFY_SERVICE_NAME", "jobify-api")
+    monkeypatch.setenv("JOBIFY_DB_URL", migrated_db)
+    monkeypatch.setenv("JOBIFY_REDIS_URL", "redis://localhost:6379/0")
+    monkeypatch.setenv("JOBIFY_STORAGE_ROOT", str(tmp_path))
+    monkeypatch.setenv("JOBIFY_JWT_SECRET", _JWT_SECRET)
 
-    import kpa.workers.celery_app as _celery_mod
-    from kpa.app_factory import create_app
-    from kpa.workers.celery_app import celery_app
+    import jobify.workers.celery_app as _celery_mod
+    from jobify.app_factory import create_app
+    from jobify.workers.celery_app import celery_app
 
     app = create_app()
 
@@ -88,7 +88,7 @@ async def _make_applicant_direct(db_url: str, *, email: str) -> tuple[str, str]:
     """Create user + applicant rows via a committed transaction.
 
     Returns (applicant_id, access_token). The token is minted directly using
-    the same secret that pipeline_client sets via KPA_JWT_SECRET, so the
+    the same secret that pipeline_client sets via JOBIFY_JWT_SECRET, so the
     app under test will accept it.
     """
     engine = create_async_engine(db_url, poolclass=NullPool)
@@ -192,7 +192,7 @@ async def test_upload_then_parse_populates_parsed_json(
                 result = await conn.execute(
                     sql_text(
                         "SELECT model_name, array_length(embedding::real[], 1) "
-                        "FROM kpa.applicant_embeddings WHERE applicant_id = :aid"
+                        "FROM jobify.applicant_embeddings WHERE applicant_id = :aid"
                     ),
                     {"aid": applicant_id},
                 )

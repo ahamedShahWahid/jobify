@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 
-import 'package:kpa_app/data/notifications/notification_dto.dart';
+import 'package:jobify_app/data/notifications/notification_dto.dart';
 
 class NotificationApi {
   NotificationApi(this._dio);

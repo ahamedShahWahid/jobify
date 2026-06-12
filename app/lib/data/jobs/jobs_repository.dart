@@ -1,5 +1,5 @@
-import 'package:kpa_app/data/jobs/application_source.dart';
-import 'package:kpa_app/data/jobs/jobs_dto.dart';
+import 'package:jobify_app/data/jobs/application_source.dart';
+import 'package:jobify_app/data/jobs/jobs_dto.dart';
 
 abstract interface class JobsRepository {
   Future<JobDetailDto> fetchById(String jobId);

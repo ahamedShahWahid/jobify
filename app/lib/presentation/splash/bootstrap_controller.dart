@@ -1,6 +1,6 @@
-import 'package:kpa_app/core/error/exceptions.dart';
-import 'package:kpa_app/data/auth/auth_repository_provider.dart';
-import 'package:kpa_app/data/auth/token_storage.dart';
+import 'package:jobify_app/core/error/exceptions.dart';
+import 'package:jobify_app/data/auth/auth_repository_provider.dart';
+import 'package:jobify_app/data/auth/token_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'bootstrap_controller.g.dart';

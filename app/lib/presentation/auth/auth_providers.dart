@@ -1,4 +1,4 @@
-import 'package:kpa_app/data/auth/auth_state.dart';
+import 'package:jobify_app/data/auth/auth_state.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'auth_providers.g.dart';

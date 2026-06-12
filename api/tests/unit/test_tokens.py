@@ -1,4 +1,4 @@
-"""Unit tests for kpa.auth.tokens — pure crypto helpers, no DB / no network."""
+"""Unit tests for jobify.auth.tokens — pure crypto helpers, no DB / no network."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 import jwt as pyjwt
 import pytest
 
-from kpa.auth.tokens import (
+from jobify.auth.tokens import (
     AccessTokenError,
     decode_access_token,
     mint_access_token,
@@ -26,7 +26,7 @@ def test_mint_access_token_roundtrip_preserves_claims() -> None:
 
     assert claims["sub"] == str(_USER_ID)
     assert claims["role"] == "applicant"
-    assert claims["iss"] == "kpa-api"
+    assert claims["iss"] == "jobify-api"
     assert isinstance(claims["jti"], str) and len(claims["jti"]) == 36
     assert claims["exp"] - claims["iat"] == 600
 
@@ -72,7 +72,7 @@ def test_decode_rejects_bad_issuer() -> None:
 def test_decode_rejects_missing_role() -> None:
     """Defence in depth: a forged token missing `role` must be rejected."""
     payload = {
-        "iss": "kpa-api",
+        "iss": "jobify-api",
         "sub": str(_USER_ID),
         # role intentionally omitted
         "iat": int(time.time()),
@@ -87,7 +87,7 @@ def test_decode_rejects_missing_role() -> None:
 def test_decode_accepts_30s_iat_skew() -> None:
     """Tokens with iat up to 30s in the future are accepted."""
     payload = {
-        "iss": "kpa-api",
+        "iss": "jobify-api",
         "sub": str(_USER_ID),
         "role": "applicant",
         "iat": int(time.time()) + 30,
@@ -102,7 +102,7 @@ def test_decode_accepts_30s_iat_skew() -> None:
 def test_decode_rejects_iat_skew_beyond_window() -> None:
     """iat must be within 30s of now; 60s in the future is clearly over the limit."""
     payload = {
-        "iss": "kpa-api",
+        "iss": "jobify-api",
         "sub": str(_USER_ID),
         "role": "applicant",
         "iat": int(time.time()) + 60,

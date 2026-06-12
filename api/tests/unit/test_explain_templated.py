@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from kpa.scoring.explain import templated_explanation
+from jobify.scoring.explain import templated_explanation
 
 
 def _kw(**overrides) -> dict:

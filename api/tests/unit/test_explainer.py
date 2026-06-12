@@ -7,8 +7,8 @@ from decimal import Decimal
 
 import pytest
 
-from kpa.scoring.explain import templated_explanation
-from kpa.scoring.explainer import ExplainContext, TemplatedExplainer
+from jobify.scoring.explain import templated_explanation
+from jobify.scoring.explainer import ExplainContext, TemplatedExplainer
 
 
 def _ctx(**overrides: object) -> ExplainContext:

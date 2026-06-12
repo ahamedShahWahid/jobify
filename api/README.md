@@ -1,6 +1,6 @@
-# KPA API
+# Jobify API
 
-FastAPI service for the Khan Placement Agency platform. This directory contains the backend foundations, DB layer, and the resume upload data plane. Auth, parsing, and matching code land in follow-on plans.
+FastAPI service for the Jobify platform. This directory contains the backend foundations, DB layer, and the resume upload data plane. Auth, parsing, and matching code land in follow-on plans.
 
 ## Requirements
 
@@ -22,12 +22,12 @@ Then set up Postgres — see [Database](#database).
 
 ## Run locally
 
-The service reads its config from environment variables (all prefixed `KPA_`).
+The service reads its config from environment variables (all prefixed `JOBIFY_`).
 The easiest path is to keep them in `.env` (created in First-time setup above)
 and let `uv` load it:
 
 ```bash
-uv run --env-file=.env uvicorn kpa.main:app --reload --port 8000
+uv run --env-file=.env uvicorn jobify.main:app --reload --port 8000
 ```
 
 - `--reload` watches `src/` and restarts the server on code changes. Drop it
@@ -37,8 +37,8 @@ uv run --env-file=.env uvicorn kpa.main:app --reload --port 8000
 If you'd rather pass vars inline (e.g., CI, one-off overrides), skip `.env`:
 
 ```bash
-KPA_ENV=local KPA_SERVICE_NAME=kpa-api \
-  uv run uvicorn kpa.main:app --reload --port 8000
+JOBIFY_ENV=local JOBIFY_SERVICE_NAME=jobify-api \
+  uv run uvicorn jobify.main:app --reload --port 8000
 ```
 
 ### Verify it's up
@@ -52,7 +52,7 @@ Expected response:
 ```json
 {
   "status": "ok",
-  "service": "kpa-api",
+  "service": "jobify-api",
   "version": "0.1.0",
   "env": "local"
 }
@@ -82,9 +82,9 @@ brew services start postgresql@16
 
 # Create the role and the two databases (dev + integration tests).
 psql -d postgres <<'SQL'
-CREATE ROLE kpa WITH LOGIN PASSWORD 'kpa' CREATEDB;
-CREATE DATABASE kpa OWNER kpa;
-CREATE DATABASE kpa_test OWNER kpa;
+CREATE ROLE jobify WITH LOGIN PASSWORD 'jobify' CREATEDB;
+CREATE DATABASE jobify OWNER jobify;
+CREATE DATABASE jobify_test OWNER jobify;
 SQL
 
 uv run alembic upgrade head         # applies migrations to the dev DB
@@ -93,16 +93,16 @@ uv run alembic upgrade head         # applies migrations to the dev DB
 The dev connection string lives in `.env`:
 
 ```
-KPA_DB_URL=postgresql+asyncpg://kpa:kpa@localhost:5432/kpa
+JOBIFY_DB_URL=postgresql+asyncpg://jobify:jobify@localhost:5432/jobify
 ```
 
-Integration tests connect to `kpa_test` by default; override with `KPA_TEST_DB_URL` if your local Postgres isn't on `localhost:5432`.
+Integration tests connect to `jobify_test` by default; override with `JOBIFY_TEST_DB_URL` if your local Postgres isn't on `localhost:5432`.
 
 ### Reset the dev database
 
 ```bash
-psql -d postgres -c "DROP DATABASE kpa;"
-psql -d postgres -c "CREATE DATABASE kpa OWNER kpa;"
+psql -d postgres -c "DROP DATABASE jobify;"
+psql -d postgres -c "CREATE DATABASE jobify OWNER jobify;"
 uv run alembic upgrade head
 ```
 
@@ -121,21 +121,21 @@ PG_CONFIG=/opt/homebrew/opt/postgresql@16/bin/pg_config make
 PG_CONFIG=/opt/homebrew/opt/postgresql@16/bin/pg_config make install
 ```
 
-Then create the extension as a Postgres superuser (preferred — keeps the `kpa` role at normal privilege):
+Then create the extension as a Postgres superuser (preferred — keeps the `jobify` role at normal privilege):
 
 ```bash
 # Run as a superuser (e.g. the default 'postgres' role):
-psql -U postgres -d kpa -c "CREATE EXTENSION IF NOT EXISTS vector;"
-psql -U postgres -d kpa_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
+psql -U postgres -d jobify -c "CREATE EXTENSION IF NOT EXISTS vector;"
+psql -U postgres -d jobify_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
 ```
 
-If you don't have a separate superuser role set up locally, the quickest fallback is to temporarily grant superuser to `kpa` so the Alembic migration can create the extension itself:
+If you don't have a separate superuser role set up locally, the quickest fallback is to temporarily grant superuser to `jobify` so the Alembic migration can create the extension itself:
 
 ```bash
 # dev only — revert after migrations run if desired
-psql -d postgres -c "ALTER ROLE kpa SUPERUSER;"
-psql -d kpa -c "CREATE EXTENSION IF NOT EXISTS vector;"
-psql -d kpa_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
+psql -d postgres -c "ALTER ROLE jobify SUPERUSER;"
+psql -d jobify -c "CREATE EXTENSION IF NOT EXISTS vector;"
+psql -d jobify_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
 ```
 
 The Alembic migration `0004_applicant_embeddings.py` runs `CREATE EXTENSION IF NOT EXISTS vector` idempotently as the first step of `upgrade()`.
@@ -144,7 +144,7 @@ The Alembic migration `0004_applicant_embeddings.py` runs `CREATE EXTENSION IF N
 
 ```bash
 uv run alembic revision -m "describe the change"
-# Edit the generated file under src/kpa/db/migrations/versions/.
+# Edit the generated file under src/jobify/db/migrations/versions/.
 uv run alembic upgrade head
 ```
 
@@ -178,7 +178,7 @@ redis-cli ping     # → PONG
 The connection string lives in `.env`:
 
 ```
-KPA_REDIS_URL=redis://localhost:6379/0
+JOBIFY_REDIS_URL=redis://localhost:6379/0
 ```
 
 ### Run the parse worker
@@ -187,7 +187,7 @@ In a second terminal (uvicorn keeps running in the first):
 
 ```bash
 cd api
-uv run --env-file=.env celery -A kpa.workers.celery_app worker \
+uv run --env-file=.env celery -A jobify.workers.celery_app worker \
     --pool=solo --concurrency=1 -Q parse,embed,score --loglevel=info
 ```
 
@@ -198,7 +198,7 @@ Upload a resume in the first terminal; the worker logs `parse.complete` when it'
 
 ### Skipping the worker for tests
 
-Tests use Celery eager mode (set via `KPA_CELERY_TASK_ALWAYS_EAGER=true` in test fixtures) so `.delay()` runs the task body inline — no Redis required during `pytest`. Production never sets this flag.
+Tests use Celery eager mode (set via `JOBIFY_CELERY_TASK_ALWAYS_EAGER=true` in test fixtures) so `.delay()` runs the task body inline — no Redis required during `pytest`. Production never sets this flag.
 
 ## Resume uploads
 
@@ -209,7 +209,7 @@ POST   /v1/applicants/me/resumes
 GET    /v1/applicants/me/resumes/{resume_id}
 ```
 
-POST accepts `multipart/form-data` with one field `file`. Content-type is checked against `KPA_ALLOWED_RESUME_CONTENT_TYPES`; size against `KPA_MAX_UPLOAD_BYTES`. The file is persisted under `KPA_STORAGE_ROOT` (gitignored `var/` by default); the resume row in `kpa.resumes` lands with `parse_status=pending`. Parsing is a later plan.
+POST accepts `multipart/form-data` with one field `file`. Content-type is checked against `JOBIFY_ALLOWED_RESUME_CONTENT_TYPES`; size against `JOBIFY_MAX_UPLOAD_BYTES`. The file is persisted under `JOBIFY_STORAGE_ROOT` (gitignored `var/` by default); the resume row in `jobify.resumes` lands with `parse_status=pending`. Parsing is a later plan.
 
 Both routes require an `Authorization: Bearer <access_jwt>` header — the applicant id is derived from the access token (via the `current_user` dependency), not from the URL. Expect `401` for a missing or invalid token (or a soft-deleted user), `403 not_an_applicant` for recruiter/admin roles, and a uniform `404` for unknown or other-user resume ids. Size violations return `413`; disallowed content-types return `415`. Obtain the access token via the Google OAuth sign-in endpoint documented in [Auth](#auth) below.
 
@@ -227,26 +227,26 @@ curl -s -X POST "http://127.0.0.1:8000/v1/applicants/me/resumes" \
 For Fluent Bit / Elasticsearch compatibility, flip the log format:
 
 ```bash
-KPA_LOG_FORMAT=json uv run --env-file=.env uvicorn kpa.main:app --port 8000
+JOBIFY_LOG_FORMAT=json uv run --env-file=.env uvicorn jobify.main:app --port 8000
 ```
 
 (Inline env vars override anything in `.env`, so this works even with the
-default `KPA_LOG_FORMAT=text` in the file.)
+default `JOBIFY_LOG_FORMAT=text` in the file.)
 
 ## Seeding demo data
 
-The `kpa-seed-jobs` script populates `employers` + `jobs` from a versioned JSON
+The `jobify-seed-jobs` script populates `employers` + `jobs` from a versioned JSON
 fixture so a backend-only demo of the future feed is possible.
 
 ```bash
 # Apply (idempotent — safe to re-run)
-uv run --env-file=.env kpa-seed-jobs
+uv run --env-file=.env jobify-seed-jobs
 
 # Validate the JSON only; nothing written
-uv run --env-file=.env kpa-seed-jobs --dry-run
+uv run --env-file=.env jobify-seed-jobs --dry-run
 
 # Use a different fixture
-uv run --env-file=.env kpa-seed-jobs --from path/to/jobs.json
+uv run --env-file=.env jobify-seed-jobs --from path/to/jobs.json
 ```
 
 The canonical fixture lives at `api/data/sample_jobs.json` (10 employers,
@@ -256,7 +256,7 @@ existing `verified_at` timestamp are preserved.
 
 The seeder dispatches `embed_job` for each inserted or updated job after the
 COMMIT. For embeddings (and downstream scoring) to materialize, a Celery worker
-on the `embed,score` queues must be running (`uv run --env-file=.env celery -A kpa.workers.celery_app worker
+on the `embed,score` queues must be running (`uv run --env-file=.env celery -A jobify.workers.celery_app worker
 --pool=solo --concurrency=1 -Q parse,embed,score`). If the broker is down, the
 seeder logs `embed.dispatch-failed` per job and continues; re-running the seed
 CLI re-dispatches.
@@ -269,7 +269,7 @@ Unit tests (no DB required):
 uv run pytest -v -m "not integration"
 ```
 
-Integration tests (require local Postgres + `kpa_test` database — see [Database](#database)):
+Integration tests (require local Postgres + `jobify_test` database — see [Database](#database)):
 
 ```bash
 uv run pytest -v -m integration
@@ -301,32 +301,32 @@ uv run mypy
 
 ## Configuration
 
-All settings are read from environment variables prefixed `KPA_`:
+All settings are read from environment variables prefixed `JOBIFY_`:
 
 | Variable           | Required | Default | Purpose                         |
 | ------------------ | -------- | ------- | ------------------------------- |
-| `KPA_ENV`          | yes      | —       | `local` \| `dev` \| `staging` \| `prod` |
-| `KPA_SERVICE_NAME` | yes      | —       | Reported in `/health`           |
-| `KPA_DB_URL`       | yes      | —       | SQLAlchemy DSN; must use the `postgresql+asyncpg://` driver |
-| `KPA_STORAGE_ROOT` | no       | `var/uploads` | Filesystem root for `LocalFileStorage`. Relative paths resolve against CWD. |
-| `KPA_MAX_UPLOAD_BYTES` | no   | `10485760` | Max bytes per upload (10 MiB).                      |
-| `KPA_ALLOWED_RESUME_CONTENT_TYPES` | no | (pdf, doc, docx) | Comma-separated content-type whitelist. |
-| `KPA_LOG_LEVEL`    | no       | `INFO`  | Stdlib log level                |
-| `KPA_LOG_FORMAT`   | no       | `text`  | `text` (key=value) or `json`    |
-| `KPA_JWT_SECRET`   | yes      | —       | HS256 signing secret; min 32 bytes |
-| `KPA_JWT_ACCESS_TTL_SECONDS`  | no | `600`     | Access token lifetime (10 min default) |
-| `KPA_JWT_REFRESH_TTL_SECONDS` | no | `2592000` | Refresh token lifetime (30 d default)  |
-| `KPA_GOOGLE_OAUTH_CLIENT_IDS` | yes | —        | CSV of Google Client IDs (web/iOS/Android) |
-| `KPA_GOOGLE_JWKS_URL`         | no | `https://www.googleapis.com/oauth2/v3/certs` | Override for tests / offline dev |
-| `KPA_GOOGLE_JWKS_CACHE_TTL_SECONDS` | no | `3600` | JWKS in-process cache TTL |
-| `KPA_AUTH_REQUIRE_EMAIL_VERIFIED`   | no | `false` | Reject Google sign-ins without `email_verified=true` |
-| `KPA_REDIS_URL`    | yes      | —       | Redis connection string (`redis://` or `rediss://`). Required for Celery broker. |
-| `KPA_CELERY_TASK_ALWAYS_EAGER` | no | `false` | When true, Celery tasks run synchronously in-process. Tests only. |
-| `KPA_GEMINI_API_KEY` | yes    | —       | Gemini Developer API key for the embedding worker |
-| `KPA_EMBEDDING_MODEL` | no   | `gemini-embedding-2` | Embedding model identifier |
-| `KPA_EMBEDDING_DIM` | no     | `1536`  | Matryoshka output dim — must be in {128,256,512,768,1024,1536,3072} and match the migration's Vector(N) |
-| `KPA_EMAIL_CHANNEL` | no     | `logging` | Email adapter: `logging` (stdout stub, default) or `ses` (deferred until deploy target picked) |
-| `KPA_NOTIFY_BATCH_SIZE` | no | `50`   | Max notifications claimed per `sweep_notifications` task run |
+| `JOBIFY_ENV`          | yes      | —       | `local` \| `dev` \| `staging` \| `prod` |
+| `JOBIFY_SERVICE_NAME` | yes      | —       | Reported in `/health`           |
+| `JOBIFY_DB_URL`       | yes      | —       | SQLAlchemy DSN; must use the `postgresql+asyncpg://` driver |
+| `JOBIFY_STORAGE_ROOT` | no       | `var/uploads` | Filesystem root for `LocalFileStorage`. Relative paths resolve against CWD. |
+| `JOBIFY_MAX_UPLOAD_BYTES` | no   | `10485760` | Max bytes per upload (10 MiB).                      |
+| `JOBIFY_ALLOWED_RESUME_CONTENT_TYPES` | no | (pdf, doc, docx) | Comma-separated content-type whitelist. |
+| `JOBIFY_LOG_LEVEL`    | no       | `INFO`  | Stdlib log level                |
+| `JOBIFY_LOG_FORMAT`   | no       | `text`  | `text` (key=value) or `json`    |
+| `JOBIFY_JWT_SECRET`   | yes      | —       | HS256 signing secret; min 32 bytes |
+| `JOBIFY_JWT_ACCESS_TTL_SECONDS`  | no | `600`     | Access token lifetime (10 min default) |
+| `JOBIFY_JWT_REFRESH_TTL_SECONDS` | no | `2592000` | Refresh token lifetime (30 d default)  |
+| `JOBIFY_GOOGLE_OAUTH_CLIENT_IDS` | yes | —        | CSV of Google Client IDs (web/iOS/Android) |
+| `JOBIFY_GOOGLE_JWKS_URL`         | no | `https://www.googleapis.com/oauth2/v3/certs` | Override for tests / offline dev |
+| `JOBIFY_GOOGLE_JWKS_CACHE_TTL_SECONDS` | no | `3600` | JWKS in-process cache TTL |
+| `JOBIFY_AUTH_REQUIRE_EMAIL_VERIFIED`   | no | `false` | Reject Google sign-ins without `email_verified=true` |
+| `JOBIFY_REDIS_URL`    | yes      | —       | Redis connection string (`redis://` or `rediss://`). Required for Celery broker. |
+| `JOBIFY_CELERY_TASK_ALWAYS_EAGER` | no | `false` | When true, Celery tasks run synchronously in-process. Tests only. |
+| `JOBIFY_GEMINI_API_KEY` | yes    | —       | Gemini Developer API key for the embedding worker |
+| `JOBIFY_EMBEDDING_MODEL` | no   | `gemini-embedding-2` | Embedding model identifier |
+| `JOBIFY_EMBEDDING_DIM` | no     | `1536`  | Matryoshka output dim — must be in {128,256,512,768,1024,1536,3072} and match the migration's Vector(N) |
+| `JOBIFY_EMAIL_CHANNEL` | no     | `logging` | Email adapter: `logging` (stdout stub, default) or `ses` (deferred until deploy target picked) |
+| `JOBIFY_NOTIFY_BATCH_SIZE` | no | `50`   | Max notifications claimed per `sweep_notifications` task run |
 
 The service refuses to boot if required variables are missing or invalid.
 
@@ -361,7 +361,7 @@ for the design rationale.
 # Mint a JWT secret if you don't have one yet:
 openssl rand -base64 48 | tr -d '\n' | tr -d '=' | head -c 64
 
-# Then start the server (with KPA_JWT_SECRET and KPA_GOOGLE_OAUTH_CLIENT_IDS set in .env)
+# Then start the server (with JOBIFY_JWT_SECRET and JOBIFY_GOOGLE_OAUTH_CLIENT_IDS set in .env)
 # and hit /v1/me with a valid Bearer access JWT:
 ACCESS=...   # from a real Google sign-in
 curl -s http://127.0.0.1:8000/v1/me -H "Authorization: Bearer $ACCESS" | python -m json.tool
@@ -445,7 +445,7 @@ Mark a single notification as read. Idempotent — marking an already-read notif
 ```
 api/
 ├── alembic.ini
-├── src/kpa/
+├── src/jobify/
 │   ├── app_factory.py        # create_app() — middlewares + routes + engine + storage
 │   ├── main.py               # uvicorn entry point
 │   ├── settings.py

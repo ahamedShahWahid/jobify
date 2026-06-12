@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/me/me_api.dart';
-import 'package:kpa_app/data/me/me_repository_impl.dart';
-import 'package:kpa_app/data/me/profile_update_dto.dart';
+import 'package:jobify_app/data/me/me_api.dart';
+import 'package:jobify_app/data/me/me_repository_impl.dart';
+import 'package:jobify_app/data/me/profile_update_dto.dart';
 
 import '../../../helpers/mock_interceptor.dart';
 

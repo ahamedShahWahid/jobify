@@ -2,7 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'member_dto.g.dart';
 
-/// Mirrors MemberRead (api/src/kpa/routes/employers.py) — one row of
+/// Mirrors MemberRead (api/src/jobify/routes/employers.py) — one row of
 /// GET /v1/employers/{id}/members. `role` is 'owner' | 'member'.
 @JsonSerializable()
 class MemberDto {

@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:kpa_app/presentation/profile/me_controller.dart';
-import 'package:kpa_app/presentation/profile/sign_out_controller.dart';
-import 'package:kpa_app/presentation/routing/routes.dart';
-import 'package:kpa_app/presentation/theme/kpa_spacing.dart';
-import 'package:kpa_app/presentation/widgets/async_value_widget.dart';
+import 'package:jobify_app/presentation/profile/me_controller.dart';
+import 'package:jobify_app/presentation/profile/sign_out_controller.dart';
+import 'package:jobify_app/presentation/routing/routes.dart';
+import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
 
 class RecruiterProfileScreen extends ConsumerWidget {
   const RecruiterProfileScreen({super.key});
@@ -23,13 +23,13 @@ class RecruiterProfileScreen extends ConsumerWidget {
         value: me,
         onRetry: () => ref.read(meControllerProvider.notifier).refresh(),
         data: (data) => ListView(
-          padding: const EdgeInsets.all(KpaSpacing.lg),
+          padding: const EdgeInsets.all(JobifySpacing.lg),
           children: [
             Text(
               data.displayName ?? data.email ?? 'Profile',
               style: theme.textTheme.headlineSmall,
             ),
-            const SizedBox(height: KpaSpacing.xs),
+            const SizedBox(height: JobifySpacing.xs),
             if (data.email case final email?)
               Text(
                 email,
@@ -37,14 +37,14 @@ class RecruiterProfileScreen extends ConsumerWidget {
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
-            const SizedBox(height: KpaSpacing.xl),
+            const SizedBox(height: JobifySpacing.xl),
             ListTile(
               leading: const Icon(Icons.shield_outlined),
               title: const Text('Privacy & data'),
               subtitle: const Text('Preferences, export, delete'),
               onTap: () => context.go(Routes.privacy),
             ),
-            const SizedBox(height: KpaSpacing.xxl),
+            const SizedBox(height: JobifySpacing.xxl),
             OutlinedButton(
               onPressed: signOut.isLoading
                   ? null

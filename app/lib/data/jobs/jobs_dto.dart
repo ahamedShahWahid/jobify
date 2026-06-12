@@ -1,8 +1,8 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import 'package:kpa_app/data/feed/feed_dto.dart';
-import 'package:kpa_app/data/jobs/application_source.dart';
-import 'package:kpa_app/data/jobs/application_status.dart';
+import 'package:jobify_app/data/feed/feed_dto.dart';
+import 'package:jobify_app/data/jobs/application_source.dart';
+import 'package:jobify_app/data/jobs/application_status.dart';
 
 part 'jobs_dto.freezed.dart';
 part 'jobs_dto.g.dart';

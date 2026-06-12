@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kpa_app/data/jobs/application_status.dart';
-import 'package:kpa_app/data/jobs/jobs_dto.dart';
-import 'package:kpa_app/presentation/job_detail/apply_to_job_controller.dart';
-import 'package:kpa_app/presentation/job_detail/save_job_controller.dart';
-import 'package:kpa_app/presentation/job_detail/unsave_job_controller.dart';
-import 'package:kpa_app/presentation/job_detail/withdraw_application_controller.dart';
-import 'package:kpa_app/presentation/theme/kpa_spacing.dart';
+import 'package:jobify_app/data/jobs/application_status.dart';
+import 'package:jobify_app/data/jobs/jobs_dto.dart';
+import 'package:jobify_app/presentation/job_detail/apply_to_job_controller.dart';
+import 'package:jobify_app/presentation/job_detail/save_job_controller.dart';
+import 'package:jobify_app/presentation/job_detail/unsave_job_controller.dart';
+import 'package:jobify_app/presentation/job_detail/withdraw_application_controller.dart';
+import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
 
 class ActionBar extends ConsumerWidget {
   const ActionBar({required this.detail, super.key});
@@ -33,13 +33,13 @@ class ActionBar extends ConsumerWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.all(KpaSpacing.lg),
+        padding: const EdgeInsets.all(JobifySpacing.lg),
         child: Row(
           children: [
             Expanded(
               child: _applyOrWithdraw(context, ref, app, jobId, isBusy),
             ),
-            const SizedBox(width: KpaSpacing.md),
+            const SizedBox(width: JobifySpacing.md),
             _saveHeart(context, ref, saved, jobId, isBusy),
           ],
         ),

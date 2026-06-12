@@ -6,19 +6,19 @@ import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-from kpa.app_factory import create_app
+from jobify.app_factory import create_app
 
 
 @pytest.fixture
 def app_with_boom(monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    monkeypatch.setenv("KPA_ENV", "local")
-    monkeypatch.setenv("KPA_SERVICE_NAME", "kpa-api")
-    monkeypatch.setenv("KPA_LOG_LEVEL", "INFO")
-    monkeypatch.setenv("KPA_LOG_FORMAT", "text")
-    monkeypatch.setenv("KPA_DB_URL", "postgresql+asyncpg://u:p@h:5432/d")
-    monkeypatch.setenv("KPA_REDIS_URL", "redis://localhost:6379/0")
-    monkeypatch.setenv("KPA_JWT_SECRET", "x" * 32)
-    monkeypatch.setenv("KPA_GOOGLE_OAUTH_CLIENT_IDS", "test.apps.googleusercontent.com")
+    monkeypatch.setenv("JOBIFY_ENV", "local")
+    monkeypatch.setenv("JOBIFY_SERVICE_NAME", "jobify-api")
+    monkeypatch.setenv("JOBIFY_LOG_LEVEL", "INFO")
+    monkeypatch.setenv("JOBIFY_LOG_FORMAT", "text")
+    monkeypatch.setenv("JOBIFY_DB_URL", "postgresql+asyncpg://u:p@h:5432/d")
+    monkeypatch.setenv("JOBIFY_REDIS_URL", "redis://localhost:6379/0")
+    monkeypatch.setenv("JOBIFY_JWT_SECRET", "x" * 32)
+    monkeypatch.setenv("JOBIFY_GOOGLE_OAUTH_CLIENT_IDS", "test.apps.googleusercontent.com")
 
     app = create_app()
 

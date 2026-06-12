@@ -4,34 +4,34 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:kpa_app/data/auth/auth_state.dart';
-import 'package:kpa_app/presentation/applications/applications_screen.dart';
-import 'package:kpa_app/presentation/auth/auth_providers.dart';
-import 'package:kpa_app/presentation/auth/sign_in_screen.dart';
-import 'package:kpa_app/presentation/feed/feed_screen.dart';
-import 'package:kpa_app/presentation/job_detail/job_detail_screen.dart';
-import 'package:kpa_app/presentation/profile/edit_profile_screen.dart';
-import 'package:kpa_app/presentation/invites/pending_invites_screen.dart';
-import 'package:kpa_app/presentation/notifications/notifications_screen.dart';
-import 'package:kpa_app/presentation/privacy/delete_account_screen.dart';
-import 'package:kpa_app/presentation/privacy/privacy_screen.dart';
-import 'package:kpa_app/presentation/onboarding/employer_onboarding_screen.dart';
-import 'package:kpa_app/data/jobs/recruiter_job_dto.dart';
-import 'package:kpa_app/presentation/recruiter/job_applicants_screen.dart';
-import 'package:kpa_app/presentation/recruiter/job_form_screen.dart';
-import 'package:kpa_app/presentation/recruiter/recruiter_dashboard_screen.dart';
-import 'package:kpa_app/presentation/recruiter/recruiter_employer_screen.dart';
-import 'package:kpa_app/presentation/recruiter/recruiter_job_detail_screen.dart';
-import 'package:kpa_app/presentation/recruiter/recruiter_jobs_screen.dart';
-import 'package:kpa_app/presentation/recruiter/recruiter_profile_screen.dart';
-import 'package:kpa_app/presentation/resume/resume_screen.dart';
-import 'package:kpa_app/presentation/profile/profile_screen.dart';
-import 'package:kpa_app/presentation/routing/role_redirect.dart';
-import 'package:kpa_app/presentation/routing/routes.dart';
-import 'package:kpa_app/presentation/saved/saved_screen.dart';
-import 'package:kpa_app/presentation/splash/splash_screen.dart';
-import 'package:kpa_app/presentation/widgets/kpa_recruiter_shell_scaffold.dart';
-import 'package:kpa_app/presentation/widgets/kpa_shell_scaffold.dart';
+import 'package:jobify_app/data/auth/auth_state.dart';
+import 'package:jobify_app/presentation/applications/applications_screen.dart';
+import 'package:jobify_app/presentation/auth/auth_providers.dart';
+import 'package:jobify_app/presentation/auth/sign_in_screen.dart';
+import 'package:jobify_app/presentation/feed/feed_screen.dart';
+import 'package:jobify_app/presentation/job_detail/job_detail_screen.dart';
+import 'package:jobify_app/presentation/profile/edit_profile_screen.dart';
+import 'package:jobify_app/presentation/invites/pending_invites_screen.dart';
+import 'package:jobify_app/presentation/notifications/notifications_screen.dart';
+import 'package:jobify_app/presentation/privacy/delete_account_screen.dart';
+import 'package:jobify_app/presentation/privacy/privacy_screen.dart';
+import 'package:jobify_app/presentation/onboarding/employer_onboarding_screen.dart';
+import 'package:jobify_app/data/jobs/recruiter_job_dto.dart';
+import 'package:jobify_app/presentation/recruiter/job_applicants_screen.dart';
+import 'package:jobify_app/presentation/recruiter/job_form_screen.dart';
+import 'package:jobify_app/presentation/recruiter/recruiter_dashboard_screen.dart';
+import 'package:jobify_app/presentation/recruiter/recruiter_employer_screen.dart';
+import 'package:jobify_app/presentation/recruiter/recruiter_job_detail_screen.dart';
+import 'package:jobify_app/presentation/recruiter/recruiter_jobs_screen.dart';
+import 'package:jobify_app/presentation/recruiter/recruiter_profile_screen.dart';
+import 'package:jobify_app/presentation/resume/resume_screen.dart';
+import 'package:jobify_app/presentation/profile/profile_screen.dart';
+import 'package:jobify_app/presentation/routing/role_redirect.dart';
+import 'package:jobify_app/presentation/routing/routes.dart';
+import 'package:jobify_app/presentation/saved/saved_screen.dart';
+import 'package:jobify_app/presentation/splash/splash_screen.dart';
+import 'package:jobify_app/presentation/widgets/jobify_recruiter_shell_scaffold.dart';
+import 'package:jobify_app/presentation/widgets/jobify_shell_scaffold.dart';
 
 part 'router.g.dart';
 
@@ -110,7 +110,7 @@ GoRouter router(Ref ref) {
         builder: (_, __) => const EmployerOnboardingScreen(),
       ),
       StatefulShellRoute.indexedStack(
-        builder: (context, state, shell) => KpaShellScaffold(shell: shell),
+        builder: (context, state, shell) => JobifyShellScaffold(shell: shell),
         branches: [
           StatefulShellBranch(
             routes: [
@@ -205,7 +205,7 @@ GoRouter router(Ref ref) {
       // Recruiter shell — gated by roleAwareRedirect in the redirect callback.
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) =>
-            KpaRecruiterShellScaffold(shell: shell),
+            JobifyRecruiterShellScaffold(shell: shell),
         branches: [
           StatefulShellBranch(
             routes: [

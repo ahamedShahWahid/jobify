@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kpa_app/presentation/widgets/kpa_recruiter_shell_scaffold.dart';
+import 'package:jobify_app/presentation/widgets/jobify_recruiter_shell_scaffold.dart';
 
 /// Trivial branch body so this test stays focused on the shell scaffold's
 /// tab bar and branch switching — not the real screens' provider wiring
@@ -21,7 +21,7 @@ void main() {
       initialLocation: '/recruiter/dashboard',
       routes: [
         StatefulShellRoute.indexedStack(
-          builder: (_, __, shell) => KpaRecruiterShellScaffold(shell: shell),
+          builder: (_, __, shell) => JobifyRecruiterShellScaffold(shell: shell),
           branches: [
             StatefulShellBranch(
               routes: [

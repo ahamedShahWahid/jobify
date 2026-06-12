@@ -3,16 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import 'package:kpa_app/core/error/exceptions.dart';
-import 'package:kpa_app/data/jobs/applicant_of_job_dto.dart';
-import 'package:kpa_app/data/jobs/recruiter_jobs_repository_impl.dart';
-import 'package:kpa_app/presentation/recruiter/recruiter_applicants_controller.dart';
-import 'package:kpa_app/presentation/recruiter/resume_saver/resume_saver.dart';
-import 'package:kpa_app/presentation/theme/kpa_spacing.dart';
-import 'package:kpa_app/presentation/widgets/async_value_widget.dart';
-import 'package:kpa_app/presentation/widgets/kpa_empty_state.dart';
-import 'package:kpa_app/presentation/widgets/kpa_loading_view.dart';
-import 'package:kpa_app/presentation/widgets/kpa_score_badge.dart';
+import 'package:jobify_app/core/error/exceptions.dart';
+import 'package:jobify_app/data/jobs/applicant_of_job_dto.dart';
+import 'package:jobify_app/data/jobs/recruiter_jobs_repository_impl.dart';
+import 'package:jobify_app/presentation/recruiter/recruiter_applicants_controller.dart';
+import 'package:jobify_app/presentation/recruiter/resume_saver/resume_saver.dart';
+import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
+import 'package:jobify_app/presentation/widgets/jobify_empty_state.dart';
+import 'package:jobify_app/presentation/widgets/jobify_loading_view.dart';
+import 'package:jobify_app/presentation/widgets/jobify_score_badge.dart';
 
 final _dateFormat = DateFormat.yMMMMd();
 
@@ -75,7 +75,7 @@ class _JobApplicantsScreenState extends ConsumerState<JobApplicantsScreen> {
           ),
         ),
       );
-    } on KpaException {
+    } on JobifyException {
       messenger.showSnackBar(
         const SnackBar(
           content: Text("Couldn't download the résumé. Try again."),
@@ -97,7 +97,7 @@ class _JobApplicantsScreenState extends ConsumerState<JobApplicantsScreen> {
             .read(recruiterApplicantsControllerProvider(widget.jobId).notifier)
             .refresh(),
         isEmpty: (s) => s.items.isEmpty,
-        empty: () => const KpaEmptyState(
+        empty: () => const JobifyEmptyState(
           headline: 'No applicants yet',
           body: 'When candidates apply, they will show up here.',
           icon: Icons.people_outline,
@@ -110,15 +110,16 @@ class _JobApplicantsScreenState extends ConsumerState<JobApplicantsScreen> {
               .refresh(),
           child: ListView.separated(
             controller: _scroll,
-            padding: const EdgeInsets.all(KpaSpacing.lg),
+            padding: const EdgeInsets.all(JobifySpacing.lg),
             itemCount: s.items.length + 1,
-            separatorBuilder: (_, __) => const SizedBox(height: KpaSpacing.md),
+            separatorBuilder: (_, __) =>
+                const SizedBox(height: JobifySpacing.md),
             itemBuilder: (context, i) {
               if (i == s.items.length) {
                 if (s.isLoadingMore) {
                   return const Padding(
-                    padding: EdgeInsets.all(KpaSpacing.lg),
-                    child: KpaLoadingView(),
+                    padding: EdgeInsets.all(JobifySpacing.lg),
+                    child: JobifyLoadingView(),
                   );
                 }
                 return const SizedBox.shrink();
@@ -149,7 +150,7 @@ class _ApplicantCard extends StatelessWidget {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(KpaSpacing.lg),
+        padding: const EdgeInsets.all(JobifySpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -160,12 +161,12 @@ class _ApplicantCard extends StatelessWidget {
                   child: Text(name, style: theme.textTheme.titleMedium),
                 ),
                 if (applicant.matchScore != null) ...[
-                  const SizedBox(width: KpaSpacing.sm),
-                  KpaScoreBadge(score: applicant.matchScore!),
+                  const SizedBox(width: JobifySpacing.sm),
+                  JobifyScoreBadge(score: applicant.matchScore!),
                 ],
               ],
             ),
-            const SizedBox(height: KpaSpacing.xs),
+            const SizedBox(height: JobifySpacing.xs),
             Text(
               'Applied ${_dateFormat.format(applicant.appliedAt)}',
               style: theme.textTheme.bodySmall?.copyWith(
@@ -173,10 +174,10 @@ class _ApplicantCard extends StatelessWidget {
               ),
             ),
             if (fit != null && fit.isNotEmpty) ...[
-              const SizedBox(height: KpaSpacing.sm),
+              const SizedBox(height: JobifySpacing.sm),
               Text(fit, style: theme.textTheme.bodyMedium),
             ],
-            const SizedBox(height: KpaSpacing.sm),
+            const SizedBox(height: JobifySpacing.sm),
             Align(
               alignment: Alignment.centerLeft,
               child: OutlinedButton.icon(

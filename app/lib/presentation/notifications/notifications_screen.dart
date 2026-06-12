@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import 'package:kpa_app/data/notifications/notification_dto.dart';
-import 'package:kpa_app/presentation/notifications/notification_title.dart';
-import 'package:kpa_app/presentation/notifications/notifications_controller.dart';
-import 'package:kpa_app/presentation/routing/routes.dart';
-import 'package:kpa_app/presentation/theme/kpa_spacing.dart';
-import 'package:kpa_app/presentation/widgets/async_value_widget.dart';
-import 'package:kpa_app/presentation/widgets/kpa_loading_view.dart';
+import 'package:jobify_app/data/notifications/notification_dto.dart';
+import 'package:jobify_app/presentation/notifications/notification_title.dart';
+import 'package:jobify_app/presentation/notifications/notifications_controller.dart';
+import 'package:jobify_app/presentation/routing/routes.dart';
+import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
+import 'package:jobify_app/presentation/widgets/jobify_loading_view.dart';
 
 final _dateFormat = DateFormat.yMMMd();
 
@@ -64,15 +64,15 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               ref.read(notificationsControllerProvider.notifier).refresh(),
           child: ListView.separated(
             controller: _scroll,
-            padding: const EdgeInsets.all(KpaSpacing.lg),
+            padding: const EdgeInsets.all(JobifySpacing.lg),
             itemCount: s.items.length + 1,
             separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (context, i) {
               if (i == s.items.length) {
                 return s.isLoadingMore
                     ? const Padding(
-                        padding: EdgeInsets.all(KpaSpacing.lg),
-                        child: KpaLoadingView(),
+                        padding: EdgeInsets.all(JobifySpacing.lg),
+                        child: JobifyLoadingView(),
                       )
                     : const SizedBox.shrink();
               }

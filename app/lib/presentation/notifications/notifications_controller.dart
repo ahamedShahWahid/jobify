@@ -1,7 +1,7 @@
-import 'package:kpa_app/data/notifications/notification_dto.dart';
-import 'package:kpa_app/data/notifications/notifications_repository_impl.dart';
-import 'package:kpa_app/presentation/paging/paged_state.dart';
-import 'package:kpa_app/presentation/paging/paging.dart';
+import 'package:jobify_app/data/notifications/notification_dto.dart';
+import 'package:jobify_app/data/notifications/notifications_repository_impl.dart';
+import 'package:jobify_app/presentation/paging/paged_state.dart';
+import 'package:jobify_app/presentation/paging/paging.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'notifications_controller.g.dart';

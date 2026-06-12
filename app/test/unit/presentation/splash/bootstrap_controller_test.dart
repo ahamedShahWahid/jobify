@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/core/error/exceptions.dart';
-import 'package:kpa_app/data/auth/auth_repository.dart';
-import 'package:kpa_app/data/auth/auth_repository_provider.dart';
-import 'package:kpa_app/data/auth/auth_state.dart';
-import 'package:kpa_app/data/auth/user_role.dart';
-import 'package:kpa_app/data/auth/token_storage.dart';
-import 'package:kpa_app/presentation/splash/bootstrap_controller.dart';
+import 'package:jobify_app/core/error/exceptions.dart';
+import 'package:jobify_app/data/auth/auth_repository.dart';
+import 'package:jobify_app/data/auth/auth_repository_provider.dart';
+import 'package:jobify_app/data/auth/auth_state.dart';
+import 'package:jobify_app/data/auth/user_role.dart';
+import 'package:jobify_app/data/auth/token_storage.dart';
+import 'package:jobify_app/presentation/splash/bootstrap_controller.dart';
 
 class _FakeStorage implements TokenStorage {
   _FakeStorage([this.token]);

@@ -1,5 +1,5 @@
-import 'package:kpa_app/data/auth/user_role.dart';
-import 'package:kpa_app/presentation/routing/routes.dart';
+import 'package:jobify_app/data/auth/user_role.dart';
+import 'package:jobify_app/presentation/routing/routes.dart';
 
 /// True if [loc] belongs to the recruiter shell subtree.
 bool isRecruiterLocation(String loc) => loc.startsWith('/recruiter');

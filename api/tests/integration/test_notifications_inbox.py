@@ -9,8 +9,8 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kpa.auth.tokens import mint_access_token
-from kpa.db.models import (
+from jobify.auth.tokens import mint_access_token
+from jobify.db.models import (
     Applicant,
     Notification,
     NotificationChannel,
@@ -19,7 +19,7 @@ from kpa.db.models import (
     UserRole,
 )
 
-_JWT_SECRET = "x" * 32  # matches KPA_JWT_SECRET set by the integration fixtures
+_JWT_SECRET = "x" * 32  # matches JOBIFY_JWT_SECRET set by the integration fixtures
 
 
 # ---------------------------------------------------------------------------

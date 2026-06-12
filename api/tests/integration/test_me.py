@@ -10,8 +10,8 @@ import jwt as pyjwt
 import pytest
 from sqlalchemy import select
 
-from kpa.auth.google_verifier import GoogleClaims
-from kpa.db.models import User
+from jobify.auth.google_verifier import GoogleClaims
+from jobify.db.models import User
 
 pytestmark = pytest.mark.integration
 
@@ -66,7 +66,7 @@ async def test_me_invalid_signature_returns_401(
     # Token signed with the wrong secret.
     forged = pyjwt.encode(
         {
-            "iss": "kpa-api",
+            "iss": "jobify-api",
             "sub": "11111111-1111-1111-1111-111111111111",
             "role": "applicant",
             "iat": int(time.time()),
@@ -86,7 +86,7 @@ async def test_me_expired_token_returns_401(
 ) -> None:
     expired = pyjwt.encode(
         {
-            "iss": "kpa-api",
+            "iss": "jobify-api",
             "sub": "11111111-1111-1111-1111-111111111111",
             "role": "applicant",
             "iat": int(time.time()) - 7200,
@@ -123,8 +123,8 @@ async def test_me_tolerates_nullable_email_and_scrubbed_applicant_fields(
     """users.email, applicants.full_name and applicants.locations are nullable
     in the DB (migration 0015 / phone-only-auth future). The wire contract must
     mirror that instead of 500-ing on a null or masking it as ""."""
-    from kpa.auth.tokens import mint_access_token
-    from kpa.db.models import Applicant, UserRole
+    from jobify.auth.tokens import mint_access_token
+    from jobify.db.models import Applicant, UserRole
 
     user = User(email=None, role=UserRole.APPLICANT)
     session.add(user)

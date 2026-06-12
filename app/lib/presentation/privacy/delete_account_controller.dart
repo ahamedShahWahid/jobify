@@ -1,10 +1,10 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:kpa_app/data/api/dio_provider.dart';
-import 'package:kpa_app/data/auth/auth_state.dart';
-import 'package:kpa_app/data/dsr/dsr_repository_impl.dart';
-import 'package:kpa_app/presentation/auth/auth_providers.dart';
-import 'package:kpa_app/presentation/auth/delete_success_snackbar_provider.dart';
+import 'package:jobify_app/data/api/dio_provider.dart';
+import 'package:jobify_app/data/auth/auth_state.dart';
+import 'package:jobify_app/data/dsr/dsr_repository_impl.dart';
+import 'package:jobify_app/presentation/auth/auth_providers.dart';
+import 'package:jobify_app/presentation/auth/delete_success_snackbar_provider.dart';
 
 part 'delete_account_controller.g.dart';
 

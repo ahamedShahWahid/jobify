@@ -1,11 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/core/error/exceptions.dart';
-import 'package:kpa_app/data/resume/resume_dto.dart';
-import 'package:kpa_app/data/resume/resume_parse_status.dart';
-import 'package:kpa_app/data/resume/resume_repository.dart';
-import 'package:kpa_app/data/resume/resume_repository_impl.dart';
-import 'package:kpa_app/presentation/resume/resume_controller.dart';
+import 'package:jobify_app/core/error/exceptions.dart';
+import 'package:jobify_app/data/resume/resume_dto.dart';
+import 'package:jobify_app/data/resume/resume_parse_status.dart';
+import 'package:jobify_app/data/resume/resume_repository.dart';
+import 'package:jobify_app/data/resume/resume_repository_impl.dart';
+import 'package:jobify_app/presentation/resume/resume_controller.dart';
 
 ResumeDto _dto(String id, ResumeParseStatus s) => ResumeDto(
       id: id,

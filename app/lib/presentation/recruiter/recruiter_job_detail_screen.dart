@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:kpa_app/data/jobs/recruiter_job_dto.dart';
-import 'package:kpa_app/presentation/profile/ctc_format.dart';
-import 'package:kpa_app/presentation/recruiter/job_form_controller.dart';
-import 'package:kpa_app/presentation/recruiter/recruiter_jobs_controller.dart';
-import 'package:kpa_app/presentation/routing/routes.dart';
-import 'package:kpa_app/presentation/theme/kpa_spacing.dart';
-import 'package:kpa_app/presentation/widgets/kpa_empty_state.dart';
-import 'package:kpa_app/presentation/widgets/kpa_loading_view.dart';
+import 'package:jobify_app/data/jobs/recruiter_job_dto.dart';
+import 'package:jobify_app/presentation/profile/ctc_format.dart';
+import 'package:jobify_app/presentation/recruiter/job_form_controller.dart';
+import 'package:jobify_app/presentation/recruiter/recruiter_jobs_controller.dart';
+import 'package:jobify_app/presentation/routing/routes.dart';
+import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/widgets/jobify_empty_state.dart';
+import 'package:jobify_app/presentation/widgets/jobify_loading_view.dart';
 
 /// Recruiter-side job detail. When navigated from a card the full
 /// [RecruiterJobDto] arrives via `GoRouterState.extra` (no refetch). On a
@@ -35,7 +35,7 @@ class RecruiterJobDetailScreen extends ConsumerWidget {
     // Deep-link path: find the job in the include-closed list.
     final value = ref.watch(recruiterJobsControllerProvider(true));
     return value.when(
-      loading: () => const Scaffold(body: KpaLoadingView()),
+      loading: () => const Scaffold(body: JobifyLoadingView()),
       error: (_, __) => _NotFoundScaffold(),
       data: (state) {
         for (final j in state.items) {
@@ -52,7 +52,7 @@ class _NotFoundScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Job')),
-      body: KpaEmptyState(
+      body: JobifyEmptyState(
         headline: 'Job not found',
         body: 'It may have been deleted, or it belongs to another company.',
         icon: Icons.search_off_outlined,
@@ -90,10 +90,10 @@ class _DetailScaffold extends ConsumerWidget {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(KpaSpacing.lg),
+        padding: const EdgeInsets.all(JobifySpacing.lg),
         children: [
           Text(job.title, style: theme.textTheme.headlineSmall),
-          const SizedBox(height: KpaSpacing.sm),
+          const SizedBox(height: JobifySpacing.sm),
           Text(
             isOpen ? 'Open' : 'Closed',
             style: theme.textTheme.labelLarge?.copyWith(
@@ -102,10 +102,10 @@ class _DetailScaffold extends ConsumerWidget {
                   : theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          const SizedBox(height: KpaSpacing.lg),
+          const SizedBox(height: JobifySpacing.lg),
           Wrap(
-            spacing: KpaSpacing.xl,
-            runSpacing: KpaSpacing.sm,
+            spacing: JobifySpacing.xl,
+            runSpacing: JobifySpacing.sm,
             children: [
               _Stat(
                 icon: Icons.people_outline,
@@ -119,7 +119,7 @@ class _DetailScaffold extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: KpaSpacing.lg),
+          const SizedBox(height: JobifySpacing.lg),
           _Field(
             label: 'Experience',
             value: '${job.minExpYears}–${job.maxExpYears} yrs',
@@ -134,11 +134,11 @@ class _DetailScaffold extends ConsumerWidget {
             label: 'Locations',
             value: job.locations.isEmpty ? '—' : job.locations.join(', '),
           ),
-          const SizedBox(height: KpaSpacing.lg),
+          const SizedBox(height: JobifySpacing.lg),
           Text('Description', style: theme.textTheme.titleMedium),
-          const SizedBox(height: KpaSpacing.sm),
+          const SizedBox(height: JobifySpacing.sm),
           Text(job.description, style: theme.textTheme.bodyMedium),
-          const SizedBox(height: KpaSpacing.xl),
+          const SizedBox(height: JobifySpacing.xl),
           FilledButton.icon(
             onPressed: () => context.go(
               '${Routes.recruiterJobs}/${job.id}/applicants',
@@ -146,14 +146,14 @@ class _DetailScaffold extends ConsumerWidget {
             icon: const Icon(Icons.people_outline),
             label: Text('View applicants (${job.applicantCount})'),
           ),
-          const SizedBox(height: KpaSpacing.md),
+          const SizedBox(height: JobifySpacing.md),
           if (isOpen)
             OutlinedButton.icon(
               onPressed: () => _confirmClose(context, ref),
               icon: const Icon(Icons.lock_outline),
               label: const Text('Close this job'),
             ),
-          const SizedBox(height: KpaSpacing.md),
+          const SizedBox(height: JobifySpacing.md),
           OutlinedButton.icon(
             onPressed: () => _confirmDelete(context, ref),
             icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
@@ -249,9 +249,9 @@ class _Stat extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, size: 18, color: theme.colorScheme.onSurfaceVariant),
-        const SizedBox(width: KpaSpacing.xs),
+        const SizedBox(width: JobifySpacing.xs),
         Text(value, style: theme.textTheme.titleMedium),
-        const SizedBox(width: KpaSpacing.xs),
+        const SizedBox(width: JobifySpacing.xs),
         Text(
           label,
           style: theme.textTheme.bodySmall?.copyWith(
@@ -272,7 +272,7 @@ class _Field extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: KpaSpacing.xs),
+      padding: const EdgeInsets.symmetric(vertical: JobifySpacing.xs),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'package:kpa_app/data/jobs/recruiter_job_dto.dart';
-import 'package:kpa_app/presentation/profile/ctc_format.dart';
-import 'package:kpa_app/presentation/theme/kpa_spacing.dart';
+import 'package:jobify_app/data/jobs/recruiter_job_dto.dart';
+import 'package:jobify_app/presentation/profile/ctc_format.dart';
+import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
 
 class RecruiterJobCard extends StatelessWidget {
   const RecruiterJobCard({
@@ -24,7 +24,7 @@ class RecruiterJobCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(KpaSpacing.lg),
+          padding: const EdgeInsets.all(JobifySpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -38,11 +38,11 @@ class RecruiterJobCard extends StatelessWidget {
                       style: theme.textTheme.titleMedium,
                     ),
                   ),
-                  const SizedBox(width: KpaSpacing.sm),
+                  const SizedBox(width: JobifySpacing.sm),
                   _StatusChip(isOpen: isOpen),
                 ],
               ),
-              const SizedBox(height: KpaSpacing.sm),
+              const SizedBox(height: JobifySpacing.sm),
 
               // Exp band
               Text(
@@ -54,7 +54,7 @@ class RecruiterJobCard extends StatelessWidget {
 
               // CTC band (only when at least one bound is non-null)
               if (job.ctcMin != null || job.ctcMax != null) ...[
-                const SizedBox(height: KpaSpacing.xs),
+                const SizedBox(height: JobifySpacing.xs),
                 Text(
                   '${formatCtcNum(job.ctcMin)} – ${formatCtcNum(job.ctcMax)}',
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -63,20 +63,20 @@ class RecruiterJobCard extends StatelessWidget {
                 ),
               ],
 
-              const SizedBox(height: KpaSpacing.md),
+              const SizedBox(height: JobifySpacing.md),
 
               // Counts row
               Row(
                 children: [
                   const Icon(Icons.people_outline, size: 16),
-                  const SizedBox(width: KpaSpacing.xs),
+                  const SizedBox(width: JobifySpacing.xs),
                   Text(
                     '${job.applicantCount}',
                     style: theme.textTheme.labelMedium,
                   ),
-                  const SizedBox(width: KpaSpacing.md),
+                  const SizedBox(width: JobifySpacing.md),
                   const Icon(Icons.bolt_outlined, size: 16),
-                  const SizedBox(width: KpaSpacing.xs),
+                  const SizedBox(width: JobifySpacing.xs),
                   Text(
                     '${job.surfacedMatchCount}',
                     style: theme.textTheme.labelMedium,
@@ -111,8 +111,8 @@ class _StatusChip extends StatelessWidget {
           );
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: KpaSpacing.sm,
-        vertical: KpaSpacing.xs,
+        horizontal: JobifySpacing.sm,
+        vertical: JobifySpacing.xs,
       ),
       decoration: BoxDecoration(
         color: bg,

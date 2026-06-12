@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kpa.db.models import (
+from jobify.db.models import (
     Applicant,
     Application,
     ApplicationStatus,

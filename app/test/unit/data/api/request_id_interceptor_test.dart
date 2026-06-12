@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/api/request_id_interceptor.dart';
+import 'package:jobify_app/data/api/request_id_interceptor.dart';
 
 class _TestHandler extends RequestInterceptorHandler {
   late RequestOptions capturedOptions;

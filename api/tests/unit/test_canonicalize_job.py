@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from kpa.integrations.embeddings.canonicalize_job import canonicalize_job
+from jobify.integrations.embeddings.canonicalize_job import canonicalize_job
 
 
 @dataclass

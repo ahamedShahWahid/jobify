@@ -6,9 +6,9 @@ import httpx
 import pytest
 from sqlalchemy import select
 
-from kpa.auth.google_verifier import GoogleClaims
-from kpa.auth.tokens import sha256_token_hash
-from kpa.db.models import RefreshToken
+from jobify.auth.google_verifier import GoogleClaims
+from jobify.auth.tokens import sha256_token_hash
+from jobify.db.models import RefreshToken
 
 pytestmark = pytest.mark.integration
 

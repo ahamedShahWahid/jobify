@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/core/error/exceptions.dart';
-import 'package:kpa_app/presentation/widgets/async_value_widget.dart';
+import 'package:jobify_app/core/error/exceptions.dart';
+import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
 
 // NOTE: tests use ThemeData.light() instead of buildTheme() because
 // buildTheme triggers google_fonts to fetch Inter, which fails in
@@ -39,7 +39,7 @@ void main() {
     expect(find.text('42'), findsOneWidget);
   });
 
-  testWidgets('renders KpaErrorView with typed exception copy on error',
+  testWidgets('renders JobifyErrorView with typed exception copy on error',
       (tester) async {
     await tester.pumpWidget(
       _wrap(
@@ -52,7 +52,7 @@ void main() {
         ),
       ),
     );
-    expect(find.textContaining("Couldn't reach KPA"), findsOneWidget);
+    expect(find.textContaining("Couldn't reach Jobify"), findsOneWidget);
   });
 
   testWidgets('renders empty when isEmpty predicate matches', (tester) async {

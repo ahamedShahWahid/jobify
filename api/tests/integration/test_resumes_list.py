@@ -8,13 +8,13 @@ import httpx
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kpa.auth.google_verifier import GoogleClaims
-from kpa.auth.tokens import mint_access_token
-from kpa.db.models import User, UserRole
+from jobify.auth.google_verifier import GoogleClaims
+from jobify.auth.tokens import mint_access_token
+from jobify.db.models import User, UserRole
 
 pytestmark = pytest.mark.integration
 
-_JWT_SECRET = "x" * 32  # matches KPA_JWT_SECRET set by the integration fixtures
+_JWT_SECRET = "x" * 32  # matches JOBIFY_JWT_SECRET set by the integration fixtures
 
 
 def _claims(sub: str = "g-resume-1", email: str = "alice@example.com") -> GoogleClaims:

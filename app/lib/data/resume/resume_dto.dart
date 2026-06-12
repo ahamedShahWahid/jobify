@@ -1,6 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 
-import 'package:kpa_app/data/resume/resume_parse_status.dart';
+import 'package:jobify_app/data/resume/resume_parse_status.dart';
 
 part 'resume_dto.g.dart';
 

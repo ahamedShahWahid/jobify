@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/me/profile_update_dto.dart';
+import 'package:jobify_app/data/me/profile_update_dto.dart';
 
 void main() {
   test('toJson uses snake_case keys and includes explicit nulls', () {

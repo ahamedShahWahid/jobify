@@ -2,8 +2,8 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
-import 'package:kpa_app/data/jobs/applicant_of_job_dto.dart';
-import 'package:kpa_app/data/jobs/recruiter_job_dto.dart';
+import 'package:jobify_app/data/jobs/applicant_of_job_dto.dart';
+import 'package:jobify_app/data/jobs/recruiter_job_dto.dart';
 
 /// Parsed result of GET /v1/applications/{id}/resume (binary download).
 class ResumeDownload {

@@ -1,12 +1,12 @@
 // ignore_for_file: directives_ordering
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:kpa_app/data/api/dio_provider.dart';
-import 'package:kpa_app/data/auth/auth_repository.dart';
-import 'package:kpa_app/data/auth/auth_repository_impl.dart';
-import 'package:kpa_app/data/auth/google_sign_in_data_source.dart';
-import 'package:kpa_app/data/auth/token_storage.dart';
-import 'package:kpa_app/presentation/auth/auth_providers.dart';
+import 'package:jobify_app/data/api/dio_provider.dart';
+import 'package:jobify_app/data/auth/auth_repository.dart';
+import 'package:jobify_app/data/auth/auth_repository_impl.dart';
+import 'package:jobify_app/data/auth/google_sign_in_data_source.dart';
+import 'package:jobify_app/data/auth/token_storage.dart';
+import 'package:jobify_app/presentation/auth/auth_providers.dart';
 
 part 'auth_repository_provider.g.dart';
 

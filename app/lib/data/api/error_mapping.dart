@@ -1,14 +1,14 @@
 import 'package:dio/dio.dart';
-import 'package:kpa_app/core/error/auth_slugs.dart';
-import 'package:kpa_app/core/error/exceptions.dart';
+import 'package:jobify_app/core/error/auth_slugs.dart';
+import 'package:jobify_app/core/error/exceptions.dart';
 
-/// Map a [DioException] into a typed [KpaException].
+/// Map a [DioException] into a typed [JobifyException].
 ///
 /// Call from dio's `onError` interceptor (or inside each repo's catch
 /// block). 401 + slug `invalid_access_token` → [AuthException] so the
 /// refresh-on-401 interceptor can be selective; other 4xx/5xx →
 /// [ApiException]; transport errors → [NetworkException].
-KpaException mapDioException(DioException e) {
+JobifyException mapDioException(DioException e) {
   final response = e.response;
   final requestId = response?.headers.value('x-request-id');
 
@@ -38,7 +38,7 @@ KpaException mapDioException(DioException e) {
   }
 }
 
-KpaException _mapResponse(
+JobifyException _mapResponse(
   Response<dynamic> response,
   String? requestId,
   DioException cause,

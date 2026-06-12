@@ -12,7 +12,7 @@ async def test_migrated_db_has_users_and_applicants_tables(session: AsyncSession
     result = await session.execute(
         text("""
         SELECT table_name FROM information_schema.tables
-        WHERE table_schema = 'kpa'
+        WHERE table_schema = 'jobify'
         ORDER BY table_name
     """)
     )
@@ -26,7 +26,7 @@ async def test_users_has_partial_indexes(session: AsyncSession) -> None:
     result = await session.execute(
         text("""
         SELECT indexname FROM pg_indexes
-        WHERE schemaname = 'kpa' AND tablename = 'users'
+        WHERE schemaname = 'jobify' AND tablename = 'users'
     """)
     )
     names = {row[0] for row in result}
@@ -39,7 +39,7 @@ async def test_migrated_db_has_employers_and_jobs_tables(session: AsyncSession) 
     result = await session.execute(
         text("""
         SELECT table_name FROM information_schema.tables
-        WHERE table_schema = 'kpa'
+        WHERE table_schema = 'jobify'
         ORDER BY table_name
     """)
     )
@@ -53,7 +53,7 @@ async def test_jobs_has_partial_indexes(session: AsyncSession) -> None:
     result = await session.execute(
         text("""
         SELECT indexname FROM pg_indexes
-        WHERE schemaname = 'kpa' AND tablename = 'jobs'
+        WHERE schemaname = 'jobify' AND tablename = 'jobs'
     """)
     )
     names = {row[0] for row in result}
@@ -69,7 +69,7 @@ async def test_employers_name_norm_is_partial_unique(session: AsyncSession) -> N
     result = await session.execute(
         text("""
         SELECT indexdef FROM pg_indexes
-        WHERE schemaname = 'kpa'
+        WHERE schemaname = 'jobify'
           AND tablename = 'employers'
           AND indexname = 'ix_employers_name_norm_live'
     """)
@@ -85,7 +85,7 @@ async def test_migrated_db_has_job_embeddings_table(session: AsyncSession) -> No
     result = await session.execute(
         text("""
         SELECT table_name FROM information_schema.tables
-        WHERE table_schema = 'kpa'
+        WHERE table_schema = 'jobify'
     """)
     )
     names = {row[0] for row in result}
@@ -97,7 +97,7 @@ async def test_job_embeddings_has_hnsw_index(session: AsyncSession) -> None:
     result = await session.execute(
         text("""
         SELECT indexname, indexdef FROM pg_indexes
-        WHERE schemaname = 'kpa' AND tablename = 'job_embeddings'
+        WHERE schemaname = 'jobify' AND tablename = 'job_embeddings'
     """)
     )
     rows = list(result)
@@ -113,7 +113,7 @@ async def test_job_embeddings_job_id_is_unique(session: AsyncSession) -> None:
     result = await session.execute(
         text("""
         SELECT indexdef FROM pg_indexes
-        WHERE schemaname = 'kpa'
+        WHERE schemaname = 'jobify'
           AND tablename = 'job_embeddings'
           AND indexdef ILIKE '%UNIQUE%job_id%'
     """)
@@ -127,7 +127,7 @@ async def test_migrated_db_has_matches_table(session: AsyncSession) -> None:
     result = await session.execute(
         text("""
         SELECT table_name FROM information_schema.tables
-        WHERE table_schema = 'kpa'
+        WHERE table_schema = 'jobify'
     """)
     )
     names = {row[0] for row in result}
@@ -139,7 +139,7 @@ async def test_matches_has_partial_indexes(session: AsyncSession) -> None:
     result = await session.execute(
         text("""
         SELECT indexname FROM pg_indexes
-        WHERE schemaname = 'kpa' AND tablename = 'matches'
+        WHERE schemaname = 'jobify' AND tablename = 'matches'
     """)
     )
     names = {row[0] for row in result}
@@ -153,7 +153,7 @@ async def test_matches_check_constraints_exist(session: AsyncSession) -> None:
     result = await session.execute(
         text("""
         SELECT conname FROM pg_constraint
-        WHERE conrelid = 'kpa.matches'::regclass AND contype = 'c'
+        WHERE conrelid = 'jobify.matches'::regclass AND contype = 'c'
     """)
     )
     names = {row[0] for row in result}
@@ -167,7 +167,7 @@ async def test_matches_has_explanation_column(session: AsyncSession) -> None:
     result = await session.execute(
         text("""
         SELECT column_name, data_type, is_nullable FROM information_schema.columns
-        WHERE table_schema = 'kpa' AND table_name = 'matches' AND column_name = 'explanation'
+        WHERE table_schema = 'jobify' AND table_name = 'matches' AND column_name = 'explanation'
     """)
     )
     row = result.first()
@@ -183,7 +183,7 @@ async def test_migrated_db_has_applications_and_saved_jobs_tables(
     result = await session.execute(
         text("""
         SELECT table_name FROM information_schema.tables
-        WHERE table_schema = 'kpa'
+        WHERE table_schema = 'jobify'
         ORDER BY table_name
     """)
     )
@@ -199,7 +199,7 @@ async def test_applications_has_partial_unique_on_applicant_job(
     result = await session.execute(
         text("""
         SELECT indexdef FROM pg_indexes
-        WHERE schemaname = 'kpa'
+        WHERE schemaname = 'jobify'
           AND tablename = 'applications'
           AND indexname = 'ix_applications_applicant_job_live'
     """)
@@ -217,7 +217,7 @@ async def test_saved_jobs_has_partial_unique_on_applicant_job(
     result = await session.execute(
         text("""
         SELECT indexdef FROM pg_indexes
-        WHERE schemaname = 'kpa'
+        WHERE schemaname = 'jobify'
           AND tablename = 'saved_jobs'
           AND indexname = 'ix_saved_jobs_applicant_job_live'
     """)
@@ -238,7 +238,7 @@ async def test_migrated_db_has_notifications_table(session: AsyncSession) -> Non
     result = await session.execute(
         text("""
         SELECT table_name FROM information_schema.tables
-        WHERE table_schema = 'kpa'
+        WHERE table_schema = 'jobify'
         ORDER BY table_name
     """)
     )
@@ -252,7 +252,7 @@ async def test_notifications_has_sweeper_partial_index(session: AsyncSession) ->
     result = await session.execute(
         text("""
         SELECT indexdef FROM pg_indexes
-        WHERE schemaname = 'kpa'
+        WHERE schemaname = 'jobify'
           AND tablename = 'notifications'
           AND indexname = 'ix_notifications_status_send_after_live'
     """)
@@ -269,7 +269,7 @@ async def test_notifications_has_user_inbox_partial_index(session: AsyncSession)
     result = await session.execute(
         text("""
         SELECT indexname FROM pg_indexes
-        WHERE schemaname = 'kpa'
+        WHERE schemaname = 'jobify'
           AND tablename = 'notifications'
     """)
     )

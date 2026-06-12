@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/resume/resume_dto.dart';
-import 'package:kpa_app/data/resume/resume_parse_status.dart';
+import 'package:jobify_app/data/resume/resume_dto.dart';
+import 'package:jobify_app/data/resume/resume_parse_status.dart';
 
 void main() {
   test('parses the ResumeRead wire shape', () {

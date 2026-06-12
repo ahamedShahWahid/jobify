@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/auth/auth_state.dart';
-import 'package:kpa_app/data/auth/user_role.dart';
-import 'package:kpa_app/data/me/me_dto.dart';
-import 'package:kpa_app/data/me/me_repository.dart';
-import 'package:kpa_app/data/me/me_repository_impl.dart';
-import 'package:kpa_app/data/me/profile_update_dto.dart';
-import 'package:kpa_app/presentation/auth/auth_providers.dart';
-import 'package:kpa_app/presentation/profile/package_info_provider.dart';
-import 'package:kpa_app/presentation/profile/profile_screen.dart';
+import 'package:jobify_app/data/auth/auth_state.dart';
+import 'package:jobify_app/data/auth/user_role.dart';
+import 'package:jobify_app/data/me/me_dto.dart';
+import 'package:jobify_app/data/me/me_repository.dart';
+import 'package:jobify_app/data/me/me_repository_impl.dart';
+import 'package:jobify_app/data/me/profile_update_dto.dart';
+import 'package:jobify_app/presentation/auth/auth_providers.dart';
+import 'package:jobify_app/presentation/profile/package_info_provider.dart';
+import 'package:jobify_app/presentation/profile/profile_screen.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 class _FakeRepo implements MeRepository {
@@ -43,8 +43,8 @@ ProviderScope _buildScope({
       meRepositoryProvider.overrideWithValue(_FakeRepo(_me)),
       packageInfoProvider.overrideWith(
         (_) async => PackageInfo(
-          appName: 'KPA',
-          packageName: 'com.kpa.app',
+          appName: 'Jobify',
+          packageName: 'com.jobify.app',
           version: '1.0.0',
           buildNumber: '1',
         ),

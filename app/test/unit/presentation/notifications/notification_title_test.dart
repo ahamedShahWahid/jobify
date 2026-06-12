@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kpa_app/data/notifications/notification_dto.dart';
-import 'package:kpa_app/presentation/notifications/notification_title.dart';
+import 'package:jobify_app/data/notifications/notification_dto.dart';
+import 'package:jobify_app/presentation/notifications/notification_title.dart';
 
 NotificationDto _n(
   String kind,

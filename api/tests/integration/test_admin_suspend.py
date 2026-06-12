@@ -9,8 +9,8 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kpa.auth.tokens import mint_access_token
-from kpa.db.models import AuditLog, User, UserRole
+from jobify.auth.tokens import mint_access_token
+from jobify.db.models import AuditLog, User, UserRole
 
 pytestmark = pytest.mark.integration
 

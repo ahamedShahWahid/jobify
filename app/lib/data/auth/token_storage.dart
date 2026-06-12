@@ -17,12 +17,12 @@ class SecureTokenStorage implements TokenStorage {
               iOptions: IOSOptions(
                 accessibility: KeychainAccessibility.first_unlock,
               ),
-              webOptions: WebOptions(dbName: 'kpa_app_secure'),
+              webOptions: WebOptions(dbName: 'jobify_app_secure'),
             );
 
   final FlutterSecureStorage _storage;
 
-  static const _kRefreshKey = 'kpa.refresh_token';
+  static const _kRefreshKey = 'jobify.refresh_token';
 
   @override
   Future<String?> readRefreshToken() => _storage.read(key: _kRefreshKey);
