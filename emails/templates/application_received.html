@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  JOBIFY — TRANSACTIONAL EMAIL
+  Template:   application_received.html
+  Kind:       application_received
+  Channel:    email
+  Status:     WIRED TODAY  (notifications outbox emits this; email channel is
+              currently the LoggingEmailChannel stub — real SES deferred)
+  Recipient:  APPLICANT (confirmation of their own application)
+
+  Payload fields consumed (from notifications.payload dict):
+    {{job_title}}      — title of the role applied to        e.g. "Backend Engineer, Payments"
+    {{employer_name}}  — hiring company                      e.g. "Greywell Labs"
+    {{application_id}} — id of the application row           e.g. "8f2c…"  (shown as reference)
+    {{job_id}}         — id of the job (for the CTA link)    e.g. "a91f…"
+
+  CTA link: https://jobify.in/#/explore/jobs/{{job_id}}
+  ============================================================================
+-->
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <title>Your application is in — Jobify</title>
+  <!--[if mso]>
+  <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+  <![endif]-->
+  <!-- Fraunces is progressive enhancement; degrades to Georgia/serif if blocked -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    /* client resets */
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; line-height: 100%; outline: none; text-decoration: none; }
+    body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; }
+    a { color: #b23a20; }
+
+    /* mobile */
+    @media screen and (max-width: 600px) {
+      .email-container { width: 100% !important; }
+      .px { padding-left: 24px !important; padding-right: 24px !important; }
+      .h1 { font-size: 34px !important; line-height: 1.04 !important; }
+      .score-big { font-size: 46px !important; }
+      .stack { display: block !important; width: 100% !important; }
+      .btn-a { display: block !important; }
+    }
+
+    /* dark mode */
+    @media (prefers-color-scheme: dark) {
+      body, .bg-wrap { background-color: #17120d !important; }
+      .paper { background-color: #221c16 !important; }
+      .paper-2 { background-color: #2a231b !important; }
+      .ink, .h1, .lead { color: #f4efe3 !important; }
+      .ink-soft { color: #b6ac98 !important; }
+      .ink-faint { color: #8a8070 !important; }
+      .hair { border-color: #3a3127 !important; }
+      .hair-td { border-top-color: #3a3127 !important; }
+      .wordmark { color: #f4efe3 !important; }
+      .footer-card { background-color: #1c1610 !important; }
+      .next-card { background-color: #2a231b !important; }
+      .ref-mono { color: #b6ac98 !important; }
+    }
+  </style>
+</head>
+<body style="margin:0; padding:0; background-color:#efe8da;">
+  <!-- preheader (hidden preview text) -->
+  <div style="display:none; max-height:0; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px; color:#efe8da; opacity:0;">
+    Your application to Greywell Labs is in — here&rsquo;s what happens next.
+    &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847;
+  </div>
+
+  <table role="presentation" class="bg-wrap" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#efe8da;">
+    <tr>
+      <td align="center" style="padding:32px 12px 48px;">
+
+        <!-- container -->
+        <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px;">
+
+          <!-- masthead -->
+          <tr>
+            <td class="px" style="padding:0 8px 16px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="left" style="font-family:'Fraunces',Georgia,serif; font-weight:900; font-size:24px; letter-spacing:-0.03em; color:#221c16;" class="wordmark">
+                    Jobify<span style="color:#d8472a;">.</span>
+                  </td>
+                  <td align="right" style="font-family:'JetBrains Mono',ui-monospace,Menlo,monospace; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:#9b917e;" class="ink-faint">
+                    Application&nbsp;Filed
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- main card -->
+          <tr>
+            <td class="paper" style="background-color:#f4efe3; border:2px solid #221c16; box-shadow:18px 22px 0 -8px rgba(34,28,22,0.08);">
+
+              <!-- accent top rule -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr><td style="height:5px; line-height:5px; font-size:5px; background-color:#d8472a;">&nbsp;</td></tr>
+              </table>
+
+              <!-- header -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="px" style="padding:36px 44px 8px;">
+                    <div style="font-family:'JetBrains Mono',ui-monospace,Menlo,monospace; font-size:11px; letter-spacing:0.22em; text-transform:uppercase; color:#b23a20; font-weight:500;">
+                      Application Received
+                    </div>
+                    <h1 class="h1 ink" style="font-family:'Fraunces',Georgia,serif; font-weight:900; font-size:48px; line-height:1; letter-spacing:-0.035em; color:#221c16; margin:14px 0 0;">
+                      Your application<br>is&nbsp;in.
+                    </h1>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- role line -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="px" style="padding:22px 44px 4px;">
+                    <p class="lead ink" style="margin:0; font-family:'Hanken Grotesk',-apple-system,'Segoe UI',Arial,sans-serif; font-size:17px; line-height:1.6; color:#221c16;">
+                      We&rsquo;ve filed your application for
+                      <!-- {{job_title}} --><strong style="font-weight:700;">&nbsp;Backend Engineer, Payments</strong>
+                      at
+                      <!-- {{employer_name}} --><strong style="font-weight:700;">Greywell Labs</strong>.
+                      It&rsquo;s now in front of the hiring team.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- "what happens next" card -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="px" style="padding:24px 44px 8px;">
+                    <table role="presentation" class="next-card paper-2" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#ece4d3; border-left:3px solid #d8472a;">
+                      <tr>
+                        <td style="padding:18px 22px;">
+                          <div style="font-family:'JetBrains Mono',ui-monospace,Menlo,monospace; font-size:10px; letter-spacing:0.18em; text-transform:uppercase; color:#6c6354; margin-bottom:12px;" class="ink-soft">
+                            What happens next
+                          </div>
+                          <p class="ink" style="margin:0 0 10px; font-family:'Hanken Grotesk',-apple-system,'Segoe UI',Arial,sans-serif; font-size:15px; line-height:1.55; color:#221c16;">
+                            <span style="font-family:'Fraunces',Georgia,serif; font-weight:900; color:#d8472a;">&rarr;</span>&nbsp;
+                            The recruiter sees you <strong style="font-weight:700;">ranked by your match score</strong> against the role&mdash;not buried in a pile.
+                          </p>
+                          <p class="ink" style="margin:0; font-family:'Hanken Grotesk',-apple-system,'Segoe UI',Arial,sans-serif; font-size:15px; line-height:1.55; color:#221c16;">
+                            <span style="font-family:'Fraunces',Georgia,serif; font-weight:900; color:#d8472a;">&rarr;</span>&nbsp;
+                            Your r&eacute;sum&eacute; is shared with that employer, and <strong style="font-weight:700;">every view is audited</strong>. Your data stays accountable.
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA button (bulletproof) -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="px" style="padding:24px 44px 8px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td align="center" bgcolor="#d8472a" style="background-color:#d8472a; border:2px solid #221c16;">
+                          <!--[if mso]>
+                          <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://jobify.in/#/explore/jobs/a91f0000-job-id" style="height:48px;v-text-anchor:middle;width:240px;" arcsize="0%" strokecolor="#221c16" fillcolor="#d8472a">
+                            <w:anchorlock/><center style="color:#f4efe3;font-family:sans-serif;font-size:15px;font-weight:bold;">View your application &rarr;</center>
+                          </v:roundrect>
+                          <![endif]-->
+                          <!--[if !mso]><!-- -->
+                          <a class="btn-a" href="https://jobify.in/#/explore/jobs/a91f0000-job-id" target="_blank"
+                             style="display:inline-block; font-family:'Hanken Grotesk',-apple-system,'Segoe UI',Arial,sans-serif; font-size:15px; font-weight:700; color:#f4efe3; text-decoration:none; padding:14px 28px; letter-spacing:0.01em;">
+                            View your application&nbsp;&rarr;
+                          </a>
+                          <!--<![endif]-->
+                        </td>
+                      </tr>
+                    </table>
+                    <!-- {{job_id}} drives the link target above -->
+                  </td>
+                </tr>
+              </table>
+
+              <!-- reference id -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="px" style="padding:18px 44px 36px;">
+                    <p class="ref-mono ink-faint" style="margin:0; font-family:'JetBrains Mono',ui-monospace,Menlo,monospace; font-size:11px; letter-spacing:0.04em; color:#9b917e;">
+                      Reference&nbsp;&middot;&nbsp;application
+                      <!-- {{application_id}} -->#8f2c4d11
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- footer -->
+          <tr>
+            <td class="footer-card" style="padding:28px 16px 8px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding:0 8px;">
+                    <div style="font-family:'Fraunces',Georgia,serif; font-weight:900; font-size:18px; letter-spacing:-0.03em; color:#221c16;" class="wordmark">
+                      Jobify<span style="color:#d8472a;">.</span>
+                    </div>
+                    <p class="ink-soft" style="margin:10px 0 0; font-family:'Hanken Grotesk',-apple-system,'Segoe UI',Arial,sans-serif; font-size:12px; line-height:1.6; color:#6c6354;">
+                      Jobify Technologies &middot; Bengaluru, India
+                    </p>
+                    <p style="margin:10px 0 0; font-family:'Hanken Grotesk',-apple-system,'Segoe UI',Arial,sans-serif; font-size:12px; line-height:1.6;">
+                      <a href="https://jobify.in/#/profile" target="_blank" style="color:#b23a20; text-decoration:underline;">Manage email preferences</a>
+                      <span class="ink-faint" style="color:#9b917e;">&nbsp;&middot;&nbsp;</span>
+                      <a href="https://jobify.in/#/profile" target="_blank" style="color:#b23a20; text-decoration:underline;">Unsubscribe</a>
+                    </p>
+                    <p class="ink-faint" style="margin:14px 0 0; font-family:'Fraunces',Georgia,serif; font-style:italic; font-size:13px; color:#9b917e;">
+                      Made in India &#127470;&#127475;
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

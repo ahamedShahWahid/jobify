@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jobify — Email Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #f4efe3;
+      --paper-2: #ece4d3;
+      --paper-3: #e4dac4;
+      --ink: #221c16;
+      --ink-soft: #6c6354;
+      --ink-faint: #9b917e;
+      --line: #d9cfb9;
+      --line-strong: #c4b89c;
+      --accent: #d8472a;
+      --accent-deep: #b23a20;
+      --accent-wash: #f3d9cf;
+      --forest: #1f4034;
+      --forest-soft: #cfdcd2;
+      --gold: #b8842f;
+      --serif: "Fraunces", Georgia, serif;
+      --sans: "Hanken Grotesk", system-ui, sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    body::before {
+      content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: 0.04;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    a { color: inherit; text-decoration: none; }
+    .shell { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; padding: 0 28px; }
+
+    /* masthead */
+    header.mast {
+      border-bottom: 2px solid var(--ink);
+      padding: 30px 0 22px;
+    }
+    .mast-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+    .logo { font-family: var(--serif); font-weight: 900; font-size: 40px; letter-spacing: -0.04em; line-height: 0.9; }
+    .logo .dot { color: var(--accent); }
+    .kicker { font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent-deep); font-weight: 500; }
+    .mast h1 { font-family: var(--serif); font-weight: 900; font-size: clamp(28px,4vw,42px); letter-spacing: -0.03em; line-height: 1; margin: 8px 0 0; }
+    .mast .deck { font-family: var(--serif); font-style: italic; color: var(--ink-soft); font-size: 17px; max-width: 52ch; margin: 12px 0 0; }
+    .edition { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint); text-align: right; }
+
+    /* global controls */
+    .controls {
+      position: sticky; top: 0; z-index: 40;
+      background: color-mix(in srgb, var(--paper) 92%, transparent);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--line);
+      padding: 12px 0;
+      margin-bottom: 8px;
+    }
+    .controls-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+    .ctl-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-faint); }
+    .seg { display: inline-flex; border: 1.5px solid var(--ink); }
+    .seg button {
+      font-family: var(--sans); font-weight: 600; font-size: 12.5px; padding: 8px 16px;
+      background: transparent; border: 0; color: var(--ink-soft); cursor: pointer; transition: all 120ms;
+    }
+    .seg button + button { border-left: 1.5px solid var(--ink); }
+    .seg button.on { background: var(--ink); color: var(--paper); }
+    .seg button:hover:not(.on) { color: var(--ink); background: var(--paper-2); }
+    .seg.accent button.on { background: var(--accent); }
+    .grow { flex: 1; }
+    .scroll-hint { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); }
+
+    /* template panels */
+    .templates { padding: 24px 0 80px; display: grid; gap: 56px; }
+
+    .panel { }
+    .panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; border-bottom: 2px solid var(--ink); padding-bottom: 14px; margin-bottom: 22px; flex-wrap: wrap; }
+    .panel-no { font-family: var(--mono); font-size: 12px; color: var(--ink-faint); }
+    .panel-title { font-family: var(--serif); font-weight: 900; font-size: clamp(24px,3vw,34px); letter-spacing: -0.03em; line-height: 1; margin: 6px 0 0; }
+    .panel-file { font-family: var(--mono); font-size: 12px; color: var(--ink-soft); margin-top: 8px; }
+
+    .badges { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 4px 10px; border: 1px solid var(--line-strong); color: var(--ink-soft); background: var(--paper); white-space: nowrap;
+    }
+    .badge.wired { border-color: var(--forest); color: var(--forest); background: var(--forest-soft); }
+    .badge.proposed { border-color: var(--gold); color: #8a621f; background: #efe2c4; }
+    .badge.kind { border-color: var(--accent); color: var(--accent-deep); background: var(--accent-wash); }
+    .badge.channel { border-color: var(--ink); color: var(--ink); background: var(--paper); }
+
+    .panel-grid { display: grid; grid-template-columns: 1fr 300px; gap: 28px; align-items: start; }
+    @media (max-width: 920px) { .panel-grid { grid-template-columns: 1fr; } }
+
+    /* iframe device frame */
+    .device { display: flex; justify-content: center; }
+    .device-inner {
+      border: 2px solid var(--ink);
+      background: #fff;
+      box-shadow: 18px 22px 0 -8px rgba(34,28,22,0.10);
+      transition: width 280ms cubic-bezier(0.2,0.7,0.2,1);
+      width: 600px; max-width: 100%;
+      overflow: hidden;
+    }
+    .device-bar { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--paper-2); }
+    .device-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line-strong); }
+    .device-url { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); margin-left: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    iframe { width: 100%; height: 760px; border: 0; display: block; background: #fff; }
+
+    /* metadata side card */
+    .meta-card { border: 1px solid var(--line-strong); background: var(--paper); }
+    .meta-sec { padding: 16px 18px; border-bottom: 1px solid var(--line); }
+    .meta-sec:last-child { border-bottom: 0; }
+    .meta-k { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 8px; }
+    .meta-v { font-family: var(--mono); font-size: 12.5px; color: var(--ink); }
+    .payload-list { list-style: none; margin: 0; padding: 0; }
+    .payload-list li { font-family: var(--mono); font-size: 12px; color: var(--ink-soft); padding: 3px 0; }
+    .payload-list li b { color: var(--accent-deep); font-weight: 500; }
+    .summary { font-size: 14px; color: var(--ink); line-height: 1.55; }
+    .open-link { font-family: var(--sans); font-weight: 600; font-size: 13px; color: var(--accent-deep); display: inline-flex; align-items: center; gap: 6px; }
+    .open-link:hover { text-decoration: underline; }
+
+    footer.foot { border-top: 1px solid var(--line); padding: 28px 0 48px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; color: var(--ink-faint); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .colophon { font-family: var(--serif); font-style: italic; color: var(--ink-soft); font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="mast">
+      <div class="mast-row">
+        <div>
+          <div class="logo">Jobify<span class="dot">.</span></div>
+          <div class="kicker" style="margin-top:10px;">Transactional Email Studio</div>
+          <h1>The outbox, on paper.</h1>
+          <p class="deck">Four production-grade templates for the Jobify notifications outbox &mdash; table-based, bulletproof, dark-mode-aware. Real values are filled from each notification&rsquo;s <span style="font-style:normal; font-family:var(--mono); font-size:13px;">payload</span> dict.</p>
+        </div>
+        <div class="edition">
+          Edition &mdash; v0<br>
+          4 templates<br>
+          2 wired &middot; 2 proposed
+        </div>
+      </div>
+    </header>
+  </div>
+
+  <!-- sticky global controls -->
+  <div class="controls">
+    <div class="shell">
+      <div class="controls-row">
+        <span class="ctl-label">Color scheme</span>
+        <div class="seg accent" id="scheme-seg">
+          <button data-scheme="light" class="on">Light</button>
+          <button data-scheme="dark">Dark</button>
+        </div>
+        <span class="ctl-label" style="margin-left:8px;">Width</span>
+        <div class="seg" id="width-seg">
+          <button data-width="600" class="on">Desktop &middot; 600</button>
+          <button data-width="360">Mobile &middot; 360</button>
+        </div>
+        <span class="grow"></span>
+        <span class="scroll-hint">scroll a frame to see the full email &darr;</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="shell">
+    <div class="templates" id="templates"></div>
+
+    <footer class="foot">
+      <span>Jobify Technologies &middot; Bengaluru, India</span>
+      <span class="colophon">Made in India &#127470;&#127475;</span>
+      <span>Email Studio &middot; static preview, no build step</span>
+    </footer>
+  </div>
+
+  <script>
+    // ---- template registry -------------------------------------------------
+    const TEMPLATES = [
+      {
+        file: "templates/application_received.html",
+        title: "Application Received",
+        kind: "application_received",
+        channel: "email",
+        status: "wired",
+        summary: "Warm confirmation to the applicant that their application was filed — role + employer, a “what happens next” note (ranked by match score, résumé shared & audited), and a “View your application” CTA.",
+        payload: [
+          ["job_title", "role applied to"],
+          ["employer_name", "hiring company"],
+          ["application_id", "reference id"],
+          ["job_id", "CTA deep-link"]
+        ]
+      },
+      {
+        file: "templates/employer_invite.html",
+        title: "Employer Invite",
+        kind: "employer_invite",
+        channel: "email",
+        status: "wired",
+        summary: "B2B-but-warm invitation to join an employer team. Explains what accepting does (post roles / review ranked applicants), a 7-day expiry, an “Accept invitation” CTA and a plaintext fallback link.",
+        payload: [
+          ["employer_name", "inviting company"],
+          ["role", "owner | recruiter"],
+          ["invite_id", "accept target"],
+          ["employer_id", "employer ref"]
+        ]
+      },
+      {
+        file: "templates/match_surfaced.html",
+        title: "Match Digest",
+        kind: "match_surfaced",
+        channel: "email",
+        status: "proposed",
+        summary: "The signature email: “3 new roles match your résumé.” Three scored rows (mono 0.91 / 0.86 / 0.83), each with role, employer (+ ✓ Verified), location, CTC band and the one-line “why this fits.” Primary CTA opens the feed.",
+        payload: [
+          ["match_count", "rows in digest"],
+          ["matches[].score", "0..1, 2-dp"],
+          ["matches[].job_title", "role"],
+          ["matches[].employer_name", "company"],
+          ["matches[].verified", "✓ marker"],
+          ["matches[].location", "where"],
+          ["matches[].ctc_band", "pay range"],
+          ["matches[].fit", "why this fits"]
+        ]
+      },
+      {
+        file: "templates/dsr_export_ready.html",
+        title: "Data Export Ready",
+        kind: "dsr_export_ready",
+        channel: "email",
+        status: "proposed",
+        summary: "Calm, trustworthy DPDP tone. States what’s included (résumés, applications, matches, consents, audit history) and what’s deliberately excluded (session tokens). “Download your data” CTA + 24h link expiry.",
+        payload: [
+          ["download_url", "signed, expiring"],
+          ["expires_hours", "link window (24)"],
+          ["requested_at", "request time"],
+          ["section_counts", "per-section totals"]
+        ]
+      }
+    ];
+
+    // ---- state -------------------------------------------------------------
+    let scheme = "light";
+    let width = 600;
+
+    const container = document.getElementById("templates");
+
+    function statusBadge(status) {
+      if (status === "wired") return '<span class="badge wired">● Wired today</span>';
+      return '<span class="badge proposed">○ Proposed</span>';
+    }
+
+    function render() {
+      container.innerHTML = "";
+      TEMPLATES.forEach((t, i) => {
+        const no = String(i + 1).padStart(2, "0");
+        const payloadItems = t.payload.map(p => `<li><b>${p[0]}</b> &middot; ${p[1]}</li>`).join("");
+        const panel = document.createElement("section");
+        panel.className = "panel";
+        panel.innerHTML = `
+          <div class="panel-head">
+            <div>
+              <span class="panel-no">No. ${no}</span>
+              <div class="panel-title">${t.title}</div>
+              <div class="panel-file">${t.file}</div>
+            </div>
+            <div class="badges">
+              <span class="badge kind">${t.kind}</span>
+              <span class="badge channel">${t.channel}</span>
+              ${statusBadge(t.status)}
+            </div>
+          </div>
+          <div class="panel-grid">
+            <div class="device">
+              <div class="device-inner" data-frame>
+                <div class="device-bar">
+                  <span class="device-dot"></span><span class="device-dot"></span><span class="device-dot"></span>
+                  <span class="device-url">${t.file}</span>
+                </div>
+                <iframe data-src="${t.file}" title="${t.title} email preview" loading="lazy"></iframe>
+              </div>
+            </div>
+            <div>
+              <div class="meta-card">
+                <div class="meta-sec">
+                  <div class="meta-k">Summary</div>
+                  <div class="summary">${t.summary}</div>
+                </div>
+                <div class="meta-sec">
+                  <div class="meta-k">Kind &middot; Channel</div>
+                  <div class="meta-v">${t.kind}<br>${t.channel}</div>
+                </div>
+                <div class="meta-sec">
+                  <div class="meta-k">Payload fields</div>
+                  <ul class="payload-list">${payloadItems}</ul>
+                </div>
+                <div class="meta-sec">
+                  <a class="open-link" href="${t.file}" target="_blank" rel="noopener">Open standalone &rarr;</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        container.appendChild(panel);
+      });
+      applyWidth();
+      reloadFrames();
+    }
+
+    function applyWidth() {
+      document.querySelectorAll("[data-frame]").forEach(f => {
+        f.style.width = width + "px";
+      });
+    }
+
+    // The templates' dark mode lives behind @media (prefers-color-scheme: dark),
+    // which we can't fake from the host page (setting the iframe's color-scheme
+    // property doesn't flip that media query). So to PREVIEW dark mode we inject
+    // a tiny override stylesheet into each iframe that re-applies the SAME dark
+    // palette the templates ship — every .dark-rule class gets its dark value
+    // unconditionally. In a real dark-mode email client the @media block does
+    // this on its own; here we mirror it so the toggle is truthful.
+    const DARK_OVERRIDE = `
+      body, .bg-wrap { background-color:#15110c !important; }
+      .paper { background-color:#221c16 !important; }
+      .paper-2, .next-card, .perk-card, .incl-card { background-color:#2a231b !important; }
+      .row-card { background-color:#2a231b !important; border-color:#3a3127 !important; }
+      .excl-card { background-color:#1b1610 !important; border-color:#3a3127 !important; }
+      .ink, .h1, .lead { color:#f4efe3 !important; }
+      .ink-soft, .meta-mono, .fallback-mono, .ref-mono, .url-mono { color:#b6ac98 !important; }
+      .ink-faint { color:#8a8070 !important; }
+      .hair, .hair-td { border-color:#3a3127 !important; }
+      .wordmark { color:#f4efe3 !important; }
+      .footer-card { background-color:#1a140e !important; }
+      .fit-line { color:#f4efe3 !important; }
+      .verified-chip { background-color:#23332a !important; color:#9fc4ad !important; border-color:#3f6650 !important; }
+    `;
+
+    function applyScheme(frame) {
+      try {
+        const doc = frame.contentDocument;
+        if (!doc || !doc.head) return;
+        let style = doc.getElementById("studio-dark-override");
+        if (scheme === "dark") {
+          if (!style) {
+            style = doc.createElement("style");
+            style.id = "studio-dark-override";
+            doc.head.appendChild(style);
+          }
+          style.textContent = DARK_OVERRIDE;
+          doc.documentElement.style.colorScheme = "dark";
+        } else if (style) {
+          style.remove();
+          doc.documentElement.style.colorScheme = "light";
+        }
+      } catch (e) { /* cross-origin guard; same-origin static serve is fine */ }
+    }
+
+    function reloadFrames() {
+      document.querySelectorAll("iframe[data-src]").forEach(frame => {
+        const src = frame.getAttribute("data-src");
+        frame.style.colorScheme = scheme;
+        frame.addEventListener("load", function onload() {
+          applyScheme(frame);
+          frame.removeEventListener("load", onload);
+        });
+        // cache-bust on width too so the device frame re-lays-out cleanly
+        frame.src = src + "?scheme=" + scheme + "&w=" + width;
+        // also apply immediately in case the load already fired (cached)
+        applyScheme(frame);
+      });
+    }
+
+    // ---- controls ----------------------------------------------------------
+    document.getElementById("scheme-seg").addEventListener("click", e => {
+      const btn = e.target.closest("button[data-scheme]");
+      if (!btn) return;
+      scheme = btn.dataset.scheme;
+      document.querySelectorAll("#scheme-seg button").forEach(b => b.classList.toggle("on", b === btn));
+      reloadFrames();
+    });
+
+    document.getElementById("width-seg").addEventListener("click", e => {
+      const btn = e.target.closest("button[data-width]");
+      if (!btn) return;
+      width = parseInt(btn.dataset.width, 10);
+      document.querySelectorAll("#width-seg button").forEach(b => b.classList.toggle("on", b === btn));
+      applyWidth();
+      reloadFrames();
+    });
+
+    render();
+  </script>
+</body>
+</html>
