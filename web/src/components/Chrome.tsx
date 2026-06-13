@@ -1,17 +1,16 @@
 import { NavLink, Link } from "react-router-dom";
 import type { ReactNode } from "react";
 
-const EDITION = "Placement Press · Bengaluru";
+// The brand lockup (mark + JOBIFY + "Job will find you") lives in the SVG asset;
+// alt text carries the wordmark + punchline for a11y.
+const BRAND_ALT = "Jobify — Job will find you";
 
 export function Masthead() {
   return (
     <header className="masthead">
       <div className="masthead-row">
-        <Link to="/" className="brand">
-          <span className="logo">
-            Jobify<span className="dot">.</span>
-          </span>
-          <span className="edition">{EDITION}</span>
+        <Link to="/" className="brand" aria-label={BRAND_ALT}>
+          <img src="/jobify-logo.svg" alt={BRAND_ALT} className="brand-logo" />
         </Link>
         <nav className="nav">
           <NavLink to="/" end className={({ isActive }) => (isActive ? "active" : "")}>
@@ -48,9 +47,7 @@ export function Footer() {
       <div className="wrap">
         <div className="footer-grid">
           <div>
-            <span className="logo serif" style={{ fontSize: 28, fontWeight: 900 }}>
-              Jobify<span className="dot accent">.</span>
-            </span>
+            <img src="/jobify-logo.svg" alt={BRAND_ALT} className="brand-logo foot-logo" />
             <p className="colophon mt">
               A placement platform that surfaces roles matched to your résumé — and tells you,
               plainly, why each one fits.
