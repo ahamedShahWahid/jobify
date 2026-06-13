@@ -1,6 +1,11 @@
 import { Link } from "react-router-dom";
 import { CONSOLE_URL } from "../App";
 
+// The brand lockup (mark + JOBIFY + "Job will find you") lives in the SVG asset;
+// alt text carries the wordmark + punchline for a11y. The Link's aria-label stays
+// surface-specific ("for employers — home").
+const BRAND_ALT = "Jobify — Job will find you";
+
 /** Sticky masthead shared across pages. `onLanding` enables in-page anchors. */
 export function Masthead({ onLanding = false }: { onLanding?: boolean }) {
   return (
@@ -9,7 +14,7 @@ export function Masthead({ onLanding = false }: { onLanding?: boolean }) {
         <Link to="/" className="brand" aria-label="Jobify for employers — home">
           <img
             src="/jobify-logo.svg"
-            alt="Jobify — Job will find you"
+            alt={BRAND_ALT}
             className="brand-logo"
           />
         </Link>
@@ -54,7 +59,7 @@ export function Footer() {
             <Link to="/" className="brand" aria-label="Jobify for employers — home">
               <img
                 src="/jobify-logo.svg"
-                alt="Jobify — Job will find you"
+                alt={BRAND_ALT}
                 className="brand-logo foot-logo"
               />
             </Link>

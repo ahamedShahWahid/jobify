@@ -177,32 +177,9 @@ a {
   width: auto;
   display: block;
 }
-.foot-logo {
+.brand-logo.foot-logo {
   height: 52px;
   margin-bottom: 6px;
-}
-.brand .logo {
-  font-family: var(--serif);
-  font-weight: 900;
-  font-size: 26px;
-  letter-spacing: -0.03em;
-  line-height: 1;
-}
-.brand .logo .dot {
-  color: var(--accent);
-}
-.brand .edition {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  display: none;
-}
-@media (min-width: 720px) {
-  .brand .edition {
-    display: block;
-  }
 }
 
 .nav {
