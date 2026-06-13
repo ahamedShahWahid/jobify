@@ -24,6 +24,12 @@ export function Masthead() {
           <NavLink to="/explore" className={({ isActive }) => (isActive ? "active" : "")}>
             Explore
           </NavLink>
+          <NavLink to="/applications" className={({ isActive }) => (isActive ? "active" : "")}>
+            Casebook
+          </NavLink>
+          <NavLink to="/inbox" className={({ isActive }) => (isActive ? "active" : "")}>
+            Wire
+          </NavLink>
           <NavLink to="/profile" className={({ isActive }) => (isActive ? "active" : "")}>
             Profile
           </NavLink>

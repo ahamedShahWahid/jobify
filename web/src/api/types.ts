@@ -114,3 +114,50 @@ export interface SavedJobListResponse {
   items: SavedJobListItem[];
   next_cursor: string | null;
 }
+
+// ---- /v1/notifications (in-app inbox) --------------------------------------
+// Source: api/src/jobify/routes/notifications.py (NotificationRead).
+// `payload` is kind-specific: application_received → {job_title, employer_name,
+// application_id, job_id}; employer_invite → {employer_name, role, invite_id,
+// employer_id}. Inbox shows pending/dispatching/sent only (failed is admin-only).
+
+export interface NotificationRead {
+  id: string;
+  kind: string; // "application_received" | "employer_invite" | …
+  channel: string; // "email" | "in_app"
+  status: string; // "pending" | "dispatching" | "sent"
+  payload: Record<string, unknown>;
+  send_after: string;
+  sent_at: string | null;
+  read_at: string | null;
+  created_at: string;
+}
+
+export interface NotificationListItem {
+  notification: NotificationRead;
+}
+
+export interface NotificationListResponse {
+  items: NotificationListItem[];
+  next_cursor: string | null;
+}
+
+// ---- /v1/me/invites (invitee side of employer invites, R4) -----------------
+// Source: api/src/jobify/routes/invites.py (MyInviteRead, AcceptResult).
+// Authorization is by email match, not membership — a non-member accepts and is
+// flipped to recruiter. Accepting/declining a non-pending invite uniform-404s.
+
+export interface MyInviteRead {
+  id: string;
+  employer_id: string;
+  employer_name: string;
+  role: string; // "owner" | "member"
+  expires_at: string;
+  created_at: string;
+}
+
+export interface AcceptResult {
+  employer_id: string;
+  role: string;
+  status: string; // "accepted" | "revoked"
+}

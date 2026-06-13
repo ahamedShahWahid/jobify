@@ -1,6 +1,7 @@
 import { ApiError } from "./client";
 import type { JobifyClient } from "./client";
 import type {
+  AcceptResult,
   ApplicationListResponse,
   ApplicationRead,
   ConsentRead,
@@ -10,6 +11,9 @@ import type {
   JobDetailResponse,
   JobRead,
   MeResponse,
+  MyInviteRead,
+  NotificationListResponse,
+  NotificationRead,
   SavedJobListResponse,
   SavedJobRead,
 } from "./types";
@@ -201,6 +205,84 @@ const consents = new Map<string, ConsentRead>(
   ]),
 );
 
+// --- in-app inbox -----------------------------------------------------------
+// Seeded against the FEED employers so the cards read as real history. Newest
+// first; one unread (read_at null), the rest already opened. The invite
+// notification's payload.invite_id points at the live INVITE seed below, so the
+// inbox card and the /invites screen agree.
+const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
+
+const INVITE_ID = uuid();
+const NW = SEEDS[5].employer; // Northwind Fintech (verified)
+const MERIDIAN = SEEDS[0]; // Senior Data Platform Engineer
+const LUMEN = SEEDS[2]; // Backend Engineer (FastAPI)
+
+const notifications: NotificationRead[] = [
+  {
+    id: uuid(),
+    kind: "employer_invite",
+    channel: "in_app",
+    status: "sent",
+    payload: {
+      employer_name: NW.name,
+      role: "member",
+      invite_id: INVITE_ID,
+      employer_id: NW.id,
+    },
+    send_after: hoursAgo(3),
+    sent_at: hoursAgo(3),
+    read_at: null,
+    created_at: hoursAgo(3),
+  },
+  {
+    id: uuid(),
+    kind: "application_received",
+    channel: "email",
+    status: "sent",
+    payload: {
+      job_title: MERIDIAN.job.title,
+      employer_name: MERIDIAN.employer.name,
+      application_id: uuid(),
+      job_id: MERIDIAN.job.id,
+    },
+    send_after: hoursAgo(28),
+    sent_at: hoursAgo(28),
+    read_at: hoursAgo(26),
+    created_at: hoursAgo(28),
+  },
+  {
+    id: uuid(),
+    kind: "application_received",
+    channel: "email",
+    status: "sent",
+    payload: {
+      job_title: LUMEN.job.title,
+      employer_name: LUMEN.employer.name,
+      application_id: uuid(),
+      job_id: LUMEN.job.id,
+    },
+    send_after: hoursAgo(74),
+    sent_at: hoursAgo(74),
+    read_at: hoursAgo(70),
+    created_at: hoursAgo(74),
+  },
+];
+
+// --- employer invites (invitee side) ----------------------------------------
+const invites = new Map<string, MyInviteRead>([
+  [
+    INVITE_ID,
+    {
+      id: INVITE_ID,
+      employer_id: NW.id,
+      employer_name: NW.name,
+      role: "member",
+      expires_at: new Date(Date.now() + 6 * 86_400_000).toISOString(),
+      created_at: hoursAgo(3),
+    },
+  ],
+]);
+
 export class DemoClient implements JobifyClient {
   readonly mode = "demo" as const;
 
@@ -374,9 +456,58 @@ export class DemoClient implements JobifyClient {
         matches: 3,
         user_consents: consents.size,
         oauth_identities: 1,
-        notifications: 0,
+        notifications: notifications.length,
       },
       warnings: [],
     };
+  }
+
+  async notifications(cursor?: string): Promise<NotificationListResponse> {
+    await delay();
+    const start = cursor ? Number(cursor) : 0;
+    const limit = 10;
+    const ordered = [...notifications].sort((a, b) => b.created_at.localeCompare(a.created_at));
+    const items = ordered.slice(start, start + limit).map((notification) => ({ notification }));
+    const next = start + limit < ordered.length ? String(start + limit) : null;
+    return { items, next_cursor: next };
+  }
+
+  async markNotificationRead(notificationId: string): Promise<NotificationRead> {
+    await delay();
+    const row = notifications.find((n) => n.id === notificationId);
+    if (!row) throw new ApiError(404, "notification not found");
+    // Idempotent — keep the first read_at if already opened (mirrors the backend).
+    row.read_at = row.read_at ?? new Date().toISOString();
+    return { ...row };
+  }
+
+  async myInvites(): Promise<MyInviteRead[]> {
+    await delay();
+    const now = Date.now();
+    return [...invites.values()]
+      .filter((i) => new Date(i.expires_at).getTime() > now) // lazy expiry, like the API
+      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+  }
+
+  async acceptInvite(inviteId: string): Promise<AcceptResult> {
+    await delay();
+    const invite = invites.get(inviteId);
+    // A non-pending invite uniform-404s in the API; here a consumed invite is
+    // simply gone from the map.
+    if (!invite) throw new ApiError(404, "not found");
+    if (new Date(invite.expires_at).getTime() <= Date.now()) {
+      invites.delete(inviteId);
+      throw new ApiError(410, "invite_expired");
+    }
+    invites.delete(inviteId);
+    return { employer_id: invite.employer_id, role: invite.role, status: "accepted" };
+  }
+
+  async declineInvite(inviteId: string): Promise<AcceptResult> {
+    await delay();
+    const invite = invites.get(inviteId);
+    if (!invite) throw new ApiError(404, "not found");
+    invites.delete(inviteId);
+    return { employer_id: invite.employer_id, role: invite.role, status: "revoked" };
   }
 }

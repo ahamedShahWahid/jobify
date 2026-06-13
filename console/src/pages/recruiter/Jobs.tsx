@@ -1,115 +1,31 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { errorMessage } from "../../api/client";
-import type { EmployerRead, JobCreate, JobPatch, RecruiterJobRow } from "../../api/types";
-import { Drawer, EmptyState, ErrorNotice, Field, Stamp } from "../../components/bits";
+import type { EmployerRead, RecruiterJobRow } from "../../api/types";
+import { ctcBandText, EmptyState, ErrorNotice, Stamp } from "../../components/bits";
 import { usePagedFetch } from "../../paging/usePagedFetch";
 import { useSession } from "../../session";
 
-const lakh = (value: number | null) =>
-  value === null ? null : `₹${(value / 100_000).toFixed(value % 100_000 === 0 ? 0 : 1)}L`;
-
 function ctcBand(job: RecruiterJobRow) {
-  const min = lakh(job.ctc_min);
-  const max = lakh(job.ctc_max);
-  if (!min && !max) return <span className="dim">undisclosed</span>;
-  return <span className="num">{[min, max].filter(Boolean).join(" – ")}</span>;
-}
-
-interface JobFormState {
-  employer_id: string;
-  title: string;
-  description: string;
-  locations: string;
-  min_exp_years: string;
-  max_exp_years: string;
-  ctc_min: string;
-  ctc_max: string;
-}
-
-const emptyForm = (employerId: string): JobFormState => ({
-  employer_id: employerId,
-  title: "",
-  description: "",
-  locations: "",
-  min_exp_years: "0",
-  max_exp_years: "5",
-  ctc_min: "",
-  ctc_max: "",
-});
-
-/** Whole number in [0,50] or null if the field is blank/non-integer (NOT 0). */
-function parseExp(raw: string): number | null {
-  if (raw.trim() === "") return null;
-  const n = Number(raw);
-  return Number.isInteger(n) && n >= 0 && n <= 50 ? n : null;
-}
-
-/** undefined = blank (send null) · null = invalid · number = a valid CTC ≥ 0. */
-function parseCtc(raw: string): number | null | undefined {
-  if (raw.trim() === "") return undefined;
-  const n = Number(raw);
-  return Number.isFinite(n) && n >= 0 ? n : null;
+  if (job.ctc_min === null && job.ctc_max === null)
+    return <span className="dim">undisclosed</span>;
+  return <span className="num">{ctcBandText(job.ctc_min, job.ctc_max)}</span>;
 }
 
 /**
- * Validate + build the payload, mirroring the backend's JobCreate constraints
- * and the _ordered_bands model validator. Returning the error here means the
- * operator sees a plain message instead of a raw 422 list, and a blank exp field
- * is flagged as missing rather than silently coerced to 0 (which a PATCH would
- * otherwise write over a real value).
+ * Postings — the recruiter's job list. Create/edit open the full-page composer
+ * (/recruiter/jobs/new, /…/:id/edit) with its live candidate preview; the edit
+ * link hands the row over via router state so the composer doesn't re-fetch.
+ * Status flip + delete stay inline as quick actions on the list. The composer
+ * returns here with `state.status` so editing a closed job lands on the Closed
+ * tab (not the default Open).
  */
-function buildJobPayload(
-  form: JobFormState,
-  isCreate: boolean,
-): { payload: JobCreate | JobPatch } | { error: string } {
-  const title = form.title.trim();
-  if (title.length < 2 || title.length > 200)
-    return { error: "Title must be 2–200 characters." };
-
-  const description = form.description.trim();
-  if (description.length < 10 || description.length > 10_000)
-    return { error: "Description must be 10–10,000 characters." };
-
-  const locations = form.locations
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (locations.length === 0) return { error: "Add at least one location." };
-  if (locations.length > 20) return { error: "At most 20 locations." };
-
-  const minExp = parseExp(form.min_exp_years);
-  if (minExp === null) return { error: "Min experience must be a whole number from 0 to 50." };
-  const maxExp = parseExp(form.max_exp_years);
-  if (maxExp === null) return { error: "Max experience must be a whole number from 0 to 50." };
-  if (maxExp < minExp) return { error: "Max experience must be ≥ min experience." };
-
-  const ctcMin = parseCtc(form.ctc_min);
-  if (ctcMin === null) return { error: "CTC min must be a number ≥ 0 (or blank)." };
-  const ctcMax = parseCtc(form.ctc_max);
-  if (ctcMax === null) return { error: "CTC max must be a number ≥ 0 (or blank)." };
-  if (ctcMin !== undefined && ctcMax !== undefined && ctcMax < ctcMin)
-    return { error: "CTC max must be ≥ CTC min." };
-
-  const base = {
-    title,
-    description,
-    locations,
-    min_exp_years: minExp,
-    max_exp_years: maxExp,
-    ctc_min: ctcMin ?? null,
-    ctc_max: ctcMax ?? null,
-  };
-  if (isCreate) {
-    if (!form.employer_id) return { error: "Choose an employer." };
-    return { payload: { ...base, employer_id: form.employer_id } };
-  }
-  return { payload: base };
-}
-
 export function Jobs() {
   const { client } = useSession();
-  const [status, setStatus] = useState<"open" | "closed">("open");
+  const navigate = useNavigate();
+  const location = useLocation();
+  const returnedStatus = (location.state as { status?: "open" | "closed" } | null)?.status;
+  const [status, setStatus] = useState<"open" | "closed">(returnedStatus ?? "open");
   const [employers, setEmployers] = useState<EmployerRead[]>([]);
   const [opError, setOpError] = useState<string | null>(null);
 
@@ -119,59 +35,11 @@ export function Jobs() {
   );
   const { rows, nextCursor, busy, error, reload, loadMore } = usePagedFetch(fetcher, status);
 
-  // drawer state: null = closed; "new" = create; otherwise the job being edited
-  const [editing, setEditing] = useState<"new" | RecruiterJobRow | null>(null);
-  const [form, setForm] = useState<JobFormState>(emptyForm(""));
-  const [formError, setFormError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-
+  // Needed only to disable "New posting" when the recruiter has no employer yet
+  // (the composer's create flow requires one).
   useEffect(() => {
     client.myEmployers().then(setEmployers, () => undefined);
   }, [client]);
-
-  function openCreate() {
-    setForm(emptyForm(employers[0]?.id ?? ""));
-    setFormError(null);
-    setEditing("new");
-  }
-
-  function openEdit(job: RecruiterJobRow) {
-    setForm({
-      employer_id: "",
-      title: job.title,
-      description: job.description,
-      locations: job.locations.join(", "),
-      min_exp_years: String(job.min_exp_years),
-      max_exp_years: String(job.max_exp_years),
-      ctc_min: job.ctc_min === null ? "" : String(job.ctc_min),
-      ctc_max: job.ctc_max === null ? "" : String(job.ctc_max),
-    });
-    setFormError(null);
-    setEditing(job);
-  }
-
-  async function save() {
-    const built = buildJobPayload(form, editing === "new");
-    if ("error" in built) {
-      setFormError(built.error);
-      return;
-    }
-    setSaving(true);
-    setFormError(null);
-    try {
-      if (editing === "new") {
-        await client.createJob(built.payload as JobCreate);
-      } else if (editing) {
-        await client.patchJob(editing.id, built.payload);
-      }
-      setEditing(null);
-      reload();
-    } catch (e) {
-      setFormError(errorMessage(e));
-    } finally {
-      setSaving(false);
-    }
-  }
 
   async function flipStatus(job: RecruiterJobRow) {
     setOpError(null);
@@ -202,7 +70,7 @@ export function Jobs() {
           POSTINGS<span className="ghost">/{status.toUpperCase()}</span>
         </h1>
         <div className="sub">
-          <span className="flavor">Write the role the way you'd want to read it.</span>
+          <span className="flavor">Write the role the way you&apos;d want to read it.</span>
         </div>
       </div>
 
@@ -215,7 +83,12 @@ export function Jobs() {
             Closed
           </button>
         </div>
-        <button className="btn primary" onClick={openCreate} disabled={employers.length === 0}>
+        <button
+          className="btn primary"
+          onClick={() => navigate("/recruiter/jobs/new")}
+          disabled={employers.length === 0}
+          title={employers.length === 0 ? "Create an employer first" : undefined}
+        >
           + New posting
         </button>
       </div>
@@ -261,7 +134,10 @@ export function Jobs() {
                 </td>
                 <td className="r num acc">{job.surfaced_match_count}</td>
                 <td className="r" style={{ whiteSpace: "nowrap" }}>
-                  <button className="btn ghost sm" onClick={() => openEdit(job)}>
+                  <button
+                    className="btn ghost sm"
+                    onClick={() => navigate(`/recruiter/jobs/${job.id}/edit`, { state: { job } })}
+                  >
                     Edit
                   </button>{" "}
                   <button className="btn sm" onClick={() => void flipStatus(job)}>
@@ -289,98 +165,6 @@ export function Jobs() {
           </button>
         )}
       </div>
-
-      {editing !== null && (
-        <Drawer
-          title={editing === "new" ? "New posting" : `Edit — ${editing.title}`}
-          onClose={() => setEditing(null)}
-          foot={
-            <>
-              <button className="btn ghost" onClick={() => setEditing(null)}>
-                Cancel
-              </button>
-              <button className="btn primary" onClick={() => void save()} disabled={saving}>
-                {saving ? "Saving…" : editing === "new" ? "Publish posting" : "Save changes"}
-              </button>
-            </>
-          }
-        >
-          <ErrorNotice error={formError} />
-          {editing === "new" && (
-            <Field label="Employer">
-              <select
-                value={form.employer_id}
-                onChange={(e) => setForm({ ...form, employer_id: e.target.value })}
-              >
-                {employers.map((employer) => (
-                  <option key={employer.id} value={employer.id}>
-                    {employer.name}
-                    {employer.verified_at ? "" : " (unverified)"}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          )}
-          <Field label="Title">
-            <input
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              maxLength={200}
-            />
-          </Field>
-          <Field label="Description" hint="10–10,000 chars. Editing content re-embeds the job for matching.">
-            <textarea
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              rows={7}
-            />
-          </Field>
-          <Field label="Locations" hint="Comma-separated, e.g. Bengaluru, Remote (IN)">
-            <input
-              value={form.locations}
-              onChange={(e) => setForm({ ...form, locations: e.target.value })}
-            />
-          </Field>
-          <div className="field-row">
-            <Field label="Min exp (years)">
-              <input
-                type="number"
-                min={0}
-                max={50}
-                value={form.min_exp_years}
-                onChange={(e) => setForm({ ...form, min_exp_years: e.target.value })}
-              />
-            </Field>
-            <Field label="Max exp (years)">
-              <input
-                type="number"
-                min={0}
-                max={50}
-                value={form.max_exp_years}
-                onChange={(e) => setForm({ ...form, max_exp_years: e.target.value })}
-              />
-            </Field>
-          </div>
-          <div className="field-row">
-            <Field label="CTC min (₹/yr)" hint="Blank = undisclosed">
-              <input
-                type="number"
-                min={0}
-                value={form.ctc_min}
-                onChange={(e) => setForm({ ...form, ctc_min: e.target.value })}
-              />
-            </Field>
-            <Field label="CTC max (₹/yr)">
-              <input
-                type="number"
-                min={0}
-                value={form.ctc_max}
-                onChange={(e) => setForm({ ...form, ctc_max: e.target.value })}
-              />
-            </Field>
-          </div>
-        </Drawer>
-      )}
     </>
   );
 }

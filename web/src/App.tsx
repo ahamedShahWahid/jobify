@@ -8,6 +8,9 @@ import { Gate } from "./pages/explore/Gate";
 import { JobDetail } from "./pages/explore/JobDetail";
 import { WhyMatch } from "./pages/explore/WhyMatch";
 import { Profile } from "./pages/Profile";
+import { Applications } from "./pages/Applications";
+import { Inbox } from "./pages/Inbox";
+import { Invites } from "./pages/Invites";
 import { SessionProvider, useSessionStore } from "./session";
 
 /** Explore routes need an applicant session — otherwise show the sign-in gate. */
@@ -48,6 +51,30 @@ export function App() {
             element={
               <RequireApplicant>
                 <WhyMatch />
+              </RequireApplicant>
+            }
+          />
+          <Route
+            path="/applications"
+            element={
+              <RequireApplicant>
+                <Applications />
+              </RequireApplicant>
+            }
+          />
+          <Route
+            path="/inbox"
+            element={
+              <RequireApplicant>
+                <Inbox />
+              </RequireApplicant>
+            }
+          />
+          <Route
+            path="/invites"
+            element={
+              <RequireApplicant>
+                <Invites />
               </RequireApplicant>
             }
           />

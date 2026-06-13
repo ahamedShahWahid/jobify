@@ -1,31 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { ConsoleClient } from "../../api/client";
 import { errorMessage } from "../../api/client";
+import { drainJobs } from "../../api/recruiterJobs";
 import type { EmployerRead, RecruiterJobRow } from "../../api/types";
 import { EmptyState, ErrorNotice, Stamp } from "../../components/bits";
 import { useSession } from "../../session";
 
-// The dashboard totals must count ALL jobs, not the first page — otherwise a
+// The dashboard totals count ALL jobs (drainJobs walks every page) — otherwise a
 // recruiter with >20 jobs of a status silently sees undercounted tiles and a
-// top-5 that misses high-applicant postings on later pages. Bounded so a
-// misbehaving cursor can't loop forever.
-const MAX_PAGES = 50;
-
-async function drainJobs(
-  client: ConsoleClient,
-  status: "open" | "closed",
-): Promise<RecruiterJobRow[]> {
-  const all: RecruiterJobRow[] = [];
-  let cursor: string | undefined;
-  for (let page = 0; page < MAX_PAGES; page++) {
-    const res = await client.listMyJobs(status, cursor);
-    all.push(...res.items);
-    if (!res.next_cursor) break;
-    cursor = res.next_cursor;
-  }
-  return all;
-}
+// top-5 that misses high-applicant postings on later pages.
 
 export function Dashboard() {
   const { client, identity } = useSession();
