@@ -331,6 +331,65 @@ a {
   line-height: 1.55;
 }
 
+/* ---- brand band: the one constant (logo + Jobify Blue) above the 3 voices -- */
+
+.brand-band {
+  display: grid;
+  grid-template-columns: minmax(200px, 0.7fr) 1.6fr;
+  gap: 1px;
+  background: var(--sg-line);
+  border: 1px solid var(--sg-line);
+  margin-top: clamp(30px, 4vw, 44px);
+}
+@media (max-width: 720px) {
+  .brand-band {
+    grid-template-columns: 1fr;
+  }
+}
+.brand-band-mark {
+  background: var(--sg-paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 26px;
+}
+.brand-band-logo {
+  width: min(230px, 86%);
+  height: auto;
+  display: block;
+}
+.brand-band-body {
+  background: var(--sg-paper);
+  padding: 24px 26px 26px;
+}
+.brand-band-body .no {
+  font-family: var(--sg-mono);
+  font-size: 11px;
+  color: var(--sg-accent);
+  letter-spacing: 0.1em;
+}
+.brand-band-body h3 {
+  font-family: var(--sg-display);
+  font-weight: 600;
+  font-size: 22px;
+  margin: 10px 0 8px;
+  letter-spacing: -0.01em;
+}
+.brand-band-body p {
+  margin: 0 0 18px;
+  font-size: 14px;
+  color: var(--sg-ink-soft);
+  line-height: 1.55;
+  max-width: 62ch;
+}
+.brand-band-body strong {
+  color: #0048a8;
+  font-weight: 700;
+}
+.brand-swatches {
+  grid-template-columns: repeat(3, minmax(110px, 1fr));
+}
+
 /* ---- 3-up app summary cards (each previews its own palette + font) ------- */
 
 .app-cards {

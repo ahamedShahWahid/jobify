@@ -21,6 +21,12 @@
   --line-strong: rgba(14, 27, 42, 0.22);
   --line-faint: rgba(14, 27, 42, 0.06);
 
+  /* Jobify Blue — the cross-surface brand colour (the logo). Sits above this
+     property's amber accent; documented in the styleguide as --brand-blue. */
+  --brand-blue: #0048a8;
+  --brand-blue-deep: #003c8f;
+  --brand-blue-tint: #e1ecf8;
+
   --amber: #f3a712; /* the one signal accent */
   --amber-deep: #e8930c;
   --amber-wash: rgba(243, 167, 18, 0.12);
