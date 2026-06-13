@@ -209,6 +209,7 @@ SQLAlchemy models are never response models. Define `*Read`/`*Create`/`*Update` 
 - **Hand-written migrations** in `src/jobify/db/migrations/versions/` (autogenerate off; excluded from mypy). Edit the revision before `upgrade head`.
 - **structlog only** — `structlog.get_logger(__name__)`, context as kwargs; no `print`/`logging.getLogger`. `JOBIFY_LOG_FORMAT=json` for prod.
 - **All handlers `async def`.** Versioned routes under `/v1` except bare `/health` + `/ready` (probes).
+- **Branch workflow → `WORKFLOW.md`.** One short-lived branch per feature off latest `origin/main`; `scripts/new-feature.sh <name>` to start, `scripts/sync-with-main.sh` to reconcile after a squash-merge (it auto-`rebase --onto`s past already-merged commits — never restack new work on a merged branch).
 - **Doc ownership.** Operational content (commands, env vars, setup, endpoint docs) lives in `api/README.md` / `app/README.md`; this file holds only code-invariants ("why it's shaped this way / what breaks if changed") + a spec pointer per section. Keep CLAUDE.md well under 40k — it's loaded into every session and truncates silently past the limit.
 
 ## Source-of-truth when in doubt
