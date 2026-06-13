@@ -7,6 +7,7 @@ import { UserActions } from "./pages/admin/UserActions";
 import { Verification } from "./pages/admin/Verification";
 import { Applicants } from "./pages/recruiter/Applicants";
 import { Dashboard } from "./pages/recruiter/Dashboard";
+import { JobComposer } from "./pages/recruiter/JobComposer";
 import { Jobs } from "./pages/recruiter/Jobs";
 import { Team } from "./pages/recruiter/Team";
 import { SignIn } from "./pages/SignIn";
@@ -113,6 +114,22 @@ export function App() {
               element={
                 <RequireArea area="recruiter">
                   <Jobs />
+                </RequireArea>
+              }
+            />
+            <Route
+              path="/recruiter/jobs/new"
+              element={
+                <RequireArea area="recruiter">
+                  <JobComposer />
+                </RequireArea>
+              }
+            />
+            <Route
+              path="/recruiter/jobs/:jobId/edit"
+              element={
+                <RequireArea area="recruiter">
+                  <JobComposer />
                 </RequireArea>
               }
             />

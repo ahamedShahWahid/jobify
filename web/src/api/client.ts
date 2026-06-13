@@ -1,10 +1,14 @@
 import type {
+  AcceptResult,
   ApplicationListResponse,
   ApplicationRead,
   ConsentRead,
   FeedResponse,
   JobDetailResponse,
   MeResponse,
+  MyInviteRead,
+  NotificationListResponse,
+  NotificationRead,
   SavedJobListResponse,
   SavedJobRead,
 } from "./types";
@@ -29,6 +33,16 @@ export interface JobifyClient {
   dsrExport(): Promise<unknown>;
   /** DELETE /v1/me/dsr → a DeleteReport; the account is tombstoned on success. */
   dsrDelete(): Promise<unknown>;
+  /** GET /v1/notifications → the in-app inbox (pending/dispatching/sent only). */
+  notifications(cursor?: string): Promise<NotificationListResponse>;
+  /** POST /v1/notifications/{id}/read → the updated row; idempotent. */
+  markNotificationRead(notificationId: string): Promise<NotificationRead>;
+  /** GET /v1/me/invites → pending, non-expired employer invites for the caller. */
+  myInvites(): Promise<MyInviteRead[]>;
+  /** POST /v1/me/invites/{id}/accept → join the employer (flips role → recruiter). */
+  acceptInvite(inviteId: string): Promise<AcceptResult>;
+  /** POST /v1/me/invites/{id}/decline → mark the invite revoked. */
+  declineInvite(inviteId: string): Promise<AcceptResult>;
 }
 
 /** RFC 7807 problem+json error; `detail` is the API's user-visible slug/message. */
@@ -233,5 +247,30 @@ export class HttpClient implements JobifyClient {
   }
   dsrDelete() {
     return this.request<unknown>("DELETE", "/v1/me/dsr", { confirmation: "DELETE_MY_ACCOUNT" });
+  }
+  notifications(cursor?: string) {
+    const qs = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
+    return this.request<NotificationListResponse>("GET", `/v1/notifications${qs}`);
+  }
+  markNotificationRead(notificationId: string) {
+    return this.request<NotificationRead>(
+      "POST",
+      `/v1/notifications/${encodeURIComponent(notificationId)}/read`,
+    );
+  }
+  myInvites() {
+    return this.request<MyInviteRead[]>("GET", "/v1/me/invites");
+  }
+  acceptInvite(inviteId: string) {
+    return this.request<AcceptResult>(
+      "POST",
+      `/v1/me/invites/${encodeURIComponent(inviteId)}/accept`,
+    );
+  }
+  declineInvite(inviteId: string) {
+    return this.request<AcceptResult>(
+      "POST",
+      `/v1/me/invites/${encodeURIComponent(inviteId)}/decline`,
+    );
   }
 }
