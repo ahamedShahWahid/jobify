@@ -125,6 +125,36 @@ export interface EmployerRead {
   created_at: string;
 }
 
+// ---- /v1/admin/employers (PROPOSED — see client.ts) ------------
+//
+// No backend endpoint exists for an employer verification queue yet (admin has
+// only audit-logs + suspend/unsuspend today). These types model the contract the
+// console *would* consume once the backend exposes it; in live mode the calls
+// 404. The DemoClient implements them fully against seeded data.
+
+export type EmployerVerificationStatus = "pending" | "verified" | "rejected";
+
+export interface EmployerVerificationRow {
+  id: string;
+  name: string;
+  gst: string | null;
+  status: EmployerVerificationStatus;
+  created_at: string;
+  reviewed_at: string | null; // derived: verified_at or rejected_at, whichever is set
+  reason: string | null; // rejection_reason, only set while rejected
+  // Demo-only enrichment. The real GET /v1/admin/employers response omits these —
+  // employers don't collect domain/contact today, and reviewer history lives in
+  // audit_logs (admin.employer.verified / .rejected), not a column.
+  domain?: string | null;
+  contact_email?: string | null;
+  reviewer?: string | null;
+}
+
+export interface EmployerVerificationPage {
+  items: EmployerVerificationRow[];
+  next_cursor: string | null;
+}
+
 export interface MemberRead {
   user_id: string;
   email: string | null;

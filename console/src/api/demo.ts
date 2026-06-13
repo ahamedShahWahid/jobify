@@ -8,6 +8,9 @@ import type {
   AuditLogListResponse,
   AuditLogRead,
   EmployerRead,
+  EmployerVerificationPage,
+  EmployerVerificationRow,
+  EmployerVerificationStatus,
   InviteRead,
   JobCreate,
   JobPatch,
@@ -344,6 +347,55 @@ const invites = new Map<string, InviteRead[]>([
   [employers[1].id, []],
 ]);
 
+// ---- employer verification queue (PROPOSED contract; see client.ts) ---------
+//
+// Seeded across pending/verified/rejected so the queue is explorable. verify/
+// reject mutate these rows AND push an admin audit row, mirroring suspendUser.
+
+const mkVerification = (
+  name: string,
+  domain: string | null,
+  contactEmail: string | null,
+  gst: string | null,
+  status: EmployerVerificationStatus,
+  submittedDaysAgo: number,
+  review: { daysAgo: number; reason: string | null } | null,
+): EmployerVerificationRow => ({
+  id: uuid(),
+  name,
+  domain,
+  contact_email: contactEmail,
+  gst,
+  status,
+  created_at: daysAgo(submittedDaysAgo),
+  reviewed_at: review ? daysAgo(review.daysAgo) : null,
+  reviewer: review ? "ops@jobify.in" : null,
+  reason: review?.reason ?? null,
+});
+
+const verificationQueue: EmployerVerificationRow[] = [
+  mkVerification("Northwind Logistics", "northwind.in", "talent@northwind.in", "27AAGCN2233R1Z9", "pending", 1, null),
+  mkVerification("Tessellate Studio", "tessellate.design", "hello@tessellate.design", null, "pending", 2, null),
+  mkVerification("Brightpath Tutoring", "brightpath.co.in", "founder@gmail.com", "29BRGHT9988K1Z2", "pending", 4, null),
+  mkVerification("Quantum Foundry", "quantumfoundry.io", "people@quantumfoundry.io", "06QFNDR4521M1Z8", "pending", 6, null),
+  mkVerification("Meridian Analytics", "meridian.in", "priya.k@meridian.in", "29ABCDE1234F1Z5", "verified", 41, {
+    daysAgo: 40,
+    reason: null,
+  }),
+  mkVerification("Greenleaf Agritech", "greenleaf.farm", "ops@greenleaf.farm", "33GRNLF6677P1Z4", "verified", 28, {
+    daysAgo: 27,
+    reason: null,
+  }),
+  mkVerification("Apex Crypto Holdings", null, "fast.cash.now@protonmail.com", null, "rejected", 15, {
+    daysAgo: 14,
+    reason: "No registered domain and contact email does not match the company; GST absent.",
+  }),
+  mkVerification("Skylar Mediaworks", "skylar.media", "admin@skylar-different.com", "19SKYLR3344Q1Z1", "rejected", 9, {
+    daysAgo: 8,
+    reason: "Contact email domain does not match the stated company domain.",
+  }),
+];
+
 // Mirror the backend JobCreate/JobPatch validation so demo mode rejects the same
 // payloads the real API would (otherwise demo silently accepts invalid data and
 // hides a missing client-side guard). Only validates fields that are present.
@@ -462,6 +514,68 @@ export class DemoClient implements ConsoleClient {
       suspended_at: null,
       suspension_reason: null,
     };
+  }
+
+  async listEmployersForVerification(
+    status: EmployerVerificationStatus,
+    cursor?: string,
+  ): Promise<EmployerVerificationPage> {
+    await delay();
+    const rows = verificationQueue
+      .filter((row) => row.status === status)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+    const start = cursor ? Number(cursor) : 0;
+    const limit = 10;
+    return {
+      items: rows.slice(start, start + limit),
+      next_cursor: start + limit < rows.length ? String(start + limit) : null,
+    };
+  }
+
+  async verifyEmployer(employerId: string): Promise<EmployerVerificationRow> {
+    await delay();
+    const row = verificationQueue.find((r) => r.id === employerId);
+    if (!row) throw new ApiError(404, "employer not found");
+    const at = new Date().toISOString();
+    row.status = "verified";
+    row.reviewed_at = at;
+    row.reviewer = "ops@jobify.in";
+    row.reason = null;
+    auditLogs.unshift({
+      id: uuid(),
+      actor_user_id: ME_ID,
+      actor_role: "admin",
+      action: "admin.employer.verified",
+      resource_type: "employer",
+      resource_id: row.id,
+      context: { request_id: uuid(), employer_name: row.name },
+      created_at: at,
+    });
+    return row;
+  }
+
+  async rejectEmployer(employerId: string, reason: string): Promise<EmployerVerificationRow> {
+    await delay();
+    if (reason.length < 1 || reason.length > 255)
+      throw new ApiError(422, "reason: must be 1–255 characters");
+    const row = verificationQueue.find((r) => r.id === employerId);
+    if (!row) throw new ApiError(404, "employer not found");
+    const at = new Date().toISOString();
+    row.status = "rejected";
+    row.reviewed_at = at;
+    row.reviewer = "ops@jobify.in";
+    row.reason = reason;
+    auditLogs.unshift({
+      id: uuid(),
+      actor_user_id: ME_ID,
+      actor_role: "admin",
+      action: "admin.employer.rejected",
+      resource_type: "employer",
+      resource_id: row.id,
+      context: { request_id: uuid(), employer_name: row.name, reason },
+      created_at: at,
+    });
+    return row;
   }
 
   async listMyJobs(status: "open" | "closed", cursor?: string): Promise<RecruiterJobsPage> {

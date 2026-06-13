@@ -1,8 +1,10 @@
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import type { ReactNode } from "react";
 import { Shell } from "./components/Shell";
+import { Analytics } from "./pages/admin/Analytics";
 import { AuditExplorer } from "./pages/admin/AuditExplorer";
 import { UserActions } from "./pages/admin/UserActions";
+import { Verification } from "./pages/admin/Verification";
 import { Applicants } from "./pages/recruiter/Applicants";
 import { Dashboard } from "./pages/recruiter/Dashboard";
 import { Jobs } from "./pages/recruiter/Jobs";
@@ -67,6 +69,14 @@ export function App() {
             }
           >
             <Route
+              path="/admin/analytics"
+              element={
+                <RequireArea area="admin">
+                  <Analytics />
+                </RequireArea>
+              }
+            />
+            <Route
               path="/admin/audit"
               element={
                 <RequireArea area="admin">
@@ -79,6 +89,14 @@ export function App() {
               element={
                 <RequireArea area="admin">
                   <UserActions />
+                </RequireArea>
+              }
+            />
+            <Route
+              path="/admin/verification"
+              element={
+                <RequireArea area="admin">
+                  <Verification />
                 </RequireArea>
               }
             />

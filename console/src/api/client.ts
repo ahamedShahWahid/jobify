@@ -4,6 +4,9 @@ import type {
   AuditLogFilters,
   AuditLogListResponse,
   EmployerRead,
+  EmployerVerificationPage,
+  EmployerVerificationRow,
+  EmployerVerificationStatus,
   InviteRead,
   JobCreate,
   JobPatch,
@@ -23,6 +26,14 @@ export interface ConsoleClient {
   listAuditLogs(filters: AuditLogFilters): Promise<AuditLogListResponse>;
   suspendUser(userId: string, reason: string): Promise<AdminUserRead>;
   unsuspendUser(userId: string): Promise<AdminUserRead>;
+
+  // admin · employer verification queue (GET/POST /v1/admin/employers, migration 0020)
+  listEmployersForVerification(
+    status: EmployerVerificationStatus,
+    cursor?: string,
+  ): Promise<EmployerVerificationPage>;
+  verifyEmployer(employerId: string): Promise<EmployerVerificationRow>;
+  rejectEmployer(employerId: string, reason: string): Promise<EmployerVerificationRow>;
 
   // recruiter
   listMyJobs(status: "open" | "closed", cursor?: string): Promise<RecruiterJobsPage>;
@@ -148,6 +159,27 @@ export class HttpClient implements ConsoleClient {
 
   unsuspendUser(userId: string): Promise<AdminUserRead> {
     return this.request("DELETE", `/v1/admin/users/${userId}/suspend`);
+  }
+
+  // Employer verification review (admin) — GET /v1/admin/employers (status filter
+  // + cursor), POST .../{id}/verify, POST .../{id}/reject {reason}. The live
+  // response is AdminEmployerRead {id,name,gst,status,created_at,reviewed_at,reason};
+  // the demo-only domain/contact_email/reviewer fields are absent here.
+  listEmployersForVerification(
+    status: EmployerVerificationStatus,
+    cursor?: string,
+  ): Promise<EmployerVerificationPage> {
+    const params = new URLSearchParams({ status });
+    if (cursor) params.set("cursor", cursor);
+    return this.request("GET", `/v1/admin/employers?${params}`);
+  }
+
+  verifyEmployer(employerId: string): Promise<EmployerVerificationRow> {
+    return this.request("POST", `/v1/admin/employers/${employerId}/verify`);
+  }
+
+  rejectEmployer(employerId: string, reason: string): Promise<EmployerVerificationRow> {
+    return this.request("POST", `/v1/admin/employers/${employerId}/reject`, { reason });
   }
 
   listMyJobs(status: "open" | "closed", cursor?: string): Promise<RecruiterJobsPage> {
