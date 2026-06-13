@@ -22,6 +22,13 @@
   --danger: #ff5d49;
   --ok: #6fdc8c;
 
+  /* Jobify Blue — the cross-surface brand colour (the logo / rail mark). Sits
+     above the area-keyed accent; documented in the styleguide as --brand-blue.
+     brand-blue-bright is the on-dark-legible step used by the rail mark. */
+  --brand-blue: #0048a8;
+  --brand-blue-bright: #4f8cff;
+  --brand-blue-deep: #003c8f;
+
   /* accent is area-keyed; amber is the neutral/console default */
   --acc: #ffb000;
   --acc-ink: #120c00;
