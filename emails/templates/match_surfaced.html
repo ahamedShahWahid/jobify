@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  JOBIFY — TRANSACTIONAL / DIGEST EMAIL
+  Template:   match_surfaced.html
+  Kind:       match_surfaced   (digest)
+  Channel:    email
+  Status:     PROPOSED  (no email path emits this yet — the scoring worker sets
+              matches.surfaced_at, but no notification is outboxed on surface.
+              This is the product's signature email, designed forward-looking.)
+  Recipient:  APPLICANT (weekly / triggered digest of newly-surfaced matches)
+
+  Payload fields consumed (from a future notifications.payload dict):
+    {{match_count}}    — number of new matches in this digest   e.g. 3
+    {{matches}}        — ordered list (highest score first), each item:
+        {{score}}         — total_score, 0..1, 2-dp          e.g. 0.91
+        {{job_title}}     — role title                       e.g. "Backend Engineer, Payments"
+        {{employer_name}} — company                          e.g. "Greywell Labs"
+        {{verified}}      — employer.verified_at IS NOT NULL  -> ✓ Verified marker
+        {{location}}      — primary location                 e.g. "Bengaluru · Hybrid"
+        {{ctc_band}}      — CTC range                         e.g. "₹28–40 LPA"
+        {{fit}}           — explanation.fit (the "why this fits" line)
+        {{job_id}}        — for a per-row deep link (optional)
+
+  Primary CTA: https://jobify.in/#/explore  (the feed)
+  ============================================================================
+-->
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <title>3 new roles match your r&eacute;sum&eacute; — Jobify</title>
+  <!--[if mso]>
+  <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+  <![endif]-->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; line-height: 100%; outline: none; text-decoration: none; }
+    body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; }
+    a { color: #b23a20; }
+
+    @media screen and (max-width: 600px) {
+      .email-container { width: 100% !important; }
+      .px { padding-left: 22px !important; padding-right: 22px !important; }
+      .h1 { font-size: 34px !important; line-height: 1.02 !important; }
+      .row-px { padding-left: 18px !important; padding-right: 18px !important; }
+      .score-cell { width: 64px !important; }
+      .score-v { font-size: 26px !important; }
+      .btn-a { display: block !important; }
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body, .bg-wrap { background-color: #17120d !important; }
+      .paper { background-color: #221c16 !important; }
+      .paper-2 { background-color: #2a231b !important; }
+      .ink, .h1 { color: #f4efe3 !important; }
+      .lead { color: #d8cfbd !important; }
+      .ink-soft { color: #b6ac98 !important; }
+      .ink-faint { color: #8a8070 !important; }
+      .hair { border-color: #3a3127 !important; }
+      .hair-td { border-color: #3a3127 !important; }
+      .wordmark { color: #f4efe3 !important; }
+      .footer-card { background-color: #1c1610 !important; }
+      .row-card { background-color: #2a231b !important; border-color:#3a3127 !important; }
+      .verified-chip { background-color:#23332a !important; color:#9fc4ad !important; border-color:#3f6650 !important; }
+      .fit-line { color:#f4efe3 !important; }
+      .meta-mono { color:#b6ac98 !important; }
+    }
+  </style>
+</head>
+<body style="margin:0; padding:0; background-color:#efe8da;">
+  <!-- preheader -->
+  <div style="display:none; max-height:0; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px; color:#efe8da; opacity:0;">
+    Three roles just surfaced against your r&eacute;sum&eacute; — top match 0.91. Here&rsquo;s why each one fits.
+    &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847;
+  </div>
+
+  <table role="presentation" class="bg-wrap" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#efe8da;">
+    <tr>
+      <td align="center" style="padding:32px 12px 48px;">
+
+        <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px;">
+
+          <!-- masthead -->
+          <tr>
+            <td class="px" style="padding:0 8px 16px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="left" style="font-family:'Fraunces',Georgia,serif; font-weight:900; font-size:24px; letter-spacing:-0.03em; color:#221c16;" class="wordmark">
+                    Jobify<span style="color:#d8472a;">.</span>
+                  </td>
+                  <td align="right" style="font-family:'JetBrains Mono',ui-monospace,Menlo,monospace; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:#9b917e;" class="ink-faint">
+                    Your&nbsp;Match&nbsp;Digest
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- main card -->
+          <tr>
+            <td class="paper" style="background-color:#f4efe3; border:2px solid #221c16; box-shadow:18px 22px 0 -8px rgba(34,28,22,0.08);">
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr><td style="height:5px; line-height:5px; font-size:5px; background-color:#d8472a;">&nbsp;</td></tr>
+              </table>
+
+              <!-- header -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="px" style="padding:34px 40px 6px;">
+                    <div style="font-family:'JetBrains Mono',ui-monospace,Menlo,monospace; font-size:11px; letter-spacing:0.22em; text-transform:uppercase; color:#b23a20; font-weight:500;">
+                      New Matches
+                    </div>
+                    <h1 class="h1 ink" style="font-family:'Fraunces',Georgia,serif; font-weight:900; font-size:40px; line-height:1; letter-spacing:-0.035em; color:#221c16; margin:14px 0 0;">
+                      <!-- {{match_count}} --><em style="font-style:italic; font-weight:400; color:#d8472a;">3</em>
+                      new roles match<br>your r&eacute;sum&eacute;.
+                    </h1>
+                    <p class="lead ink-soft" style="margin:16px 0 0; font-family:'Hanken Grotesk',-apple-system,'Segoe UI',Arial,sans-serif; font-size:15px; line-height:1.55; color:#6c6354;">
+                      We scored your profile against every open role. These three crossed the bar this week&mdash;ordered by fit, with a one-line reason on each.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- heavy rule -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr><td class="px" style="padding:24px 40px 0;"><div style="border-top:2px solid #221c16; font-size:0; line-height:0;">&nbsp;</div></td></tr>
+              </table>
+
+              <!-- ============ MATCH ROW 1 ============ -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="px" style="padding:22px 40px 0;">
+                    <table role="presentation" class="row-card" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f9f5ec; border:1.5px solid #c4b89c;">
+                      <tr>
+                        <!-- score -->
+                        <td class="score-cell" valign="top" width="84" style="width:84px; padding:18px 0 18px 20px;">
+                          <div class="score-v" style="font-family:'JetBrains Mono',ui-monospace,Menlo,monospace; font-weight:700; font-size:30px; line-height:0.9; letter-spacing:-0.02em; color:#d8472a;">
+                            <!-- {{matches[0].score}} -->0.91
+                          </div>
+                          <div style="font-family:'JetBrains Mono',ui-monospace,Menlo,monospace; font-size:8px; letter-spacing:0.16em; text-transform:uppercase; color:#9b917e; margin-top:4px;">
+                            Match
+                          </div>
+                        </td>
+                        <!-- content -->
+                        <td valign="top" style="padding:18px 20px 18px 8px;">
+                          <div class="ink" style="font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:20px; line-height:1.12; color:#221c16;">
+                            <!-- {{matches[0].job_title}} -->Backend Engineer, Payments
+                          </div>
+                          <div class="meta-mono" style="margin-top:5px; font-family:'Hanken Grotesk',-apple-system,'Segoe UI',Arial,sans-serif; font-size:13px; color:#6c6354;">
+                            <!-- {{matches[0].employer_name}} -->Greywell Labs&nbsp;
+                            <!-- {{matches[0].verified}} -->
+                            <span class="verified-chip" style="font-family:'JetBrains Mono',ui-monospace,Menlo,monospace; font-size:9px; letter-spacing:0.08em; text-transform:uppercase; color:#1f4034; background-color:#cfdcd2; border:1px solid #1f4034; padding:1px 6px; white-space:nowrap;">&#10003;&nbsp;Verified</span>
+                          </div>
+                          <div class="meta-mono" style="margin-top:7px; font-family:'JetBrains Mono',ui-monospace,Menlo,monospace; font-size:11px; letter-spacing:0.04em; color:#6c6354;">
+                            <!-- {{matches[0].location}} -->Bengaluru &middot; Hybrid
+                            &nbsp;&nbsp;<span style="color:#c4b89c;">|</span>&nbsp;&nbsp;
+                            <!-- {{matches[0].ctc_band}} -->&#8377;28&ndash;40&nbsp;LPA
+                          </div>
+                          <!-- the differentiator: why this fits -->
+                          <div class="fit-line ink" style="margin-top:10px; padding-left:12px; border-left:3px solid #d8472a; font-family:'Fraunces',Georgia,serif; font-style:italic; font-size:14.5px; line-height:1.4; color:#221c16;">
+                            <!-- {{matches[0].fit}} -->Your asyncpg + Postgres depth and payments-ledger work map almost directly onto their reconciliation stack.
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- ============ MATCH ROW 2 ============ -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="px" style="padding:12px 40px 0;">
+                    <table role="presentation" class="row-card" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f9f5ec; border:1.5px solid #c4b89c;">
+                      <tr>
+                        <td class="score-cell" valign="top" width="84" style="width:84px; padding:18px 0 18px 20px;">
+                          <div class="score-v" style="font-family:'JetBrains Mono',ui-monospace,Menlo,monospace; font-weight:700; font-size:30px; line-height:0.9; letter-spacing:-0.02em; color:#d8472a;">
+                            <!-- {{matches[1].score}} -->0.86
+                          </div>
+                          <div style="font-family:'JetBrains Mono',ui-monospace,Menlo,monospace; font-size:8px; letter-spacing:0.16em; text-transform:uppercase; color:#9b917e; margin-top:4px;">
+                            Match
+                          </div>
+                        </td>
+                        <td valign="top" style="padding:18px 20px 18px 8px;">
+                          <div class="ink" style="font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:20px; line-height:1.12; color:#221c16;">
+                            <!-- {{matches[1].job_title}} -->Platform Engineer (Data)
+                          </div>
+                          <div class="meta-mono" style="margin-top:5px; font-family:'Hanken Grotesk',-apple-system,'Segoe UI',Arial,sans-serif; font-size:13px; color:#6c6354;">
+                            <!-- {{matches[1].employer_name}} -->Northwind Analytics&nbsp;
+                            <!-- {{matches[1].verified}} -->
+                            <span class="verified-chip" style="font-family:'JetBrains Mono',ui-monospace,Menlo,monospace; font-size:9px; letter-spacing:0.08em; text-transform:uppercase; color:#1f4034; background-color:#cfdcd2; border:1px solid #1f4034; padding:1px 6px; white-space:nowrap;">&#10003;&nbsp;Verified</span>
+                          </div>
+                          <div class="meta-mono" style="margin-top:7px; font-family:'JetBrains Mono',ui-monospace,Menlo,monospace; font-size:11px; letter-spacing:0.04em; color:#6c6354;">
+                            <!-- {{matches[1].location}} -->Remote (India)
+                            &nbsp;&nbsp;<span style="color:#c4b89c;">|</span>&nbsp;&nbsp;
+                            <!-- {{matches[1].ctc_band}} -->&#8377;24&ndash;34&nbsp;LPA
+                          </div>
+                          <div class="fit-line ink" style="margin-top:10px; padding-left:12px; border-left:3px solid #d8472a; font-family:'Fraunces',Georgia,serif; font-style:italic; font-size:14.5px; line-height:1.4; color:#221c16;">
+                            <!-- {{matches[1].fit}} -->Strong overlap on Python pipelines and pgvector; less direct exposure to their Spark layer, but the core fit is real.
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- ============ MATCH ROW 3 ============ -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="px" style="padding:12px 40px 0;">
+                    <table role="presentation" class="row-card" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f9f5ec; border:1.5px solid #c4b89c;">
+                      <tr>
+                        <td class="score-cell" valign="top" width="84" style="width:84px; padding:18px 0 18px 20px;">
+                          <div class="score-v" style="font-family:'JetBrains Mono',ui-monospace,Menlo,monospace; font-weight:700; font-size:30px; line-height:0.9; letter-spacing:-0.02em; color:#d8472a;">
+                            <!-- {{matches[2].score}} -->0.83
+                          </div>
+                          <div style="font-family:'JetBrains Mono',ui-monospace,Menlo,monospace; font-size:8px; letter-spacing:0.16em; text-transform:uppercase; color:#9b917e; margin-top:4px;">
+                            Match
+                          </div>
+                        </td>
+                        <td valign="top" style="padding:18px 20px 18px 8px;">
+                          <div class="ink" style="font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:20px; line-height:1.12; color:#221c16;">
+                            <!-- {{matches[2].job_title}} -->Senior Software Engineer
+                          </div>
+                          <div class="meta-mono" style="margin-top:5px; font-family:'Hanken Grotesk',-apple-system,'Segoe UI',Arial,sans-serif; font-size:13px; color:#6c6354;">
+                            <!-- {{matches[2].employer_name}} -->Tindel &amp; Co.
+                            <!-- {{matches[2].verified}} = false -> no chip -->
+                          </div>
+                          <div class="meta-mono" style="margin-top:7px; font-family:'JetBrains Mono',ui-monospace,Menlo,monospace; font-size:11px; letter-spacing:0.04em; color:#6c6354;">
+                            <!-- {{matches[2].location}} -->Pune &middot; On-site
+                            &nbsp;&nbsp;<span style="color:#c4b89c;">|</span>&nbsp;&nbsp;
+                            <!-- {{matches[2].ctc_band}} -->&#8377;22&ndash;30&nbsp;LPA
+                          </div>
+                          <div class="fit-line ink" style="margin-top:10px; padding-left:12px; border-left:3px solid #d8472a; font-family:'Fraunces',Georgia,serif; font-style:italic; font-size:14.5px; line-height:1.4; color:#221c16;">
+                            <!-- {{matches[2].fit}} -->A broad backend role that rewards your generalist range; the seniority and stack line up well.
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- primary CTA -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="px" align="center" style="padding:30px 40px 8px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td align="center" bgcolor="#d8472a" style="background-color:#d8472a; border:2px solid #221c16;">
+                          <!--[if mso]>
+                          <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://jobify.in/#/explore" style="height:48px;v-text-anchor:middle;width:200px;" arcsize="0%" strokecolor="#221c16" fillcolor="#d8472a">
+                            <w:anchorlock/><center style="color:#f4efe3;font-family:sans-serif;font-size:15px;font-weight:bold;">Open my feed &rarr;</center>
+                          </v:roundrect>
+                          <![endif]-->
+                          <!--[if !mso]><!-- -->
+                          <a class="btn-a" href="https://jobify.in/#/explore" target="_blank"
+                             style="display:inline-block; font-family:'Hanken Grotesk',-apple-system,'Segoe UI',Arial,sans-serif; font-size:15px; font-weight:700; color:#f4efe3; text-decoration:none; padding:14px 30px; letter-spacing:0.01em;">
+                            Open my feed&nbsp;&rarr;
+                          </a>
+                          <!--<![endif]-->
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- preferences note -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="px" align="center" style="padding:14px 40px 34px;">
+                    <p class="ink-soft" style="margin:0; font-family:'Hanken Grotesk',-apple-system,'Segoe UI',Arial,sans-serif; font-size:12.5px; line-height:1.55; color:#6c6354;">
+                      You control these digests in your
+                      <a href="https://jobify.in/#/profile" target="_blank" style="color:#b23a20; text-decoration:underline;">privacy settings</a>.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- footer -->
+          <tr>
+            <td class="footer-card" style="padding:28px 16px 8px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding:0 8px;">
+                    <div style="font-family:'Fraunces',Georgia,serif; font-weight:900; font-size:18px; letter-spacing:-0.03em; color:#221c16;" class="wordmark">
+                      Jobify<span style="color:#d8472a;">.</span>
+                    </div>
+                    <p class="ink-soft" style="margin:10px 0 0; font-family:'Hanken Grotesk',-apple-system,'Segoe UI',Arial,sans-serif; font-size:12px; line-height:1.6; color:#6c6354;">
+                      Jobify Technologies &middot; Bengaluru, India
+                    </p>
+                    <p style="margin:10px 0 0; font-family:'Hanken Grotesk',-apple-system,'Segoe UI',Arial,sans-serif; font-size:12px; line-height:1.6;">
+                      <a href="https://jobify.in/#/profile" target="_blank" style="color:#b23a20; text-decoration:underline;">Manage email preferences</a>
+                      <span class="ink-faint" style="color:#9b917e;">&nbsp;&middot;&nbsp;</span>
+                      <a href="https://jobify.in/#/profile" target="_blank" style="color:#b23a20; text-decoration:underline;">Unsubscribe</a>
+                    </p>
+                    <p class="ink-faint" style="margin:14px 0 0; font-family:'Fraunces',Georgia,serif; font-style:italic; font-size:13px; color:#9b917e;">
+                      Made in India &#127470;&#127475;
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

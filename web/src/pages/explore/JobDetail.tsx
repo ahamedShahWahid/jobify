@@ -153,6 +153,13 @@ export function JobDetail() {
                       </div>
                     ))}
                   </div>
+                  <Link
+                    to={`/explore/jobs/${job.id}/why`}
+                    className="link-arrow"
+                    style={{ fontSize: 13, marginTop: 14 }}
+                  >
+                    See the full breakdown <span className="arr">→</span>
+                  </Link>
                 </div>
               </>
             ) : (

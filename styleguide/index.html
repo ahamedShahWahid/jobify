@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Jobify Design System — Specimen Catalogue</title>
+    <meta
+      name="description"
+      content="A living specimen catalogue documenting the design languages of all three Jobify frontend properties — Console, Web, and Employers — side by side."
+    />
+
+    <!-- styleguide's own chrome: Spectral display + Martian Mono labels -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,600;0,800;1,300;1,400&family=Martian+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- CONSOLE fonts (verbatim from console/index.html) -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,500;12..96,700;12..96,800&family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500&family=Spline+Sans+Mono:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <!-- WEB fonts (verbatim from web/index.html) -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,900;1,9..144,400;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- EMPLOYERS fonts (verbatim from employers/index.html) -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="styleguide.css" />
+  </head>
+  <body>
+    <!-- ===================================================================
+         COVER / MASTHEAD
+         =================================================================== -->
+    <header class="cover">
+      <div class="wrap">
+        <div class="cover-top rise r1">
+          <span class="cover-edition">Jobify · Design System</span>
+          <span class="cover-edition">Specimen Catalogue · No. 01 · 2026</span>
+        </div>
+        <h1 class="rise r2">Jobify<br /><em>Design System</em></h1>
+        <p class="cover-thesis rise r3">
+          Three properties, three voices, one platform — set side by side, in
+          their own type and ink.
+        </p>
+
+        <nav class="cover-contents rise r4" aria-label="Contents">
+          <a class="toc-item" href="#overview">
+            <span class="no">00</span>
+            <span class="ti">Overview</span>
+            <span class="ds">Principles &amp; the three properties</span>
+          </a>
+          <a class="toc-item" href="#console">
+            <span class="no">01</span>
+            <span class="ti">Console</span>
+            <span class="ds">Control-room editorial · dark</span>
+          </a>
+          <a class="toc-item" href="#web">
+            <span class="no">02</span>
+            <span class="ti">Web</span>
+            <span class="ds">Editorial broadsheet · warm</span>
+          </a>
+          <a class="toc-item" href="#employers">
+            <span class="no">03</span>
+            <span class="ti">Employers</span>
+            <span class="ds">Engineering prospectus · cool</span>
+          </a>
+          <a class="toc-item" href="#compare">
+            <span class="no">04</span>
+            <span class="ti">Comparison</span>
+            <span class="ds">The three, in one table</span>
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- ===================================================================
+         00 · OVERVIEW
+         =================================================================== -->
+    <section class="section" id="overview">
+      <div class="wrap">
+        <div class="sec-head rise r1">
+          <span class="no">00</span>
+          <h2>Overview</h2>
+          <p class="meta spec">One platform · three audiences · three voices</p>
+        </div>
+
+        <p class="lede rise r2">
+          Jobify ships three distinct frontends. Each speaks to a different
+          audience in a deliberately different voice — yet all are built on the
+          same structural ideas: hand-authored CSS-variable token systems, no UI
+          framework, and a single orchestrated load reveal. This catalogue is the
+          shared reference: the tokens themselves live in each app&rsquo;s own
+          <code>:root</code> block.
+        </p>
+
+        <div class="principles rise r3">
+          <div class="principle">
+            <span class="no">P1</span>
+            <h3>Tokens, not theming</h3>
+            <p>
+              Every surface, ink, accent and hairline is a CSS custom property in
+              a single <code>:root</code> block per app. The token <em>is</em> the
+              source of truth — this page only mirrors it.
+            </p>
+          </div>
+          <div class="principle">
+            <span class="no">P2</span>
+            <h3>No framework</h3>
+            <p>
+              Plain, additive CSS. Components are class-composed, not imported;
+              the cascade is the design system. Nothing to upgrade, nothing to
+              fight.
+            </p>
+          </div>
+          <div class="principle">
+            <span class="no">P3</span>
+            <h3>One reveal</h3>
+            <p>
+              A single staggered <code>rise</code> animation on load, guarded by
+              <code>prefers-reduced-motion</code>. Motion sets the rhythm; it is
+              never load-bearing.
+            </p>
+          </div>
+          <div class="principle">
+            <span class="no">P4</span>
+            <h3>Distinct voice</h3>
+            <p>
+              A control room, a broadsheet, a prospectus. Each property earns its
+              own typefaces and palette so the audience always knows which room
+              they are in.
+            </p>
+          </div>
+        </div>
+
+        <div class="app-cards rise r4">
+          <a class="app-card" href="#console" aria-label="Console section">
+            <div class="swatch-strip">
+              <span style="background: #080b09"></span>
+              <span style="background: #121712"></span>
+              <span style="background: #ffb000"></span>
+              <span style="background: #4fe3c1"></span>
+              <span style="background: #e9e4d6"></span>
+            </div>
+            <div class="ac-body">
+              <div class="ac-name" style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800">
+                Console
+              </div>
+              <div class="ac-aud">Admins &amp; recruiters · internal</div>
+              <p class="ac-line">
+                A dark, phosphor-ink control room. Editorial display over
+                instrument-grade mono.
+              </p>
+              <div class="ac-foot">
+                <span style="font-family: 'Bricolage Grotesque', sans-serif">Bricolage Grotesque</span>
+                <span class="go">01 →</span>
+              </div>
+            </div>
+          </a>
+
+          <a class="app-card" href="#web" aria-label="Web section">
+            <div class="swatch-strip">
+              <span style="background: #f4efe3"></span>
+              <span style="background: #e4dac4"></span>
+              <span style="background: #d8472a"></span>
+              <span style="background: #1f4034"></span>
+              <span style="background: #221c16"></span>
+            </div>
+            <div class="ac-body">
+              <div class="ac-name" style="font-family: 'Fraunces', serif; font-weight: 900">Web</div>
+              <div class="ac-aud">Applicants · public</div>
+              <p class="ac-line">
+                A warm editorial broadsheet on bone paper, with a persimmon
+                signature and forest-green trust.
+              </p>
+              <div class="ac-foot">
+                <span style="font-family: 'Fraunces', serif; font-weight: 900">Fraunces</span>
+                <span class="go">02 →</span>
+              </div>
+            </div>
+          </a>
+
+          <a class="app-card" href="#employers" aria-label="Employers section">
+            <div class="swatch-strip">
+              <span style="background: #f3f4f1"></span>
+              <span style="background: #e3e6df"></span>
+              <span style="background: #f3a712"></span>
+              <span style="background: #3a6ea5"></span>
+              <span style="background: #0e1b2a"></span>
+            </div>
+            <div class="ac-body">
+              <div class="ac-name" style="font-family: 'Archivo', sans-serif; font-weight: 900">
+                Employers
+              </div>
+              <div class="ac-aud">Recruiters · acquisition</div>
+              <p class="ac-line">
+                An engineering prospectus: cool navy ink, a drafting grid, a
+                single signal-amber accent.
+              </p>
+              <div class="ac-foot">
+                <span style="font-family: 'Archivo', sans-serif; font-weight: 800">Archivo</span>
+                <span class="go">03 →</span>
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         01 · CONSOLE
+         =================================================================== -->
+    <section class="app-section app-console" id="console">
+      <div class="wrap">
+        <div class="app-banner rise r1">
+          <div>
+            <h2 class="ab-name display">Console<em>.</em></h2>
+            <div class="ab-aud spec">01 · Admins &amp; recruiters · internal tooling</div>
+          </div>
+          <p class="ab-aes">
+            &ldquo;Control-room editorial&rdquo; — a dark phosphor-ink base, warm
+            paper type, area-keyed accent.
+          </p>
+        </div>
+
+        <div class="specimen-grid">
+          <!-- TYPE SPECIMEN -->
+          <div class="rise r2">
+            <div class="block-label">
+              <span class="bl-no">A</span><span class="bl-t">Type Specimen</span>
+              <span class="bl-set">Display · Bricolage Grotesque 800</span>
+            </div>
+            <div class="type-row" style="border-top: none; padding-top: 0">
+              <p class="type-big" style="font-size: clamp(34px, 6vw, 72px)">
+                Quartz glyph vox nymphs flag jud
+              </p>
+              <div class="size-ramp">
+                <div class="sr"><span class="sr-px">46px</span><span class="type-big">Surface review</span></div>
+                <div class="sr"><span class="sr-px">30px</span><span class="type-big">Audit pulse</span></div>
+                <div class="sr"><span class="sr-px">19px</span><span class="type-big">Moderation queue</span></div>
+              </div>
+            </div>
+            <div class="type-row">
+              <div class="cmp-cap" style="color: var(--muted)">Body / data · Spline Sans Mono 400</div>
+              <p class="specimen-body" style="font-size: 13px; max-width: 60ch; margin: 0">
+                The console renders plain-text stdout to Fluent Bit. Every row
+                carries a requestId and an actor snapshot — append-only, never
+                mutated. <span style="font-variant-numeric: tabular-nums">0123456789</span> ·
+                <span style="color: var(--acc)">applicant.row-missing</span>
+              </p>
+            </div>
+            <div class="type-row">
+              <div class="cmp-cap" style="color: var(--muted)">Flavor · Newsreader italic 400</div>
+              <p class="specimen-body ab-aes" style="font-family: 'Newsreader', serif; font-style: italic; font-size: 18px; margin: 0">
+                &ldquo;Nothing surfaced yet — the queue is quiet.&rdquo;
+              </p>
+            </div>
+          </div>
+
+          <!-- COLOR TOKENS -->
+          <div class="rise r3">
+            <div class="block-label">
+              <span class="bl-no">B</span><span class="bl-t">Color Tokens</span>
+              <span class="bl-set">:root + [data-area] accents</span>
+            </div>
+            <div class="swatches">
+              <div class="sw"><div class="chip" style="background: #080b09"></div><div class="meta"><div class="tok">--bg0</div><div class="hex">#080b09</div></div></div>
+              <div class="sw"><div class="chip" style="background: #0d110e"></div><div class="meta"><div class="tok">--bg1</div><div class="hex">#0d110e</div></div></div>
+              <div class="sw"><div class="chip" style="background: #121712"></div><div class="meta"><div class="tok">--bg2</div><div class="hex">#121712</div></div></div>
+              <div class="sw"><div class="chip" style="background: #1a201a"></div><div class="meta"><div class="tok">--bg3</div><div class="hex">#1a201a</div></div></div>
+              <div class="sw"><div class="chip" style="background: #e9e4d6"></div><div class="meta"><div class="tok">--paper</div><div class="hex">#e9e4d6</div></div></div>
+              <div class="sw"><div class="chip" style="background: #b7b2a3"></div><div class="meta"><div class="tok">--paper-dim</div><div class="hex">#b7b2a3</div></div></div>
+              <div class="sw"><div class="chip" style="background: #6f7868"></div><div class="meta"><div class="tok">--muted</div><div class="hex">#6f7868</div></div></div>
+              <div class="sw"><div class="chip" style="background: #232b23"></div><div class="meta"><div class="tok">--hairline</div><div class="hex">#232b23</div></div></div>
+              <div class="sw"><div class="chip" style="background: #ffb000"></div><div class="meta"><div class="tok">--acc · admin</div><div class="hex">#ffb000</div></div></div>
+              <div class="sw"><div class="chip" style="background: #4fe3c1"></div><div class="meta"><div class="tok">--acc · recruiter</div><div class="hex">#4fe3c1</div></div></div>
+              <div class="sw"><div class="chip" style="background: #6fdc8c"></div><div class="meta"><div class="tok">--ok</div><div class="hex">#6fdc8c</div></div></div>
+              <div class="sw"><div class="chip" style="background: #ff5d49"></div><div class="meta"><div class="tok">--danger</div><div class="hex">#ff5d49</div></div></div>
+            </div>
+          </div>
+
+          <!-- COMPONENT SPECIMENS -->
+          <div class="rise r4">
+            <div class="block-label">
+              <span class="bl-no">C</span><span class="bl-t">Component Specimens</span>
+              <span class="bl-set">Tiles · table.console · chips &amp; LEDs</span>
+            </div>
+            <div class="stage" style="background: var(--bg0)">
+              <div>
+                <div class="cmp-cap" style="color: var(--muted)">Stat tiles</div>
+                <div class="c-tiles">
+                  <div class="c-tile"><div class="k">Live users</div><div class="value">12,408</div></div>
+                  <div class="c-tile"><div class="k">Surfaced</div><div class="value acc">3,927</div></div>
+                  <div class="c-tile"><div class="k">Flagged</div><div class="value">14</div></div>
+                </div>
+              </div>
+
+              <div>
+                <div class="cmp-cap" style="color: var(--muted)">Moderation table</div>
+                <table class="c-table">
+                  <thead>
+                    <tr><th>Actor</th><th>Action</th><th>Match score</th><th>State</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>R. Okafor <span class="c-id">· a1f9</span></td>
+                      <td>resume.downloaded</td>
+                      <td><span class="scorebar"><span class="track"><span class="fill" style="width: 78%"></span></span> 0.78</span></td>
+                      <td><span class="led"></span> live</td>
+                    </tr>
+                    <tr>
+                      <td>system <span class="c-id">· cron</span></td>
+                      <td>consent.swept</td>
+                      <td><span class="scorebar"><span class="track"><span class="fill" style="width: 55%"></span></span> 0.55</span></td>
+                      <td><span class="led amber"></span> review</td>
+                    </tr>
+                    <tr>
+                      <td>D. Mehta <span class="c-id">· 7c20</span></td>
+                      <td>admin.user.suspended</td>
+                      <td><span class="scorebar"><span class="track"><span class="fill" style="width: 31%"></span></span> 0.31</span></td>
+                      <td><span class="led red"></span> blocked</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div>
+                <div class="cmp-cap" style="color: var(--muted)">Chips, LEDs &amp; buttons</div>
+                <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap">
+                  <span class="c-chip">Surfaced</span>
+                  <span class="c-chip ok">Verified</span>
+                  <span class="led"></span><span class="led amber"></span><span class="led red"></span>
+                  <span class="c-btn">Approve</span>
+                  <span class="c-btn ghost">Dismiss</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         02 · WEB
+         =================================================================== -->
+    <section class="app-section app-web" id="web">
+      <div class="wrap">
+        <div class="app-banner rise r1">
+          <div>
+            <h2 class="ab-name">Web<em>.</em></h2>
+            <div class="ab-aud spec">02 · Applicants · public marketing &amp; explore</div>
+          </div>
+          <p class="ab-aes">
+            &ldquo;Warm editorial broadsheet&rdquo; — bone paper, persimmon
+            signature, forest-green verified.
+          </p>
+        </div>
+
+        <div class="specimen-grid">
+          <!-- TYPE -->
+          <div class="rise r2">
+            <div class="block-label">
+              <span class="bl-no">A</span><span class="bl-t">Type Specimen</span>
+              <span class="bl-set">Display · Fraunces 900 (opsz)</span>
+            </div>
+            <div class="type-row" style="border-top: none; padding-top: 0">
+              <p class="type-big" style="font-size: clamp(34px, 6.5vw, 78px)">
+                Sphinx of black quartz, <em style="font-style: italic; font-weight: 400; color: var(--accent)">judge</em> my vow
+              </p>
+              <div class="size-ramp">
+                <div class="sr"><span class="sr-px">52px</span><span class="type-big">Find your match</span></div>
+                <div class="sr"><span class="sr-px">30px</span><span class="type-big">Why this fits</span></div>
+                <div class="sr"><span class="sr-px">21px</span><span class="type-big">Senior Backend Engineer</span></div>
+              </div>
+            </div>
+            <div class="type-row">
+              <div class="cmp-cap" style="color: var(--ink-faint)">Body · Hanken Grotesk 400 / 600</div>
+              <p class="specimen-body" style="font-size: 15px; max-width: 60ch; margin: 0; color: var(--ink-soft)">
+                Every match is explained, not just scored — a one-line fit and an
+                honest caveat. <strong style="color: var(--ink-w); font-weight: 600">Weights are transparent.</strong>
+              </p>
+            </div>
+            <div class="type-row">
+              <div class="cmp-cap" style="color: var(--ink-faint)">Data · JetBrains Mono 500</div>
+              <p style="font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 0.04em; margin: 0; color: var(--ink-soft); font-variant-numeric: tabular-nums">
+                MATCH 0.83 · VECTOR 0.71 · 0123456789
+              </p>
+            </div>
+          </div>
+
+          <!-- COLORS -->
+          <div class="rise r3">
+            <div class="block-label">
+              <span class="bl-no">B</span><span class="bl-t">Color Tokens</span>
+              <span class="bl-set">:root · bone paper system</span>
+            </div>
+            <div class="swatches">
+              <div class="sw"><div class="chip" style="background: #f4efe3"></div><div class="meta"><div class="tok">--paper</div><div class="hex">#f4efe3</div></div></div>
+              <div class="sw"><div class="chip" style="background: #ece4d3"></div><div class="meta"><div class="tok">--paper-2</div><div class="hex">#ece4d3</div></div></div>
+              <div class="sw"><div class="chip" style="background: #e4dac4"></div><div class="meta"><div class="tok">--paper-3</div><div class="hex">#e4dac4</div></div></div>
+              <div class="sw"><div class="chip" style="background: #221c16"></div><div class="meta"><div class="tok">--ink</div><div class="hex">#221c16</div></div></div>
+              <div class="sw"><div class="chip" style="background: #6c6354"></div><div class="meta"><div class="tok">--ink-soft</div><div class="hex">#6c6354</div></div></div>
+              <div class="sw"><div class="chip" style="background: #d9cfb9"></div><div class="meta"><div class="tok">--line</div><div class="hex">#d9cfb9</div></div></div>
+              <div class="sw"><div class="chip" style="background: #d8472a"></div><div class="meta"><div class="tok">--accent</div><div class="hex">#d8472a</div></div></div>
+              <div class="sw"><div class="chip" style="background: #b23a20"></div><div class="meta"><div class="tok">--accent-deep</div><div class="hex">#b23a20</div></div></div>
+              <div class="sw"><div class="chip" style="background: #1f4034"></div><div class="meta"><div class="tok">--forest</div><div class="hex">#1f4034</div></div></div>
+              <div class="sw"><div class="chip" style="background: #cfdcd2"></div><div class="meta"><div class="tok">--forest-soft</div><div class="hex">#cfdcd2</div></div></div>
+              <div class="sw"><div class="chip" style="background: #b8842f"></div><div class="meta"><div class="tok">--gold</div><div class="hex">#b8842f</div></div></div>
+              <div class="sw"><div class="chip" style="background: #f3d9cf"></div><div class="meta"><div class="tok">--accent-wash</div><div class="hex">#f3d9cf</div></div></div>
+            </div>
+          </div>
+
+          <!-- COMPONENTS -->
+          <div class="rise r4">
+            <div class="block-label">
+              <span class="bl-no">C</span><span class="bl-t">Component Specimens</span>
+              <span class="bl-set">Match jobcard · tags · buttons</span>
+            </div>
+            <div class="stage" style="background: var(--paper-2); display: grid; gap: 26px">
+              <div>
+                <div class="cmp-cap" style="color: var(--ink-faint)">Match jobcard (with score stamp)</div>
+                <div class="w-jobcard">
+                  <div class="w-jobcard-top">
+                    <div>
+                      <h3>Senior Backend Engineer</h3>
+                      <div class="org">
+                        Northwind Labs
+                        <span class="w-tag verified">✓ Verified</span>
+                      </div>
+                    </div>
+                    <div class="w-stamp"><div class="v">83</div><div class="l">Match</div></div>
+                  </div>
+                  <div class="w-meta">
+                    <span class="w-tag accent">Remote</span>
+                    <span class="w-tag">₹38–52L</span>
+                    <span class="w-tag">5–8 yrs</span>
+                  </div>
+                  <p class="w-fit">
+                    Your Python &amp; async-Postgres depth maps cleanly onto their
+                    ingest pipeline — though they lean harder on Kafka than your
+                    history shows.
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <div class="cmp-cap" style="color: var(--ink-faint)">Buttons</div>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center">
+                  <span class="w-btn">Apply</span>
+                  <span class="w-btn ink">Save job</span>
+                  <span class="w-btn ghost">Why this match →</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         03 · EMPLOYERS
+         =================================================================== -->
+    <section class="app-section app-employers" id="employers">
+      <div class="wrap">
+        <div class="app-banner rise r1">
+          <div>
+            <h2 class="ab-name">For <em>Employers</em></h2>
+            <div class="ab-aud spec">03 · Recruiters · acquisition surface</div>
+          </div>
+          <p class="ab-aes">
+            &ldquo;Engineering prospectus&rdquo; — cool navy ink, a hairline
+            drafting grid, one signal-amber accent.
+          </p>
+        </div>
+
+        <div class="specimen-grid">
+          <!-- TYPE -->
+          <div class="rise r2">
+            <div class="block-label">
+              <span class="bl-no">A</span><span class="bl-t">Type Specimen</span>
+              <span class="bl-set">Display · Archivo 900</span>
+            </div>
+            <div class="type-row" style="border-top: none; padding-top: 0">
+              <p class="type-big" style="font-size: clamp(32px, 6vw, 72px)">
+                Hire the <em>ranked</em> shortlist, not the pile
+              </p>
+              <div class="size-ramp">
+                <div class="sr"><span class="sr-px">44px</span><span class="type-big">Verified employers</span></div>
+                <div class="sr"><span class="sr-px">28px</span><span class="type-big">How matching works</span></div>
+                <div class="sr"><span class="sr-px">19px</span><span class="type-big">Pricing &amp; plans</span></div>
+              </div>
+            </div>
+            <div class="type-row">
+              <div class="cmp-cap" style="color: var(--ink-faint-e)">Body · IBM Plex Sans 400 / 600</div>
+              <p class="specimen-body" style="font-size: 15px; max-width: 60ch; margin: 0; color: var(--ink-soft-e)">
+                Applicants arrive pre-scored against your role, each with a fit
+                line and a caveat. <strong style="color: var(--ink-e); font-weight: 600">Every score is auditable.</strong>
+              </p>
+            </div>
+            <div class="type-row">
+              <div class="cmp-cap" style="color: var(--ink-faint-e)">Data · IBM Plex Mono 500</div>
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; letter-spacing: 0.04em; margin: 0; color: var(--slate); font-variant-numeric: tabular-nums">
+                SCORE 0.91 · RANK 01/240 · 0123456789
+              </p>
+            </div>
+          </div>
+
+          <!-- COLORS -->
+          <div class="rise r3">
+            <div class="block-label">
+              <span class="bl-no">B</span><span class="bl-t">Color Tokens</span>
+              <span class="bl-set">:root · navy + signal-amber</span>
+            </div>
+            <div class="swatches">
+              <div class="sw"><div class="chip" style="background: #f3f4f1"></div><div class="meta"><div class="tok">--paper</div><div class="hex">#f3f4f1</div></div></div>
+              <div class="sw"><div class="chip" style="background: #eceee9"></div><div class="meta"><div class="tok">--paper-2</div><div class="hex">#eceee9</div></div></div>
+              <div class="sw"><div class="chip" style="background: #fbfcfa"></div><div class="meta"><div class="tok">--panel</div><div class="hex">#fbfcfa</div></div></div>
+              <div class="sw"><div class="chip" style="background: #0e1b2a"></div><div class="meta"><div class="tok">--ink</div><div class="hex">#0e1b2a</div></div></div>
+              <div class="sw"><div class="chip" style="background: #213347"></div><div class="meta"><div class="tok">--ink-2</div><div class="hex">#213347</div></div></div>
+              <div class="sw"><div class="chip" style="background: #4f6173"></div><div class="meta"><div class="tok">--ink-soft</div><div class="hex">#4f6173</div></div></div>
+              <div class="sw"><div class="chip" style="background: #f3a712"></div><div class="meta"><div class="tok">--amber</div><div class="hex">#f3a712</div></div></div>
+              <div class="sw"><div class="chip" style="background: #e8930c"></div><div class="meta"><div class="tok">--amber-deep</div><div class="hex">#e8930c</div></div></div>
+              <div class="sw"><div class="chip" style="background: #3a6ea5"></div><div class="meta"><div class="tok">--slate</div><div class="hex">#3a6ea5</div></div></div>
+              <div class="sw"><div class="chip" style="background: #2f7d5b"></div><div class="meta"><div class="tok">--good</div><div class="hex">#2f7d5b</div></div></div>
+              <div class="sw"><div class="chip" style="background: rgba(14,27,42,0.22)"></div><div class="meta"><div class="tok">--line-strong</div><div class="hex">ink @ 22%</div></div></div>
+              <div class="sw"><div class="chip" style="background: rgba(243,167,18,0.12)"></div><div class="meta"><div class="tok">--amber-wash</div><div class="hex">amber @ 12%</div></div></div>
+            </div>
+          </div>
+
+          <!-- COMPONENTS -->
+          <div class="rise r4">
+            <div class="block-label">
+              <span class="bl-no">C</span><span class="bl-t">Component Specimens</span>
+              <span class="bl-set">Ranked applicant · pricing tier · amber CTA</span>
+            </div>
+            <div class="stage" style="background: var(--paper-2e); display: grid; gap: 26px">
+              <div>
+                <div class="cmp-cap" style="color: var(--ink-faint-e)">Ranked applicant card</div>
+                <div class="e-applicant">
+                  <div class="e-ar-head">
+                    <div class="e-avatar">AK</div>
+                    <div class="e-ar-id">
+                      <div class="nm">Anika Kulkarni</div>
+                      <div class="role">Backend · 6 yrs</div>
+                    </div>
+                    <div class="e-ar-score"><div class="v">0.91</div><div class="l">Match</div></div>
+                  </div>
+                  <div class="e-bar"><span style="width: 91%"></span></div>
+                  <div class="e-ar-grid">
+                    <div class="e-cell fit">
+                      <div class="k">Fit</div>
+                      <p>Deep async-Postgres &amp; pgvector experience maps directly to the ingest role.</p>
+                    </div>
+                    <div class="e-cell caveat">
+                      <div class="k">Caveat</div>
+                      <p>Less Kafka exposure than the JD asks for; ramp likely.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div class="cmp-cap" style="color: var(--ink-faint-e)">Pricing tier &amp; trust chips</div>
+                <div style="display: flex; gap: 18px; flex-wrap: wrap; align-items: center">
+                  <span class="e-tier">Growth <span class="e-pill">Popular</span></span>
+                  <span class="e-verified"><span class="chk">✓</span> Verified employer</span>
+                </div>
+              </div>
+
+              <div>
+                <div class="cmp-cap" style="color: var(--ink-faint-e)">Buttons (amber CTA leads)</div>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center">
+                  <span class="e-btn amber">Post a role <span style="font-family: 'IBM Plex Mono', monospace">→</span></span>
+                  <span class="e-btn primary">Book a demo</span>
+                  <span class="e-btn ghost">View pricing</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         04 · CROSS-APP COMPARISON
+         =================================================================== -->
+    <section class="section alt" id="compare">
+      <div class="wrap">
+        <div class="sec-head rise r1">
+          <span class="no">04</span>
+          <h2>Comparison</h2>
+          <p class="meta spec">The three properties, in one table</p>
+        </div>
+
+        <div class="compare-wrap rise r2">
+          <table class="compare">
+            <thead>
+              <tr>
+                <th>Dimension</th>
+                <th>Console</th>
+                <th>Web</th>
+                <th>Employers</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th>Audience</th>
+                <td>Admins &amp; recruiters (internal)</td>
+                <td>Applicants (public)</td>
+                <td>Recruiters (acquisition)</td>
+              </tr>
+              <tr>
+                <th>Theme</th>
+                <td><span class="dot" style="background: #080b09"></span>Dark phosphor</td>
+                <td><span class="dot" style="background: #f4efe3"></span>Warm bone paper</td>
+                <td><span class="dot" style="background: #f3f4f1"></span>Cool off-white</td>
+              </tr>
+              <tr>
+                <th>Display font</th>
+                <td class="mono-cell">Bricolage Grotesque</td>
+                <td class="mono-cell">Fraunces</td>
+                <td class="mono-cell">Archivo</td>
+              </tr>
+              <tr>
+                <th>Body font</th>
+                <td class="mono-cell">Spline Sans Mono</td>
+                <td class="mono-cell">Hanken Grotesk</td>
+                <td class="mono-cell">IBM Plex Sans</td>
+              </tr>
+              <tr>
+                <th>Mono / data</th>
+                <td class="mono-cell">Spline Sans Mono</td>
+                <td class="mono-cell">JetBrains Mono</td>
+                <td class="mono-cell">IBM Plex Mono</td>
+              </tr>
+              <tr>
+                <th>Signature accent</th>
+                <td><span class="dot" style="background: #ffb000"></span>Amber / <span class="dot" style="background: #4fe3c1"></span>teal</td>
+                <td><span class="dot" style="background: #d8472a"></span>Persimmon</td>
+                <td><span class="dot" style="background: #f3a712"></span>Signal amber</td>
+              </tr>
+              <tr>
+                <th>Memorable thing</th>
+                <td>Area-keyed accent + LED status pulses on a dotted instrument grid</td>
+                <td>Hard-edged offset shadows &amp; a giant serif score stamp</td>
+                <td>The fanned, dealt ranked-applicant stack on a blueprint grid</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         COLOPHON
+         =================================================================== -->
+    <footer class="colophon">
+      <div class="wrap">
+        <div class="colophon-grid rise r1">
+          <div>
+            <h3>Colophon</h3>
+            <p>
+              Each property owns a single CSS file with a <code>:root</code> token
+              block at the top — surfaces, ink layers, accents, hairlines, and
+              semantic <code>ok</code> / <code>danger</code> states. Everything
+              below is additive, hand-authored, framework-free CSS; sections are
+              appended over time rather than refactored.
+            </p>
+            <p>
+              This catalogue is a <strong>hand-maintained snapshot</strong>. The
+              tokens are authoritative <em>in the apps</em> — when a value changes
+              in <code>console.css</code>, <code>web/site.css</code>, or
+              <code>employers/site.css</code>, this page is updated to match. It
+              is documentation, not a build output.
+            </p>
+          </div>
+          <div>
+            <h4>Token sources</h4>
+            <ul class="clist">
+              <li>console/src/styles/console.css</li>
+              <li>web/src/styles/site.css</li>
+              <li>employers/src/styles/site.css</li>
+            </ul>
+          </div>
+          <div>
+            <h4>Conventions</h4>
+            <ul class="clist">
+              <li>:root custom properties</li>
+              <li>No UI framework</li>
+              <li>Additive section CSS</li>
+              <li>One staggered load reveal</li>
+              <li>prefers-reduced-motion guarded</li>
+            </ul>
+          </div>
+        </div>
+        <div class="colophon-base">
+          <span>Jobify Design System · Specimen Catalogue No. 01</span>
+          <span>Set in Spectral &amp; Martian Mono · 2026</span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

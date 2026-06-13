@@ -22,6 +22,12 @@ export interface ApplicantRead {
   years_experience: string | null;
 }
 
+export interface ConsentRead {
+  scope: string; // ConsentScope value, e.g. "email_transactional"
+  granted: boolean;
+  updated_at: string;
+}
+
 export interface MatchRead {
   id: string;
   total_score: number;

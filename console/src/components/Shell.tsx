@@ -12,17 +12,19 @@ const NAV: Array<{
     area: "admin",
     label: "Moderation",
     links: [
+      { to: "/admin/analytics", idx: "00", label: "Analytics" },
       { to: "/admin/audit", idx: "01", label: "Audit explorer" },
       { to: "/admin/users", idx: "02", label: "User actions" },
+      { to: "/admin/verification", idx: "03", label: "Verification" },
     ],
   },
   {
     area: "recruiter",
     label: "Recruiting",
     links: [
-      { to: "/recruiter", idx: "03", label: "Dashboard", end: true },
-      { to: "/recruiter/jobs", idx: "04", label: "Jobs" },
-      { to: "/recruiter/team", idx: "05", label: "Team & invites" },
+      { to: "/recruiter", idx: "04", label: "Dashboard", end: true },
+      { to: "/recruiter/jobs", idx: "05", label: "Jobs" },
+      { to: "/recruiter/team", idx: "06", label: "Team & invites" },
     ],
   },
 ];

@@ -3,6 +3,7 @@ import type { JobifyClient } from "./client";
 import type {
   ApplicationListResponse,
   ApplicationRead,
+  ConsentRead,
   EmployerRead,
   FeedItem,
   FeedResponse,
@@ -183,6 +184,23 @@ const byJobId = new Map(FEED.map((f) => [f.job.id, f]));
 const applications = new Map<string, ApplicationRead>(); // job_id → application
 const savedJobs = new Map<string, SavedJobRead>(); // job_id → saved
 
+// consent state — seeded from the backend ConsentScope defaults (db/models.py).
+const CONSENT_DEFAULTS: ReadonlyArray<readonly [string, boolean]> = [
+  ["email_transactional", true],
+  ["email_marketing", false],
+  ["in_app_notifications", true],
+  ["whatsapp_notifications", false],
+  ["sms_notifications", false],
+  ["profile_visibility_recruiters", false],
+  ["third_party_sharing_recruiters", false],
+];
+const consents = new Map<string, ConsentRead>(
+  CONSENT_DEFAULTS.map(([scope, granted]) => [
+    scope,
+    { scope, granted, updated_at: daysAgo(7) },
+  ]),
+);
+
 export class DemoClient implements JobifyClient {
   readonly mode = "demo" as const;
 
@@ -290,5 +308,75 @@ export class DemoClient implements JobifyClient {
         return { saved_job, job: item.job, employer: item.employer };
       });
     return { items, next_cursor: null };
+  }
+
+  async getConsents(): Promise<ConsentRead[]> {
+    await delay();
+    return [...consents.values()].sort((a, b) => a.scope.localeCompare(b.scope));
+  }
+
+  async setConsent(scope: string, granted: boolean): Promise<ConsentRead> {
+    await delay();
+    if (!consents.has(scope)) throw new ApiError(422, "unknown consent scope");
+    const row: ConsentRead = { scope, granted, updated_at: new Date().toISOString() };
+    consents.set(scope, row);
+    return row;
+  }
+
+  async dsrExport(): Promise<unknown> {
+    await delay();
+    const me = await this.me();
+    return {
+      version: "1",
+      exported_at: new Date().toISOString(),
+      exported_for_user_id: me.id,
+      user: { id: me.id, email: me.email, role: me.role, created_at: daysAgo(120) },
+      applicant: me.applicant,
+      resumes: [
+        {
+          id: uuid(),
+          status: "parsed",
+          original_filename: "resume.pdf",
+          content_type: "application/pdf",
+          created_at: daysAgo(118),
+        },
+      ],
+      applications: [...applications.values()].map((a) => ({ ...a })),
+      saved_jobs: [...savedJobs.values()].map((s) => ({ ...s })),
+      matches: FEED.slice(0, 3).map((f) => ({
+        id: f.match.id,
+        job_id: f.job.id,
+        total_score: f.match.total_score,
+        surfaced_at: f.match.surfaced_at,
+      })),
+      user_consents: [...consents.values()].map((c) => ({ ...c })),
+      audit_history: [
+        { action: "auth.signed_in", created_at: daysAgo(2) },
+        { action: "user.dsr_export_requested", created_at: new Date().toISOString() },
+      ],
+      redactions: [
+        {
+          table: "refresh_tokens",
+          reason: "Session secrets are never exported — they would let a holder impersonate you.",
+        },
+      ],
+      notes: ["This is a demo envelope. The live API returns every row tied to your account."],
+    };
+  }
+
+  async dsrDelete(): Promise<unknown> {
+    await delay();
+    return {
+      section_counts: {
+        applications: applications.size,
+        saved_jobs: savedJobs.size,
+        resumes: 1,
+        matches: 3,
+        user_consents: consents.size,
+        oauth_identities: 1,
+        notifications: 0,
+      },
+      warnings: [],
+    };
   }
 }

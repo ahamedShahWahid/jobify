@@ -105,6 +105,7 @@ SQLAlchemy models are never response models. Define `*Read`/`*Create`/`*Update` 
 - **`suspended_at` AND `suspension_reason` clear together** on unsuspend (tooling reads `reason IS NOT NULL` as "suspended").
 - `admin.user.suspended` writes a row **every call** (re-suspend reason = evidence); `unsuspended` is no-op-on-noop. Suspending self → 400 `cannot_suspend_self`.
 - **`jobify-grant-admin <email>` bootstraps** (no grant route — chicken-and-egg). The audit-log viewer doesn't self-audit its query.
+- **Employer verification review** (`GET /v1/admin/employers?status=`, `POST .../{id}/verify`, `POST .../{id}/reject {reason}`; migration 0020). The tri-state is **DERIVED, not stored** — `verified_at` set → verified; else `rejected_at` set → rejected; else pending. Verify/reject are mutually exclusive (each clears the other's timestamp + `rejection_reason`), so re-verifying a rejected employer just works; setting `verified_at` also flips the `employer_verified` trust badge in `/v1/feed`. `AdminEmployerRead.reviewed_at`/`reason` are derived (no review table — `audit_logs` `admin.employer.{verified,rejected}` is the history). Writes an audit row every call (re-review = evidence), like suspend.
 
 ### Parse F1 quality gate
 

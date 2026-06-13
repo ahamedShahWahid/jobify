@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  JOBIFY — TRANSACTIONAL EMAIL
+  Template:   dsr_export_ready.html
+  Kind:       dsr_export_ready
+  Channel:    email
+  Status:     PROPOSED  (DSR export is synchronous HTTP today — POST /v1/me/dsr/export
+              returns the JSON envelope inline. This email is designed for an
+              ASYNC future where large exports are assembled in the background
+              and a download link is mailed when ready.)
+  Recipient:  THE DATA SUBJECT (the user who requested their data, under DPDP)
+
+  Payload fields consumed (from a future notifications.payload dict):
+    {{download_url}}   — signed, expiring download URL        e.g. https://jobify.in/dsr/download/...
+    {{expires_hours}}  — link validity window                 e.g. 24
+    {{requested_at}}   — when the export was requested (display)
+    {{section_counts}} — optional counts per section (résumés, applications, …)
+
+  CTA: {{download_url}}   |   Link expires in {{expires_hours}}h.
+  Tone: calm, trustworthy, DPDP. State what's INCLUDED and what's EXCLUDED.
+  ============================================================================
+-->
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <title>Your data export is ready — Jobify</title>
+  <!--[if mso]>
+  <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+  <![endif]-->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; line-height: 100%; outline: none; text-decoration: none; }
+    body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; }
+    a { color: #b23a20; }
+
+    @media screen and (max-width: 600px) {
+      .email-container { width: 100% !important; }
+      .px { padding-left: 24px !important; padding-right: 24px !important; }
+      .h1 { font-size: 34px !important; line-height: 1.04 !important; }
+      .incl-td { display: block !important; width: 100% !important; }
+      .btn-a { display: block !important; }
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body, .bg-wrap { background-color: #11140f !important; }
+      .paper { background-color: #1b2019 !important; }
+      .paper-2 { background-color: #232a21 !important; }
+      .ink, .h1 { color: #f4efe3 !important; }
+      .lead { color: #d8cfbd !important; }
+      .ink-soft { color: #b6ac98 !important; }
+      .ink-faint { color: #8a8070 !important; }
+      .hair { border-color: #34402f !important; }
+      .wordmark { color: #f4efe3 !important; }
+      .footer-card { background-color: #151810 !important; }
+      .incl-card { background-color: #232a21 !important; }
+      .excl-card { background-color: #2a231b !important; border-color:#3a3127 !important; }
+      .url-mono { color:#b6ac98 !important; }
+    }
+  </style>
+</head>
+<body style="margin:0; padding:0; background-color:#e6eae2;">
+  <!-- preheader -->
+  <div style="display:none; max-height:0; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px; color:#e6eae2; opacity:0;">
+    Your Jobify data export is ready to download. The link is valid for 24 hours. Session tokens are deliberately excluded.
+    &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847;
+  </div>
+
+  <table role="presentation" class="bg-wrap" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#e6eae2;">
+    <tr>
+      <td align="center" style="padding:32px 12px 48px;">
+
+        <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px;">
+
+          <!-- masthead -->
+          <tr>
+            <td class="px" style="padding:0 8px 16px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="left" style="font-family:'Fraunces',Georgia,serif; font-weight:900; font-size:24px; letter-spacing:-0.03em; color:#221c16;" class="wordmark">
+                    Jobify<span style="color:#d8472a;">.</span>
+                  </td>
+                  <td align="right" style="font-family:'JetBrains Mono',ui-monospace,Menlo,monospace; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:#9b917e;" class="ink-faint">
+                    Data&nbsp;Request&nbsp;&middot;&nbsp;DPDP
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- main card -->
+          <tr>
+            <td class="paper" style="background-color:#f4efe3; border:2px solid #221c16; box-shadow:18px 22px 0 -8px rgba(34,28,22,0.08);">
+
+              <!-- forest-green top rule (trust) -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr><td style="height:5px; line-height:5px; font-size:5px; background-color:#1f4034;">&nbsp;</td></tr>
+              </table>
+
+              <!-- header -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="px" style="padding:36px 44px 0;">
+                    <div style="font-family:'JetBrains Mono',ui-monospace,Menlo,monospace; font-size:11px; letter-spacing:0.22em; text-transform:uppercase; color:#1f4034; font-weight:500;">
+                      Data Export
+                    </div>
+                    <h1 class="h1 ink" style="font-family:'Fraunces',Georgia,serif; font-weight:900; font-size:44px; line-height:1; letter-spacing:-0.035em; color:#221c16; margin:14px 0 0;">
+                      Your data export<br>is&nbsp;ready.
+                    </h1>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- body -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="px" style="padding:22px 44px 4px;">
+                    <p class="lead ink" style="margin:0; font-family:'Hanken Grotesk',-apple-system,'Segoe UI',Arial,sans-serif; font-size:16px; line-height:1.62; color:#221c16;">
+                      You asked us for a copy of your data, and we&rsquo;ve assembled it. It&rsquo;s a single file&mdash;yours to keep, review, or take with you. This is your right under India&rsquo;s Digital Personal Data Protection Act.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- what's included -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="px" style="padding:24px 44px 0;">
+                    <table role="presentation" class="incl-card paper-2" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#ece4d3; border-left:3px solid #1f4034;">
+                      <tr>
+                        <td style="padding:18px 22px;">
+                          <div style="font-family:'JetBrains Mono',ui-monospace,Menlo,monospace; font-size:10px; letter-spacing:0.18em; text-transform:uppercase; color:#1f4034; margin-bottom:12px; font-weight:500;">
+                            What&rsquo;s included
+                          </div>
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td class="incl-td" valign="top" width="50%" style="padding:0; font-family:'Hanken Grotesk',-apple-system,'Segoe UI',Arial,sans-serif; font-size:14.5px; line-height:1.9; color:#221c16;">
+                                <span style="color:#1f4034; font-weight:700;">&#10003;</span>&nbsp; Your r&eacute;sum&eacute;s<br>
+                                <span style="color:#1f4034; font-weight:700;">&#10003;</span>&nbsp; Applications<br>
+                                <span style="color:#1f4034; font-weight:700;">&#10003;</span>&nbsp; Matches &amp; scores
+                              </td>
+                              <td class="incl-td" valign="top" width="50%" style="padding:0; font-family:'Hanken Grotesk',-apple-system,'Segoe UI',Arial,sans-serif; font-size:14.5px; line-height:1.9; color:#221c16;">
+                                <span style="color:#1f4034; font-weight:700;">&#10003;</span>&nbsp; Consent settings<br>
+                                <span style="color:#1f4034; font-weight:700;">&#10003;</span>&nbsp; Audit history
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- what's excluded -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="px" style="padding:12px 44px 0;">
+                    <table role="presentation" class="excl-card" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f9f5ec; border:1px solid #d9cfb9;">
+                      <tr>
+                        <td style="padding:14px 22px;">
+                          <p class="ink-soft" style="margin:0; font-family:'Hanken Grotesk',-apple-system,'Segoe UI',Arial,sans-serif; font-size:13.5px; line-height:1.55; color:#6c6354;">
+                            <strong style="font-weight:700; color:#221c16;">Deliberately excluded:</strong>
+                            your session &amp; refresh tokens. Those are live security credentials&mdash;exporting them would put your account at risk, so they never leave our systems.
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="px" style="padding:24px 44px 6px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td align="center" bgcolor="#1f4034" style="background-color:#1f4034; border:2px solid #221c16;">
+                          <!--[if mso]>
+                          <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://jobify.in/dsr/download/8a3f-signed-token" style="height:48px;v-text-anchor:middle;width:230px;" arcsize="0%" strokecolor="#221c16" fillcolor="#1f4034">
+                            <w:anchorlock/><center style="color:#f4efe3;font-family:sans-serif;font-size:15px;font-weight:bold;">Download your data &rarr;</center>
+                          </v:roundrect>
+                          <![endif]-->
+                          <!--[if !mso]><!-- -->
+                          <a class="btn-a" href="https://jobify.in/dsr/download/8a3f-signed-token" target="_blank"
+                             style="display:inline-block; font-family:'Hanken Grotesk',-apple-system,'Segoe UI',Arial,sans-serif; font-size:15px; font-weight:700; color:#f4efe3; text-decoration:none; padding:14px 28px; letter-spacing:0.01em;">
+                            Download your data&nbsp;&rarr;
+                          </a>
+                          <!--<![endif]-->
+                          <!-- {{download_url}} -->
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- expiry note -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="px" style="padding:16px 44px 36px;">
+                    <p class="ink-soft" style="margin:0; font-family:'Hanken Grotesk',-apple-system,'Segoe UI',Arial,sans-serif; font-size:13px; line-height:1.55; color:#6c6354;">
+                      For your security, this link <strong style="font-weight:700; color:#221c16;">expires in
+                      <!-- {{expires_hours}} -->24 hours</strong>. Once downloaded, the file is yours to keep. Need it again? Request a fresh export anytime from your
+                      <a href="https://jobify.in/#/profile" target="_blank" style="color:#b23a20; text-decoration:underline;">privacy settings</a>.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- footer -->
+          <tr>
+            <td class="footer-card" style="padding:28px 16px 8px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding:0 8px;">
+                    <div style="font-family:'Fraunces',Georgia,serif; font-weight:900; font-size:18px; letter-spacing:-0.03em; color:#221c16;" class="wordmark">
+                      Jobify<span style="color:#d8472a;">.</span>
+                    </div>
+                    <p class="ink-soft" style="margin:10px 0 0; font-family:'Hanken Grotesk',-apple-system,'Segoe UI',Arial,sans-serif; font-size:12px; line-height:1.6; color:#6c6354;">
+                      Jobify Technologies &middot; Bengaluru, India
+                    </p>
+                    <p style="margin:10px 0 0; font-family:'Hanken Grotesk',-apple-system,'Segoe UI',Arial,sans-serif; font-size:12px; line-height:1.6;">
+                      <a href="https://jobify.in/#/profile" target="_blank" style="color:#b23a20; text-decoration:underline;">Manage email preferences</a>
+                      <span class="ink-faint" style="color:#9b917e;">&nbsp;&middot;&nbsp;</span>
+                      <a href="https://jobify.in/#/profile" target="_blank" style="color:#b23a20; text-decoration:underline;">Unsubscribe</a>
+                    </p>
+                    <p class="ink-faint" style="margin:14px 0 0; font-family:'Fraunces',Georgia,serif; font-style:italic; font-size:13px; color:#9b917e;">
+                      Made in India &#127470;&#127475;
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
