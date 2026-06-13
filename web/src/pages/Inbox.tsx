@@ -109,10 +109,23 @@ export function Inbox() {
     [rows, isRead],
   );
 
+  // Drop an id back out of the overlay — used to revert an optimistic read when
+  // the server POST fails, so the UI never claims a read the server rejected.
+  const revert = useCallback((id: string) => {
+    setReadOverlay((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
   function markRead(n: NotificationRead) {
     if (isRead(n)) return;
     setReadOverlay((prev) => new Set(prev).add(n.id));
-    client.markNotificationRead(n.id).catch((e) => setOpError(errorMessage(e)));
+    client.markNotificationRead(n.id).catch((e) => {
+      revert(n.id);
+      setOpError(errorMessage(e));
+    });
   }
 
   function markAllRead() {
@@ -124,7 +137,10 @@ export function Inbox() {
       return next;
     });
     unread.forEach((n) =>
-      client.markNotificationRead(n.id).catch((e) => setOpError(errorMessage(e))),
+      client.markNotificationRead(n.id).catch((e) => {
+        revert(n.id);
+        setOpError(errorMessage(e));
+      }),
     );
   }
 
@@ -143,16 +159,23 @@ export function Inbox() {
             <span className="kicker">Dispatches</span>
             <h1 className="nx-h1">
               The Wire
-              {unreadCount > 0 && <span className="nx-badge num">{unreadCount}</span>}
+              {unreadCount > 0 && (
+                <span className="nx-badge num">
+                  {unreadCount}
+                  {nextCursor ? "+" : ""}
+                </span>
+              )}
             </h1>
             <p className="deck nx-deck">
               {unreadCount > 0
-                ? `${unreadCount} unread — application receipts and team invitations, in order.`
+                ? `${unreadCount}${nextCursor ? "+" : ""} unread — application receipts and team invitations, in order.`
                 : "Everything that's happened on your account, newest first."}
             </p>
           </div>
+          {/* No bulk-read endpoint exists, so this marks the loaded rows. Labelled
+              honestly when more pages remain. */}
           <button className="btn ghost sm" onClick={markAllRead} disabled={unreadCount === 0}>
-            Mark all read
+            {nextCursor ? "Mark loaded read" : "Mark all read"}
           </button>
         </header>
 

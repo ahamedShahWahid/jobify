@@ -1391,3 +1391,9 @@ td.mono-id {
   color: #a99e88;
   font-style: italic;
 }
+
+/* invalid CTC entry flagged in the live preview (vs. silent "Undisclosed") */
+.jc-card .jc-invalid {
+  color: #b23a20;
+  font-weight: 600;
+}

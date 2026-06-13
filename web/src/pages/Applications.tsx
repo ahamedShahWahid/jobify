@@ -53,6 +53,10 @@ export function Applications() {
   // Per-row in-flight + action error, keyed by application/job id.
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  // Jobs applied to from the Saved tab this session. The saved list KEEPS applied
+  // jobs (backend invariant), so without this the row would keep an enabled
+  // "Apply" with no feedback and invite repeat taps.
+  const [appliedFromSaved, setAppliedFromSaved] = useState<Set<string>>(new Set());
 
   async function run(id: string, fn: () => Promise<unknown>, after: () => void) {
     setBusyId(id);
@@ -60,6 +64,22 @@ export function Applications() {
     try {
       await fn();
       after();
+    } catch (e) {
+      setActionError(errorMessage(e));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  // Apply from the Saved tab: mark the row applied (the saved row persists) and
+  // refresh the Applied tab so it includes the new application on switch.
+  async function applyFromSaved(jobId: string) {
+    setBusyId(jobId);
+    setActionError(null);
+    try {
+      await client.apply(jobId);
+      setAppliedFromSaved((prev) => new Set(prev).add(jobId));
+      applied.reload();
     } catch (e) {
       setActionError(errorMessage(e));
     } finally {
@@ -234,14 +254,20 @@ export function Applications() {
                     >
                       Remove
                     </button>
-                    <button
-                      className="btn primary sm"
-                      disabled={busy || closed}
-                      title={closed ? "This role is closed" : undefined}
-                      onClick={() => void run(job.id, () => client.apply(job.id), saved.reload)}
-                    >
-                      {busy ? "…" : closed ? "Closed" : "Apply"}
-                    </button>
+                    {appliedFromSaved.has(job.id) ? (
+                      <Link to={`/explore/jobs/${job.id}`} className="btn sm cb-applied">
+                        Applied ✓
+                      </Link>
+                    ) : (
+                      <button
+                        className="btn primary sm"
+                        disabled={busy || closed}
+                        title={closed ? "This role is closed" : undefined}
+                        onClick={() => void applyFromSaved(job.id)}
+                      >
+                        {busy ? "…" : closed ? "Closed" : "Apply"}
+                      </button>
+                    )}
                   </div>
                 </article>
               );

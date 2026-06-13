@@ -1,6 +1,20 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
+/** ₹ lakh formatting for a single CTC figure (null → null). Single source for
+ *  every recruiter surface — Postings list, composer preview, dashboard. */
+export function lakh(value: number | null): string | null {
+  return value === null ? null : `₹${(value / 100_000).toFixed(value % 100_000 === 0 ? 0 : 1)}L`;
+}
+
+/** The "₹xL – ₹yL" / "Undisclosed" compensation band as a plain string. */
+export function ctcBandText(min: number | null, max: number | null): string {
+  const lo = lakh(min);
+  const hi = lakh(max);
+  if (!lo && !hi) return "Undisclosed";
+  return [lo, hi].filter(Boolean).join(" – ");
+}
+
 /** Live UTC clock — the control-room heartbeat in the masthead. */
 export function UtcClock() {
   const [now, setNow] = useState(() => new Date());

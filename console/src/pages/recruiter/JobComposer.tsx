@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { errorMessage } from "../../api/client";
-import type { ConsoleClient } from "../../api/client";
+import { findMyJob } from "../../api/recruiterJobs";
 import type { EmployerRead, JobCreate, RecruiterJobRow } from "../../api/types";
-import { ErrorNotice, Field } from "../../components/bits";
+import { ErrorNotice, Field, lakh } from "../../components/bits";
 import { useSession } from "../../session";
 import {
   buildJobPayload,
+  contentChanged,
   emptyForm,
   formFromJob,
   parseCtc,
@@ -20,47 +21,31 @@ import type { JobFormState } from "./jobForm";
  * candidate-view preview. Reached from the Postings list:
  *   /recruiter/jobs/new            → create
  *   /recruiter/jobs/:jobId/edit    → edit (job passed via router state; on a
- *                                    cold deep-link it's resolved from the
- *                                    open+closed list by id, like the Flutter
- *                                    EditJobResolver).
+ *                                    cold deep-link it's resolved by id, like the
+ *                                    Flutter EditJobResolver).
  *
  * Backend-true semantics (api CLAUDE.md): editing a content field re-embeds the
- * job for matching; a status-only change does not. The composer always sends
- * status with the patch, so the per-field hint flags when a re-embed will fire.
+ * job for matching; a status-only change does not. The edit PATCH carries only
+ * changed fields (jobForm.buildJobPayload diffs), so a status-only save stays
+ * status-only and the "re-embeds" hint (contentChanged) never lies.
  */
 
-const lakh = (value: number | null | undefined): string | null => {
-  if (value === null || value === undefined) return null;
-  return `₹${(value / 100_000).toFixed(value % 100_000 === 0 ? 0 : 1)}L`;
-};
-
-// Drain bound — a recruiter's full posting list (mirrors Dashboard's drainJobs).
-const MAX_PAGES = 50;
-
-/** Find a posting by id across the recruiter's full list. The live backend's
- *  "closed" filter returns open+closed, but the demo client returns only the
- *  named status — so drain BOTH and stop at the first hit (correct for either).
- *  Only hit on a cold deep-link; normal edits pass the row via router state. */
-async function resolveJob(client: ConsoleClient, jobId: string): Promise<RecruiterJobRow | null> {
-  for (const status of ["open", "closed"] as const) {
-    let cursor: string | undefined;
-    for (let page = 0; page < MAX_PAGES; page++) {
-      const res = await client.listMyJobs(status, cursor);
-      const hit = res.items.find((j) => j.id === jobId);
-      if (hit) return hit;
-      if (!res.next_cursor) break;
-      cursor = res.next_cursor;
-    }
-  }
-  return null;
+/** A blank-but-typed CTC field (e.g. "-5") parses to null = invalid; an empty
+ *  field parses to undefined = simply omitted. The preview must distinguish them
+ *  so an invalid entry isn't silently shown as "Undisclosed". */
+function ctcIsInvalid(raw: string): boolean {
+  return raw.trim() !== "" && parseCtc(raw) === null;
 }
 
-/** Lenient parse of the raw form for the preview only — never blocks typing. */
+/** Lenient parse of the raw form for the preview only — never blocks typing.
+ *  Parses each bound once. */
 function previewBand(form: JobFormState): string {
-  const min = lakh(typeof parseCtc(form.ctc_min) === "number" ? parseCtc(form.ctc_min)! : null);
-  const max = lakh(typeof parseCtc(form.ctc_max) === "number" ? parseCtc(form.ctc_max)! : null);
-  if (!min && !max) return "Undisclosed";
-  return [min, max].filter(Boolean).join(" – ");
+  const min = parseCtc(form.ctc_min);
+  const max = parseCtc(form.ctc_max);
+  const lo = typeof min === "number" ? lakh(min) : null;
+  const hi = typeof max === "number" ? lakh(max) : null;
+  if (!lo && !hi) return "Undisclosed";
+  return [lo, hi].filter(Boolean).join(" – ");
 }
 
 function previewExp(form: JobFormState): string {
@@ -107,7 +92,7 @@ export function JobComposer() {
     setResolving(true);
     (async () => {
       try {
-        const job = await resolveJob(client, jobId!);
+        const job = await findMyJob(client, jobId!);
         if (cancelled) return;
         if (!job) {
           setLoadError("That posting couldn't be found — it may have been deleted.");
@@ -150,24 +135,27 @@ export function JobComposer() {
     return { name, verified: editJob?.employer_verified ?? false };
   }, [isCreate, employers, form.employer_id, editJob]);
 
-  // Editing any content field re-embeds the job (status-only does not).
-  const contentDirty = useMemo(() => {
-    if (isCreate || !editJob) return false;
-    return (
-      form.title.trim() !== editJob.title ||
-      form.description.trim() !== editJob.description ||
-      parseLocations(form.locations).join("|") !== editJob.locations.join("|") ||
-      parseExp(form.min_exp_years) !== editJob.min_exp_years ||
-      parseExp(form.max_exp_years) !== editJob.max_exp_years ||
-      (parseCtc(form.ctc_min) ?? null) !== editJob.ctc_min ||
-      (parseCtc(form.ctc_max) ?? null) !== editJob.ctc_max
-    );
-  }, [isCreate, editJob, form]);
+  // Editing a content field re-embeds the job (status-only does not). Computed
+  // off the same diff the PATCH sends, so the hint and the wire agree.
+  const contentDirty = useMemo(
+    () => (!isCreate && editJob ? contentChanged(form, editJob) : false),
+    [isCreate, editJob, form],
+  );
+
+  // Invalid (non-blank, unparseable) CTC entry → flag it in the preview rather
+  // than rendering it identically to a blank "Undisclosed".
+  const ctcInvalid = ctcIsInvalid(form.ctc_min) || ctcIsInvalid(form.ctc_max);
 
   async function save() {
-    const built = buildJobPayload(form, isCreate);
+    // Edit diffs against editJob so a status-only change stays status-only.
+    const built = buildJobPayload(form, isCreate, editJob ?? undefined);
     if ("error" in built) {
       setFormError(built.error);
+      return;
+    }
+    // Edit that changed nothing — skip the round-trip, just return to the list.
+    if ("noChange" in built) {
+      navigate("/recruiter/jobs", { state: { status: form.status } });
       return;
     }
     setSaving(true);
@@ -178,7 +166,9 @@ export function JobComposer() {
       } else {
         await client.patchJob(jobId!, built.payload);
       }
-      navigate("/recruiter/jobs");
+      // Return to the list on the tab matching the saved status, so editing a
+      // closed posting doesn't drop the recruiter back on the Open tab.
+      navigate("/recruiter/jobs", { state: { status: form.status } });
     } catch (e) {
       setFormError(errorMessage(e));
     } finally {
@@ -246,8 +236,12 @@ export function JobComposer() {
                   </select>
                 </Field>
               ) : (
-                <Field label="Employer">
-                  <input value={previewCompany.name} disabled />
+                // The job row carries no employer identity, so the real name is
+                // only known when the recruiter belongs to exactly one employer;
+                // otherwise show "—" rather than a guessed name in a field that
+                // looks authoritative. Employer can't change after creation.
+                <Field label="Employer" hint="Employer is fixed once a posting is created.">
+                  <input value={employers.length === 1 ? employers[0].name : "—"} disabled />
                 </Field>
               )}
 
@@ -375,7 +369,11 @@ export function JobComposer() {
               <div className="jc-facts">
                 <div className="jc-fact">
                   <span className="k">Compensation</span>
-                  <span className="v num">{previewBand(form)}</span>
+                  {ctcInvalid ? (
+                    <span className="v num jc-invalid">Check CTC entry</span>
+                  ) : (
+                    <span className="v num">{previewBand(form)}</span>
+                  )}
                 </div>
                 <div className="jc-fact">
                   <span className="k">Experience</span>

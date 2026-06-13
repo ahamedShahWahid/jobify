@@ -2789,3 +2789,13 @@ a {
   line-height: 1.5;
   margin: 0;
 }
+
+/* "Applied ✓" affordance after applying from the Saved tab */
+.cb-applied {
+  border-color: var(--forest);
+  color: var(--forest);
+  background: var(--forest-soft);
+}
+.cb-applied:hover {
+  box-shadow: 4px 4px 0 0 var(--forest);
+}

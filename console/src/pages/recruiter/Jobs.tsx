@@ -1,31 +1,31 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { errorMessage } from "../../api/client";
 import type { EmployerRead, RecruiterJobRow } from "../../api/types";
-import { EmptyState, ErrorNotice, Stamp } from "../../components/bits";
+import { ctcBandText, EmptyState, ErrorNotice, Stamp } from "../../components/bits";
 import { usePagedFetch } from "../../paging/usePagedFetch";
 import { useSession } from "../../session";
 
-const lakh = (value: number | null) =>
-  value === null ? null : `₹${(value / 100_000).toFixed(value % 100_000 === 0 ? 0 : 1)}L`;
-
 function ctcBand(job: RecruiterJobRow) {
-  const min = lakh(job.ctc_min);
-  const max = lakh(job.ctc_max);
-  if (!min && !max) return <span className="dim">undisclosed</span>;
-  return <span className="num">{[min, max].filter(Boolean).join(" – ")}</span>;
+  if (job.ctc_min === null && job.ctc_max === null)
+    return <span className="dim">undisclosed</span>;
+  return <span className="num">{ctcBandText(job.ctc_min, job.ctc_max)}</span>;
 }
 
 /**
  * Postings — the recruiter's job list. Create/edit open the full-page composer
  * (/recruiter/jobs/new, /…/:id/edit) with its live candidate preview; the edit
  * link hands the row over via router state so the composer doesn't re-fetch.
- * Status flip + delete stay inline as quick actions on the list.
+ * Status flip + delete stay inline as quick actions on the list. The composer
+ * returns here with `state.status` so editing a closed job lands on the Closed
+ * tab (not the default Open).
  */
 export function Jobs() {
   const { client } = useSession();
   const navigate = useNavigate();
-  const [status, setStatus] = useState<"open" | "closed">("open");
+  const location = useLocation();
+  const returnedStatus = (location.state as { status?: "open" | "closed" } | null)?.status;
+  const [status, setStatus] = useState<"open" | "closed">(returnedStatus ?? "open");
   const [employers, setEmployers] = useState<EmployerRead[]>([]);
   const [opError, setOpError] = useState<string | null>(null);
 
