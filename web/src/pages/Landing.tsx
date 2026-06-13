@@ -54,12 +54,12 @@ export function Landing() {
               tells you, in one honest line, why each one does.
             </p>
             <div className="hero-cta rise d3">
-              <Link to="/explore" className="btn primary">
-                Open my feed →
+              <Link to="/welcome" className="btn primary">
+                Build my feed →
               </Link>
-              <a href="#how" className="link-arrow">
-                See how it works <span className="arr">↓</span>
-              </a>
+              <Link to="/explore" className="link-arrow">
+                I already have a feed <span className="arr">→</span>
+              </Link>
             </div>
           </div>
 

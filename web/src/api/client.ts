@@ -1,6 +1,7 @@
 import type {
   ApplicationListResponse,
   ApplicationRead,
+  ConsentRead,
   FeedResponse,
   JobDetailResponse,
   MeResponse,
@@ -20,6 +21,14 @@ export interface JobifyClient {
   unsave(jobId: string): Promise<void>;
   applications(cursor?: string): Promise<ApplicationListResponse>;
   saved(cursor?: string): Promise<SavedJobListResponse>;
+  /** GET /v1/me/consents → the caller's consent rows. */
+  getConsents(): Promise<ConsentRead[]>;
+  /** PATCH /v1/me/consents/{scope} → the updated row (422 on unknown scope). */
+  setConsent(scope: string, granted: boolean): Promise<ConsentRead>;
+  /** POST /v1/me/dsr/export → the full export envelope as an opaque JSON object. */
+  dsrExport(): Promise<unknown>;
+  /** DELETE /v1/me/dsr → a DeleteReport; the account is tombstoned on success. */
+  dsrDelete(): Promise<unknown>;
 }
 
 /** RFC 7807 problem+json error; `detail` is the API's user-visible slug/message. */
@@ -120,5 +129,22 @@ export class HttpClient implements JobifyClient {
   saved(cursor?: string) {
     const qs = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
     return this.request<SavedJobListResponse>("GET", `/v1/saved${qs}`);
+  }
+  async getConsents() {
+    const res = await this.request<{ items: ConsentRead[] }>("GET", "/v1/me/consents");
+    return res.items;
+  }
+  setConsent(scope: string, granted: boolean) {
+    return this.request<ConsentRead>("PATCH", `/v1/me/consents/${encodeURIComponent(scope)}`, {
+      granted,
+    });
+  }
+  dsrExport() {
+    // The attachment/Content-Disposition headers are irrelevant to fetch — the
+    // request helper just returns the parsed JSON envelope.
+    return this.request<unknown>("POST", "/v1/me/dsr/export");
+  }
+  dsrDelete() {
+    return this.request<unknown>("DELETE", "/v1/me/dsr", { confirmation: "DELETE_MY_ACCOUNT" });
   }
 }

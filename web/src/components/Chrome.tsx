@@ -24,6 +24,9 @@ export function Masthead() {
           <NavLink to="/explore" className={({ isActive }) => (isActive ? "active" : "")}>
             Explore
           </NavLink>
+          <NavLink to="/profile" className={({ isActive }) => (isActive ? "active" : "")}>
+            Profile
+          </NavLink>
           <Link to="/explore" className="btn primary sm nav-cta">
             Open my feed →
           </Link>
