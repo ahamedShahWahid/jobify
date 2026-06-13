@@ -9,7 +9,7 @@ Jobify (Jobify) — an early-stage placement platform.
 - `api/` — FastAPI backend (Python 3.12, `uv`). Async SQLAlchemy + Alembic on Postgres 16, Google OAuth + rotating refresh JWTs, resume upload/parse (Celery + Redis), embeddings (Gemini + pgvector), matching/scoring, feed, applications, recruiter jobs CRUD, notifications outbox, admin moderation, consent + DSR (DPDP).
 - `IMPLEMENTATION_SPEC.md` — **how** we build it (engineering spec, v0.2 MVP-first).
 - `docs/prd/KPA_Enhanced_BRD_v1_1.pdf` — **what** we build (product BRD; scope source of truth).
-- `docs/superpowers/specs/` — per-slice design docs (the **why** behind each section below). Their spent step-by-step build plans are archived under `docs/archive/plans/` (history only, not maintained).
+- `docs/superpowers/specs/` — per-slice design docs (the **why** behind each section below). Their spent step-by-step build plans were removed once shipped — recoverable from git history if ever needed.
 - `app/` — Flutter mobile + web client (last section). The spec overrides the BRD's React Native + Next.js stack.
 
 Scope vs "how" conflict: BRD wins on product behavior; spec wins on tech.
@@ -214,7 +214,7 @@ SQLAlchemy models are never response models. Define `*Read`/`*Create`/`*Update` 
 
 ## Source-of-truth when in doubt
 
-- API conventions + roadmap → `IMPLEMENTATION_SPEC.md`. Product scope → `docs/prd/KPA_Enhanced_BRD_v1_1.pdf`. Per-slice design → `docs/superpowers/specs/` (their spent build plans are archived under `docs/archive/plans/`).
+- API conventions + roadmap → `IMPLEMENTATION_SPEC.md`. Product scope → `docs/prd/KPA_Enhanced_BRD_v1_1.pdf`. Per-slice design → `docs/superpowers/specs/` (spent build plans were removed once shipped — in git history).
 
 ## Flutter app (`app/`)
 
