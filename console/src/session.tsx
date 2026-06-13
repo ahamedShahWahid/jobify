@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { ConsoleClient } from "./api/client";
-import { ApiError, HttpClient } from "./api/client";
+import { ApiError, HttpClient, TokenStore } from "./api/client";
 import { DemoClient } from "./api/demo";
 import type { DemoRole } from "./api/demo";
 import type { MeResponse } from "./api/types";
@@ -78,15 +78,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return identity;
   }, []);
 
+  // A live client over a token store. On an unrecoverable 401 (refresh failed or a
+  // non-refreshable slug) the session clears and routes back to sign-in with an
+  // "expired" notice.
+  const makeLiveClient = useCallback(
+    (store: TokenStore) =>
+      new HttpClient(store, () => {
+        setSession(null);
+        setExpired(true);
+      }),
+    [],
+  );
+
   const connectLive = useCallback(
+    // Paste-token path has no refresh token → a 401 just signs out (no rotation).
     (baseUrl: string, token: string) =>
-      connect(
-        new HttpClient(baseUrl.replace(/\/$/, ""), token, () => {
-          setSession(null);
-          setExpired(true);
-        }),
-      ),
-    [connect],
+      connect(makeLiveClient(new TokenStore(baseUrl.replace(/\/$/, ""), token, null))),
+    [connect, makeLiveClient],
   );
 
   const connectGoogle = useCallback(
@@ -113,12 +121,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         throw new ApiError(res.status, detail, res.headers.get("X-Request-Id") ?? undefined);
       }
       const data = (await res.json()) as GoogleSignInResponse;
-      // The console holds only the short-lived access token in memory; a 401 mid-session
-      // routes back to sign-in where Google is one click away.
-      // TODO: refresh-token rotation — `data.refresh_token` is intentionally unused for now.
-      return connectLive(base, data.access_token);
+      // Google sessions carry the refresh token, so a mid-session access-token
+      // expiry refreshes transparently (single-flight + rotation in HttpClient)
+      // instead of bouncing the operator back to sign-in.
+      return connect(
+        makeLiveClient(new TokenStore(base, data.access_token, data.refresh_token)),
+      );
     },
-    [connectLive],
+    [connect, makeLiveClient],
   );
 
   const store = useMemo<SessionStore>(

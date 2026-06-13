@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { JobifyClient } from "./api/client";
-import { ApiError, HttpClient } from "./api/client";
+import { ApiError, HttpClient, TokenStore } from "./api/client";
 import { DemoClient } from "./api/demo";
 import type { MeResponse } from "./api/types";
 
@@ -52,17 +52,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return identity;
   }, []);
 
+  // A live client over a token store. On an unrecoverable 401 (refresh failed or
+  // a non-refreshable slug) the session clears and routes back to the gate with an
+  // "expired" notice rather than stranding the user.
+  const makeLiveClient = useCallback(
+    (store: TokenStore) =>
+      new HttpClient(store, () => {
+        setSession(null);
+        setExpired(true);
+      }),
+    [],
+  );
+
   const connectLive = useCallback(
+    // Paste-token path has no refresh token → a 401 just signs out (no rotation).
     (baseUrl: string, token: string) =>
-      // Tokens are short-lived; a 401 mid-session clears state and routes back to
-      // the gate with an "expired" notice rather than stranding the user.
-      connect(
-        new HttpClient(baseUrl.replace(/\/$/, ""), token, () => {
-          setSession(null);
-          setExpired(true);
-        }),
-      ),
-    [connect],
+      connect(makeLiveClient(new TokenStore(baseUrl.replace(/\/$/, ""), token, null))),
+    [connect, makeLiveClient],
   );
 
   const connectGoogle = useCallback(
@@ -88,12 +94,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         throw new ApiError(res.status, problemDetail(body, res.status));
       }
       const data = (await res.json()) as GoogleOAuthResponse;
-      // TODO: refresh-token rotation (see app/ refresh interceptor). For now the
-      // returned refresh_token is intentionally unused — a 401 returns to the gate
-      // where the Google button is one click away.
-      return connectLive(base, data.access_token);
+      // Google sessions carry the refresh token, so a mid-session access-token
+      // expiry refreshes transparently (single-flight + rotation in HttpClient)
+      // instead of bouncing the user back to the gate.
+      return connect(
+        makeLiveClient(new TokenStore(base, data.access_token, data.refresh_token)),
+      );
     },
-    [connectLive],
+    [connect, makeLiveClient],
   );
 
   const store = useMemo<SessionStore>(
