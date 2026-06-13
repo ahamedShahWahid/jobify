@@ -162,6 +162,17 @@ a:hover {
 .rail-brand {
   padding: 0 22px;
 }
+.rail-lockup {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.rail-mark {
+  height: 26px;
+  width: auto;
+  display: block;
+  flex: none;
+}
 .rail-brand .wordmark {
   font-family: var(--font-display);
   font-weight: 800;
@@ -170,6 +181,13 @@ a:hover {
   display: flex;
   align-items: baseline;
   gap: 7px;
+}
+/* SignIn gate brand mark — solid J-person above the OPERATIONS CONSOLE title. */
+.gate-mark {
+  height: 52px;
+  width: auto;
+  display: block;
+  margin-bottom: 14px;
 }
 .rail-brand .wordmark em {
   font-style: normal;

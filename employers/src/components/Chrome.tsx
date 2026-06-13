@@ -6,12 +6,12 @@ export function Masthead({ onLanding = false }: { onLanding?: boolean }) {
   return (
     <header className="masthead">
       <div className="wrap masthead-inner">
-        <Link to="/" className="wordmark" aria-label="Jobify for employers — home">
-          <span className="glyph" aria-hidden="true">
-            J
-          </span>
-          Jobify
-          <span className="sub">for employers</span>
+        <Link to="/" className="brand" aria-label="Jobify for employers — home">
+          <img
+            src="/jobify-logo.svg"
+            alt="Jobify — Job will find you"
+            className="brand-logo"
+          />
         </Link>
         <nav className="mast-nav" aria-label="Primary">
           {onLanding ? (
@@ -51,12 +51,12 @@ export function Footer() {
       <div className="wrap">
         <div className="foot-grid">
           <div className="col foot-brand">
-            <Link to="/" className="wordmark" aria-label="Jobify for employers — home">
-              <span className="glyph" aria-hidden="true">
-                J
-              </span>
-              Jobify
-              <span className="sub">for employers</span>
+            <Link to="/" className="brand" aria-label="Jobify for employers — home">
+              <img
+                src="/jobify-logo.svg"
+                alt="Jobify — Job will find you"
+                className="brand-logo foot-logo"
+              />
             </Link>
             <p>
               A placement platform that ranks applicants by fit and explains why —

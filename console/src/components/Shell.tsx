@@ -45,8 +45,13 @@ export function Shell() {
     <div className="shell" data-area={area}>
       <nav className="rail">
         <div className="rail-brand">
-          <div className="wordmark">
-            JOBIFY<em>//</em>CONSOLE
+          <div className="rail-lockup">
+            {/* J-person mark only — the wordmark's letter counters would read as
+                light fills on this dark rail; the solid mark stays crisp. */}
+            <img src="/jobify-mark.svg" alt="Jobify" className="rail-mark" />
+            <div className="wordmark">
+              JOBIFY<em>//</em>CONSOLE
+            </div>
           </div>
           <div className="k" style={{ marginTop: 4 }}>
             internal operations

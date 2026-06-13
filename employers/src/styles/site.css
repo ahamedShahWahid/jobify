@@ -206,37 +206,17 @@ section {
   gap: 28px;
   height: 64px;
 }
-.wordmark {
+.brand {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-family: var(--display);
-  font-weight: 800;
-  font-size: 17px;
-  letter-spacing: -0.02em;
-  color: var(--ink);
 }
-.wordmark .glyph {
-  display: inline-grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  background: var(--ink);
-  border-radius: 5px;
-  color: var(--paper);
-  font-family: var(--mono);
-  font-size: 14px;
-  font-weight: 600;
+.brand-logo {
+  height: 40px;
+  width: auto;
+  display: block;
 }
-.wordmark .sub {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-  font-weight: 500;
-  border-left: 1px solid var(--line-strong);
-  padding-left: 12px;
+.brand-logo.foot-logo {
+  height: 52px;
 }
 .mast-nav {
   display: flex;
@@ -1347,9 +1327,6 @@ footer.site {
 
 @media (max-width: 620px) {
   .mast-nav {
-    display: none;
-  }
-  .wordmark .sub {
     display: none;
   }
   .section-head .deck {

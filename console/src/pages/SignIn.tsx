@@ -62,6 +62,7 @@ export function SignIn() {
           <UtcClock />
         </div>
 
+        <img src="/jobify-mark.svg" alt="Jobify" className="gate-mark rise" />
         <h1 className="gate-title rise">
           OPERATIONS
           <span className="line2">CONSOLE</span>

@@ -198,6 +198,13 @@ a {
   font-weight: 300;
   color: var(--sg-accent);
 }
+/* brand lockup — full Jobify logo (mark + wordmark + punchline), light-bg SVG */
+.brand-logo {
+  height: clamp(64px, 11vw, 92px);
+  width: auto;
+  max-width: 100%;
+  display: block;
+}
 .cover-thesis {
   font-family: var(--sg-display);
   font-style: italic;

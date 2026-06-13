@@ -161,9 +161,19 @@ a {
 }
 .brand {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 12px;
   text-decoration: none;
+}
+/* SVG brand lockup (mark + JOBIFY + "Job will find you"). */
+.brand-logo {
+  height: 38px;
+  width: auto;
+  display: block;
+}
+.foot-logo {
+  height: 52px;
+  margin-bottom: 6px;
 }
 .brand .logo {
   font-family: var(--serif);
