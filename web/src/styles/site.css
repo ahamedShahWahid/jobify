@@ -2197,3 +2197,52 @@ a {
     box-shadow: 4px 4px 0 0 var(--ink);
   }
 }
+
+/* ---- Google sign-in (gate) ---------------------------------------------- */
+
+.google-gate {
+  margin-bottom: 22px;
+}
+.gsi {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* GIS renders its own iframe button; keep it left-aligned with breathing room. */
+.gsi-btn {
+  min-height: 40px;
+}
+.gsi-hint {
+  font-family: var(--sans);
+  font-size: 12.5px;
+}
+.gsi-hint.err {
+  color: var(--accent-deep);
+}
+.gsi-hint code,
+.google-gate code {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  background: var(--paper-2);
+  border: 1px solid var(--line-strong);
+  padding: 1px 5px;
+}
+
+/* "or explore without an account" divider above the demo/token segmented control */
+.gate-or {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 22px;
+  color: var(--ink-faint);
+  font-family: var(--sans);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+.gate-or::before,
+.gate-or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line-strong);
+}

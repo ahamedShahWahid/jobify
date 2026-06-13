@@ -1,20 +1,27 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ApiError, errorMessage } from "../../api/client";
+import { GoogleSignInButton } from "../../auth/GoogleSignInButton";
 import { Masthead } from "../../components/Chrome";
+import { API_BASE_URL, GOOGLE_CLIENT_ID } from "../../env";
 import { useSessionStore } from "../../session";
 
 /**
- * The Explore surface needs an applicant session. Demo mode runs against seeded
- * fixtures (no backend); live mode takes a pasted applicant access token.
+ * The Explore surface needs an applicant session. Google sign-in is the primary,
+ * real path (ID token → access token → live session). Demo mode runs against seeded
+ * fixtures (no backend); live mode takes a pasted applicant access token (dev aid).
  */
 export function Gate() {
-  const { connectDemo, connectLive, expired } = useSessionStore();
+  const { connectDemo, connectLive, connectGoogle, expired } = useSessionStore();
   const [mode, setMode] = useState<"demo" | "live">("demo");
   const [baseUrl, setBaseUrl] = useState("http://localhost:8000");
   const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function showError(e: unknown) {
+    setError(e instanceof ApiError ? `${e.status || "network"}: ${e.detail}` : errorMessage(e));
+  }
 
   async function connect() {
     setBusy(true);
@@ -23,7 +30,19 @@ export function Gate() {
       if (mode === "demo") await connectDemo();
       else await connectLive(baseUrl, token.trim());
     } catch (e) {
-      setError(e instanceof ApiError ? `${e.status || "network"}: ${e.detail}` : errorMessage(e));
+      showError(e);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onGoogleCredential(idToken: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await connectGoogle(idToken, API_BASE_URL);
+    } catch (e) {
+      showError(e);
     } finally {
       setBusy(false);
     }
@@ -42,6 +61,24 @@ export function Gate() {
             </p>
           </div>
           <div className="gate-body">
+            <div className="google-gate">
+              <span className="kicker ink">Sign in</span>
+              <p className="dim" style={{ margin: "2px 0 14px" }}>
+                Use your Google account to open your real matched feed.
+              </p>
+              {GOOGLE_CLIENT_ID ? (
+                <GoogleSignInButton clientId={GOOGLE_CLIENT_ID} onCredential={onGoogleCredential} />
+              ) : (
+                <p className="gsi-hint dim" style={{ margin: 0 }}>
+                  Set <code>VITE_GOOGLE_CLIENT_ID</code> to enable Google sign-in.
+                </p>
+              )}
+            </div>
+
+            <div className="gate-or">
+              <span>or explore without an account</span>
+            </div>
+
             <div className="seg">
               <button className={mode === "demo" ? "on" : ""} onClick={() => setMode("demo")}>
                 Demo feed
