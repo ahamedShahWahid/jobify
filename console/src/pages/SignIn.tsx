@@ -1,18 +1,24 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiError, errorMessage } from "../api/client";
+import { GoogleButton } from "../auth/GoogleButton";
 import { ErrorNotice, Field, UtcClock } from "../components/bits";
+import { API_BASE_URL, GOOGLE_CLIENT_ID } from "../env";
 import { landingFor, useSessionStore } from "../session";
 
 export function SignIn() {
-  const { connectLive, connectDemo, expired } = useSessionStore();
+  const { connectLive, connectGoogle, connectDemo, expired } = useSessionStore();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"demo" | "live">("demo");
   const [demoRole, setDemoRole] = useState<"admin" | "recruiter">("admin");
-  const [baseUrl, setBaseUrl] = useState("http://localhost:8000");
+  const [baseUrl, setBaseUrl] = useState(API_BASE_URL);
   const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function asMessage(e: unknown): string {
+    return e instanceof ApiError ? `${e.status || "network"}: ${e.detail}` : errorMessage(e);
+  }
 
   async function connect() {
     setBusy(true);
@@ -22,11 +28,31 @@ export function SignIn() {
         mode === "demo" ? await connectDemo(demoRole) : await connectLive(baseUrl, token.trim());
       navigate(landingFor(identity.role));
     } catch (e) {
-      setError(e instanceof ApiError ? `${e.status || "network"}: ${e.detail}` : errorMessage(e));
+      setError(asMessage(e));
     } finally {
       setBusy(false);
     }
   }
+
+  // GIS hands back the Google ID token here → exchange for an access token
+  // against VITE_API_BASE_URL → connectLive → role-based landing.
+  const onGoogleCredential = useCallback(
+    async (idToken: string) => {
+      setBusy(true);
+      setError(null);
+      try {
+        const identity = await connectGoogle(idToken, API_BASE_URL);
+        navigate(landingFor(identity.role));
+      } catch (e) {
+        setError(asMessage(e));
+      } finally {
+        setBusy(false);
+      }
+    },
+    [connectGoogle, navigate],
+  );
+
+  const onGoogleLoadError = useCallback((message: string) => setError(message), []);
 
   return (
     <div className="gate" data-area="admin">
@@ -67,6 +93,29 @@ export function SignIn() {
       </div>
 
       <div className="gate-right">
+        <div className="google-block rise">
+          <span className="k">sign in</span>
+          {GOOGLE_CLIENT_ID ? (
+            <GoogleButton
+              clientId={GOOGLE_CLIENT_ID}
+              onCredential={onGoogleCredential}
+              onLoadError={onGoogleLoadError}
+            />
+          ) : (
+            <p className="dim google-hint">
+              Set <code>VITE_GOOGLE_CLIENT_ID</code> to enable Google sign-in.
+            </p>
+          )}
+          <p className="k google-note">
+            recruiters &amp; admins only — your DB role decides where you land. New Google users
+            provision as applicants and see the no-access page.
+          </p>
+        </div>
+
+        <div className="google-divider rise">
+          <span>or use a manual session</span>
+        </div>
+
         <div className="mode-tabs rise">
           <button className={mode === "demo" ? "on" : ""} onClick={() => setMode("demo")}>
             Demo data
@@ -78,8 +127,8 @@ export function SignIn() {
 
         {expired && !error && (
           <div className="notice rise">
-            Your session ended — the access token expired or was rejected. Paste a fresh token to
-            continue.
+            Your session ended — the access token expired or was rejected. Sign in with Google or
+            paste a fresh token to continue.
           </div>
         )}
 

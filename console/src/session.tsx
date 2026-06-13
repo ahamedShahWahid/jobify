@@ -1,10 +1,24 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { ConsoleClient } from "./api/client";
-import { HttpClient } from "./api/client";
+import { ApiError, HttpClient } from "./api/client";
 import { DemoClient } from "./api/demo";
 import type { DemoRole } from "./api/demo";
 import type { MeResponse } from "./api/types";
+
+/** Wire shape of `POST /v1/auth/oauth/google` (mirrors `SignInResponse`). */
+interface GoogleSignInResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+  user: { id: string; email: string; role: string; applicant_id: string; is_new_user: boolean };
+}
+
+/** Flatten an RFC 7807 problem `detail` (string) to a display string, as HttpClient does. */
+function detailString(detail: unknown, fallback: string): string {
+  return typeof detail === "string" ? detail : fallback;
+}
 
 export interface Session {
   client: ConsoleClient;
@@ -45,6 +59,8 @@ interface SessionStore {
   /** True when the last session ended via an expired/invalid token, not a manual disconnect. */
   expired: boolean;
   connectLive: (baseUrl: string, token: string) => Promise<MeResponse>;
+  /** Exchange a Google ID token for an access token, then `connectLive`. */
+  connectGoogle: (idToken: string, baseUrl: string) => Promise<MeResponse>;
   connectDemo: (role: DemoRole) => Promise<MeResponse>;
   disconnect: () => void;
 }
@@ -62,29 +78,67 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return identity;
   }, []);
 
+  const connectLive = useCallback(
+    (baseUrl: string, token: string) =>
+      connect(
+        new HttpClient(baseUrl.replace(/\/$/, ""), token, () => {
+          setSession(null);
+          setExpired(true);
+        }),
+      ),
+    [connect],
+  );
+
+  const connectGoogle = useCallback(
+    async (idToken: string, baseUrl: string): Promise<MeResponse> => {
+      const base = baseUrl.replace(/\/$/, "");
+      let res: Response;
+      try {
+        res = await fetch(`${base}/v1/auth/oauth/google`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id_token: idToken }),
+        });
+      } catch {
+        throw new ApiError(0, `network error — is the API reachable at ${base}?`);
+      }
+      if (!res.ok) {
+        let detail = `HTTP ${res.status}`;
+        try {
+          const problem = (await res.json()) as { detail?: unknown; title?: unknown };
+          detail = detailString(problem.detail, detailString(problem.title, detail));
+        } catch {
+          /* non-JSON error body — keep the status fallback */
+        }
+        throw new ApiError(res.status, detail, res.headers.get("X-Request-Id") ?? undefined);
+      }
+      const data = (await res.json()) as GoogleSignInResponse;
+      // The console holds only the short-lived access token in memory; a 401 mid-session
+      // routes back to sign-in where Google is one click away.
+      // TODO: refresh-token rotation — `data.refresh_token` is intentionally unused for now.
+      return connectLive(base, data.access_token);
+    },
+    [connectLive],
+  );
+
   const store = useMemo<SessionStore>(
     () => ({
       session,
       expired,
       // Access tokens are short-lived (≤10 min TTL) and held in memory only — a
-      // reload means re-pasting the token, by design. The onUnauthorized hook
+      // reload means re-authenticating, by design. The onUnauthorized hook
       // clears the session on ANY 401 so a mid-session expiry routes back to the
       // sign-in gate (with an "expired" notice) instead of stranding the user on
       // dead pages.
-      connectLive: (baseUrl, token) =>
-        connect(
-          new HttpClient(baseUrl.replace(/\/$/, ""), token, () => {
-            setSession(null);
-            setExpired(true);
-          }),
-        ),
+      connectLive,
+      connectGoogle,
       connectDemo: (role) => connect(new DemoClient(role)),
       disconnect: () => {
         setSession(null);
         setExpired(false);
       },
     }),
-    [session, expired, connect],
+    [session, expired, connect, connectLive, connectGoogle],
   );
 
   return <SessionContext.Provider value={store}>{children}</SessionContext.Provider>;

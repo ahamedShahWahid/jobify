@@ -1103,3 +1103,57 @@ td.mono-id {
     transition: none;
   }
 }
+
+/* ---- Google sign-in (primary, above the manual session controls) ---- */
+
+.google-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.google-signin {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* GIS renders its own (dark) button into this host; give it a stable footprint
+   so the panel doesn't reflow as the SDK swaps in the iframe. */
+.google-btn-host {
+  min-height: 44px;
+  display: flex;
+}
+.google-hint {
+  font-size: 13px;
+  padding: 12px 14px;
+  border: 1px dashed var(--hairline-bright);
+  background: var(--bg2);
+}
+.google-hint code,
+.google-note code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--acc);
+}
+.google-note {
+  line-height: 1.5;
+  max-width: 360px;
+}
+.google-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 18px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.google-divider::before,
+.google-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--hairline);
+}

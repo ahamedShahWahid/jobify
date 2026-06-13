@@ -26,7 +26,37 @@ as the demo persona: role decides which area you land in and which nav the rail 
 (the backend's `users.role` is single-valued, so the console gates each area to its role
 rather than letting out-of-role clicks 403).
 
-**Live mode** talks to the FastAPI service:
+## Google sign-in
+
+"Continue with Google" is the primary sign-in path. It exchanges a Google ID token for an
+access token against the backend (`POST {VITE_API_BASE_URL}/v1/auth/oauth/google`), then
+runs the same role-based landing as a pasted token. Because the backend returns the user's
+**existing** DB role, a recruiter gets a recruiter token and an admin an admin token — so it
+"just works" for existing recruiters/admins. (First-time Google users provision as
+`applicant` and land on the no-access page, which is correct: recruiters are elevated via
+`POST /v1/employers`, admins via `uv run jobify-grant-admin <email>`.)
+
+Only the short-lived access token (≤10 min) is held in memory — there is no refresh-token
+rotation yet, so any `401` routes back to this screen where Google is one click away.
+
+Build-time config (Vite env — copy `.env.example` → `.env`):
+
+| Var                     | Purpose                                                                       |
+| ----------------------- | ----------------------------------------------------------------------------- |
+| `VITE_GOOGLE_CLIENT_ID` | Google **Web** OAuth client id (`*.apps.googleusercontent.com`). Unset ⇒ button hidden, muted hint shown; demo + paste-token still work. |
+| `VITE_API_BASE_URL`     | API base for the exchange + live calls (default `http://localhost:8000`).      |
+
+To make Google sign-in live:
+
+1. On the Google **Web** OAuth client, add `http://localhost:5173` under **Authorized
+   JavaScript origins** (scheme+host+port, no trailing slash; GIS uses no redirect URIs).
+2. On the backend: include that same client id in `JOBIFY_GOOGLE_OAUTH_CLIENT_IDS`
+   (it's the `aud` the API verifies), and add `http://localhost:5173` to
+   `JOBIFY_CORS_ALLOW_ORIGINS`.
+3. Set `VITE_GOOGLE_CLIENT_ID` (+ `VITE_API_BASE_URL` if not localhost) in `console/.env`
+   and run `npm run dev`.
+
+**Live mode (paste-token)** is the manual fallback below the Google button:
 
 1. Start the API (see `api/README.md`) and add the console origin to CORS:
    `JOBIFY_CORS_ALLOW_ORIGINS=http://localhost:8080,http://localhost:5173`
