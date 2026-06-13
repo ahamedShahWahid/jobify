@@ -11,3 +11,6 @@ working
 
 # Redis dump produced by a local redis-server.
 *.rdb
+
+# Playwright MCP verification artifacts (screenshots, console logs).
+.playwright-mcp/
