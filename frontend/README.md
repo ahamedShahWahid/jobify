@@ -30,4 +30,4 @@ class; per-surface CSS is scoped inside that selector to prevent cross-surface b
 ## Design tokens
 
 Each surface owns its own CSS-variable token system in `src/sites/<surface>/styles/`.
-The static `styleguide/` at repo root is a hand-maintained snapshot of those tokens.
+The static `frontend/styleguide/` is a hand-maintained snapshot of those tokens.

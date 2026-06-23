@@ -6,30 +6,37 @@ Guidance for Claude Code working in this repo.
 
 Jobify (Jobify) — an early-stage placement platform.
 
-- `api/` — FastAPI backend (Python 3.12, `uv`). Async SQLAlchemy + Alembic on Postgres 16, Google OAuth + rotating refresh JWTs, resume upload/parse (Celery + Redis), embeddings (Gemini + pgvector), matching/scoring, feed, applications, recruiter jobs CRUD, notifications outbox, admin moderation, consent + DSR (DPDP).
+- **Backend — uv workspace (3 packages, all from repo root):**
+  - `core/` — `jobify` domain package. DB models + Alembic migrations (`core/alembic.ini`), integrations (storage, parser, embeddings, email, scoring, explainer), consent/DSR/audit, seeding CLI, Celery bare app (`jobify.celery_app`). Email templates at `core/emails/`.
+  - `api/` — `jobify_api` FastAPI service. App factory, routes, auth, middleware, DSR/admin routes, employer/invite routes. Entry point `jobify_api.main:app`. Scripts: `jobify-seed-jobs`, `jobify-seed-consents`, `jobify-grant-admin`.
+  - `worker/` — `jobify_worker` Celery daemon. Tasks (parse, embed, score, sweep_notifications), runtime singletons, worker entry point `jobify_worker.worker_app`. See `worker/README.md`.
+  - `tests/` — all tests at repo root (`tests/unit/`, `tests/integration/`, `tests/eval/`).
+  - Root `pyproject.toml` is the workspace (`[tool.uv.workspace] members = [core, api, worker]`). `.env` lives at repo root.
 - `IMPLEMENTATION_SPEC.md` — **how** we build it (engineering spec, v0.2 MVP-first).
 - `docs/prd/KPA_Enhanced_BRD_v1_1.pdf` — **what** we build (product BRD; scope source of truth).
 - `docs/superpowers/specs/` — per-slice design docs (the **why** behind each section below). Their spent step-by-step build plans were removed once shipped — recoverable from git history if ever needed.
 - `app/` — Flutter mobile + web client (last section). The spec overrides the BRD's React Native + Next.js stack.
-- `frontend/` — unified Vite + React + TS web app; three route-prefixed surfaces under one HashRouter: `/` (applicant/public, `src/sites/web`), `/employers` (recruiter marketing, `src/sites/employers`), `/console` (admin + recruiter ops, `src/sites/console`). Shared transport/session/auth/env in `src/shared`. `npm run build` = `tsc -b && vite build`. See `frontend/README.md`. Static `emails/` + `styleguide/` dirs at repo root have no build step.
+- `frontend/` — unified Vite + React + TS web app; three route-prefixed surfaces under one HashRouter: `/` (applicant/public, `src/sites/web`), `/employers` (recruiter marketing, `src/sites/employers`), `/console` (admin + recruiter ops, `src/sites/console`). Shared transport/session/auth/env in `src/shared`. `npm run build` = `tsc -b && vite build`. See `frontend/README.md`. Static `frontend/styleguide/` has no build step.
 
 Scope vs "how" conflict: BRD wins on product behavior; spec wins on tech.
 
 ## Commands + setup
 
-Backend commands run from `api/` (the `uv` workspace, `alembic.ini`, `pyproject.toml` live there). **All operational reference lives in the READMEs** — `api/README.md` (run, tests, migrations, DB/Redis/pgvector setup, worker command, seeding, the full `JOBIFY_*` env-var table, endpoint docs), `app/README.md` (Flutter run/test, web OAuth origins), and `frontend/README.md` (Vite dev/build, env vars, surface→route map). This file is non-obvious bits only. Boot rules worth pinning here:
+All backend commands run from the **repo root** (`pyproject.toml` + `uv.lock` live there). `.env` at repo root. **Operational reference in READMEs** — `api/README.md` (run, tests, migrations, DB/Redis/pgvector setup, seeding, full `JOBIFY_*` env-var table, endpoint docs), `worker/README.md` (worker run + beat command, queues), `app/README.md` (Flutter run/test, web OAuth origins), `frontend/README.md` (Vite dev/build, env vars, surface→route map). This file is non-obvious bits only. Boot rules:
 
-- App refuses to boot if a required `JOBIFY_*` var is missing/invalid (`settings.py`); `JOBIFY_DB_URL` **must** use `postgresql+asyncpg://` (enforced in `Settings._enforce_async_driver`).
+- App refuses to boot if a required `JOBIFY_*` var is missing/invalid (`settings.py` in `jobify_api`); `JOBIFY_DB_URL` **must** use `postgresql+asyncpg://` (enforced in `Settings._enforce_async_driver`).
 - Integration fixtures inject `JOBIFY_JWT_SECRET="x"*32` + `JOBIFY_GOOGLE_OAUTH_CLIENT_IDS=test.apps.googleusercontent.com` — match these for new apps under test.
-- **CI verbatim** (run these exact commands before claiming green) — api: `uv run ruff check src/ tests/` · `uv run ruff format --check src/ tests/` · `uv run mypy` · `uv run pytest -v -m "not integration and not eval"` · `uv run pytest -v -s -m eval` · `uv run pytest -v -m integration`; app: `dart format --set-exit-if-changed lib test` · `flutter analyze` · `flutter test`.
+- **Alembic runs from `core/`:** `cd core && uv run alembic upgrade head` (alembic.ini lives in `core/`).
+- **Worker runs from repo root:** `uv run --env-file=.env celery -A jobify_worker.worker_app worker --pool=solo --concurrency=1 -Q parse,embed,score,notify --loglevel=info`. Dispatch by task name via `jobify.celery_app.enqueue("jobify.<task>", …)`.
+- **CI verbatim** (run these exact commands from repo root before claiming green) — backend: `uv run ruff check core/src api/src worker/src tests` · `uv run ruff format --check core/src api/src worker/src tests` · `uv run mypy` · `uv run pytest -v -m "not integration and not eval"` · `uv run pytest -v -s -m eval` · `uv run pytest -v -m integration`; app: `dart format --set-exit-if-changed lib test` · `flutter analyze` · `flutter test`.
 
 ## Architecture — non-obvious bits
 
 > Each subproject has a paired design doc in `docs/superpowers/specs/` (the **why** + full reserved-slug tables). Below = load-bearing rules only: things that cause a bug if violated and aren't obvious from the code.
 
-### App wiring (`src/jobify/app_factory.py`)
+### App wiring (`jobify_api.app_factory`)
 
-`create_app()` builds a fresh app per call (test isolation), owning three `app.state` things: `settings`; `db_engine` + `db_sessionmaker` (single async engine, sets `search_path=jobify` via asyncpg `server_settings` so model code does **not** repeat `schema="jobify"`; disposed on `shutdown` — **don't create your own engine in module scope**); `storage` (a `Storage` protocol impl, currently `LocalFileStorage`). Routes read these via `Depends` (`get_session`, `get_storage`); tests swap via `app.dependency_overrides`.
+`create_app()` builds a fresh app per call (test isolation), owning three `app.state` things: `settings`; `db_engine` + `db_sessionmaker` (single async engine, sets `search_path=jobify` via asyncpg `server_settings` so model code does **not** repeat `schema="jobify"`; disposed on `shutdown` — **don't create your own engine in module scope**); `storage` (a `Storage` protocol impl, currently `LocalFileStorage`). Routes read these via `Depends` (`get_session` in `jobify_api.dependencies`, `get_storage`); tests swap via `app.dependency_overrides`.
 
 ### Middleware — pure ASGI, not BaseHTTPMiddleware
 
@@ -41,10 +48,10 @@ Backend commands run from `api/` (the `uv` workspace, `alembic.ini`, `pyproject.
 
 ### Resume route invariants — error ladder
 
-`routes/resumes.py` enforces this order; each layer assumes the previous passed — **don't reorder:**
+`jobify_api.routes.resumes` enforces this order; each layer assumes the previous passed — **don't reorder:**
 
 1. **401** Bearer parse + JWT + user re-fetch (`current_user`). Slugs `missing_bearer_token`/`invalid_access_token`/`user_not_found`.
-2. **403** `not_an_applicant` — `require_applicant` (`auth/dependencies.py`, the ONE shared applicant guard — seven inline copies drifted and two lost the `deleted_at` filter, letting DSR-tombstoned applicants through; don't re-inline it) rejects recruiter/admin **before any applicant-row read**.
+2. **403** `not_an_applicant` — `require_applicant` (`jobify_api.auth.dependencies`, the ONE shared applicant guard — seven inline copies drifted and two lost the `deleted_at` filter, letting DSR-tombstoned applicants through; don't re-inline it) rejects recruiter/admin **before any applicant-row read**.
 3. **500** `applicant_missing` — defense in depth (unreachable; `_upsert_identity` provisions the row at sign-in). Logs `applicant.row-missing-for-applicant-role`.
 4. **415** content-type whitelist (`JOBIFY_ALLOWED_RESUME_CONTENT_TYPES`). **413** size cap (`JOBIFY_MAX_UPLOAD_BYTES`, 10 MiB).
 5. **404** `resume not found` (GET) — **uniform** across unknown-id AND owned-by-another (single JOIN). Distinguishing leaks existence. Keep uniform.
@@ -110,7 +117,7 @@ SQLAlchemy models are never response models. Define `*Read`/`*Create`/`*Update` 
 
 ### Parse F1 quality gate
 
-- **Gold dataset `api/data/parse_eval/`** (`<id>.txt` + `<id>.expected.json`); raw text (PDF/DOCX extraction bypassed — gate measures parser heuristics).
+- **Gold dataset `core/data/parse_eval/`** (`<id>.txt` + `<id>.expected.json`); raw text (PDF/DOCX extraction bypassed — gate measures parser heuristics).
 - **`uv run pytest -m eval`** → `test_library_parser_meets_quality_gate` → `jobify.eval.parse_f1.eval_gold_dataset()`. CI runs it (`lint-types-unit-eval`, no DB) before integration.
 - **Gate** (spec §13 P1): macro-F1 ≥ 0.85; floors `email ≥ 0.95`/`phone ≥ 0.85`/`name ≥ 0.70`/`skills ≥ 0.75`. **Only those 4 fields gate** (others print only). Set-skills F1 counts FPs (measures `_extract_skills` over-match drift).
 - New gold example: drop a pair with the next id, re-run `-m eval -v -s`; if it tanks a floor, fix the expectation or document the limitation.
@@ -133,7 +140,7 @@ SQLAlchemy models are never response models. Define `*Read`/`*Create`/`*Update` 
 
 ### Seeding — spec `2026-05-20-p2.0-jobs-and-seeding-design.md`
 
-- **`employers`/`jobs` via CLI** (`uv run jobify-seed-jobs` reads `api/data/sample_jobs.json`, upserts), not migrations. Idempotency: `employers.name_norm` (DB partial-UNIQUE) + `(jobs.employer_id, lower(jobs.title))` (script-only). JSON uses `posted_days_ago: int` (→ `now() - timedelta`) so it doesn't age.
+- **`employers`/`jobs` via CLI** (`uv run jobify-seed-jobs` reads `core/data/sample_jobs.json`, upserts), not migrations. Idempotency: `employers.name_norm` (DB partial-UNIQUE) + `(jobs.employer_id, lower(jobs.title))` (script-only). JSON uses `posted_days_ago: int` (→ `now() - timedelta`) so it doesn't age.
 - **Updates preserve human state:** `employers.name` never overwritten; `verified_at` set only when `NULL`.
 - **`_apply_in_session(session, payload, report)` is the test seam** (CLI's `_apply()` opens its own engine; tests pass the savepoint session). `embed_job` dispatch (`_dispatch_embeds(...)`) runs AFTER `_apply` returns (outside `asyncio.run`); same broad-except.
 - **Drift guard** `test_loader_against_sample_jobs_json` asserts `employers==10, jobs==27` — update in the same commit.
@@ -207,7 +214,7 @@ SQLAlchemy models are never response models. Define `*Read`/`*Create`/`*Update` 
 ## Conventions
 
 - **uv only** (don't `pip install` — bypasses `uv.lock`). **No Docker for MVP** (Homebrew `postgresql@16`).
-- **Hand-written migrations** in `src/jobify/db/migrations/versions/` (autogenerate off; excluded from mypy). Edit the revision before `upgrade head`.
+- **Hand-written migrations** in `core/src/jobify/db/migrations/versions/` (autogenerate off; excluded from mypy). Edit the revision before `upgrade head`.
 - **structlog only** — `structlog.get_logger(__name__)`, context as kwargs; no `print`/`logging.getLogger`. `JOBIFY_LOG_FORMAT=json` for prod.
 - **All handlers `async def`.** Versioned routes under `/v1` except bare `/health` + `/ready` (probes).
 - **Branch workflow → `WORKFLOW.md`.** One short-lived branch per feature off latest `origin/main`; `scripts/new-feature.sh <name>` to start, `scripts/sync-with-main.sh` to reconcile after a squash-merge (it auto-`rebase --onto`s past already-merged commits — never restack new work on a merged branch).
