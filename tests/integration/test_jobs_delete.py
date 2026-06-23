@@ -58,8 +58,8 @@ async def test_delete_other_employer_returns_404(async_client, session, applican
     _, token = applicant_user_and_token
     job_id = await _setup_job(async_client, token)
 
-    from jobify.auth.tokens import mint_access_token
     from jobify.db.models import User, UserRole
+    from jobify_api.auth.tokens import mint_access_token
 
     other = User(email="other@example.com", role=UserRole.APPLICANT)
     session.add(other)

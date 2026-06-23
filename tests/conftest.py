@@ -8,7 +8,7 @@ from collections.abc import Iterator
 import pytest
 from fastapi.testclient import TestClient
 
-from jobify.app_factory import create_app
+from jobify_api.app_factory import create_app
 
 
 def pytest_configure(config: object) -> None:

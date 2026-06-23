@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import pytest
 
-from jobify.routes.feed import decode_cursor, encode_cursor
+from jobify_api.routes.feed import decode_cursor, encode_cursor
 
 
 def test_cursor_roundtrip() -> None:

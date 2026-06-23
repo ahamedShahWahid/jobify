@@ -19,7 +19,7 @@ def test_ready_returns_200_when_db_reachable(db_url: str, monkeypatch: pytest.Mo
         "test.apps.googleusercontent.com",
     )
 
-    from jobify.app_factory import create_app  # import after env is set
+    from jobify_api.app_factory import create_app  # import after env is set
 
     with TestClient(create_app()) as c:
         response = c.get("/ready")
@@ -41,7 +41,7 @@ def test_ready_returns_503_when_db_unreachable(monkeypatch: pytest.MonkeyPatch) 
         "test.apps.googleusercontent.com",
     )
 
-    from jobify.app_factory import create_app
+    from jobify_api.app_factory import create_app
 
     # raise_server_exceptions=False is NOT needed — the /ready handler catches all
     # exceptions (including bare OSError from asyncpg) and returns 503 gracefully.

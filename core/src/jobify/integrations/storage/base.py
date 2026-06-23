@@ -1,14 +1,13 @@
-"""Storage protocol + FastAPI dependency.
+"""Storage protocol.
 
 Keeps the route layer storage-agnostic: routes only see the ``Storage``
-protocol and pull a concrete instance via ``Depends(get_storage)``.
+protocol and pull a concrete instance via ``Depends(get_storage)`` (defined
+in ``jobify_api.dependencies``).
 """
 
 from __future__ import annotations
 
 from typing import Protocol
-
-from fastapi import Request
 
 
 class Storage(Protocol):
@@ -22,9 +21,3 @@ class Storage(Protocol):
     async def save(self, *, key: str, content: bytes, content_type: str) -> None: ...
     async def read(self, key: str) -> bytes: ...
     async def delete(self, key: str) -> None: ...
-
-
-def get_storage(request: Request) -> Storage:
-    """FastAPI dependency: pull the configured Storage off ``app.state``."""
-    storage: Storage = request.app.state.storage
-    return storage

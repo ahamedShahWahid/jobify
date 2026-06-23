@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobify.consent import seed_default_consents
 from jobify.db.models import DEFAULT_CONSENTS, User, UserConsent, UserRole
-from jobify.scripts.seed_consents import SeedReport, _apply_in_session
+from jobify_api.scripts.seed_consents import SeedReport, _apply_in_session
 
 pytestmark = pytest.mark.integration
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from jobify.scripts.seed_jobs import SeedPayload, normalize_name
+from jobify_api.scripts.seed_jobs import SeedPayload, normalize_name
 
 
 def _minimal_payload(**overrides) -> dict:

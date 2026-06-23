@@ -6,9 +6,9 @@ import httpx
 import pytest
 from sqlalchemy import select
 
-from jobify.auth.google_verifier import GoogleClaims
-from jobify.auth.tokens import sha256_token_hash
 from jobify.db.models import RefreshToken
+from jobify_api.auth.google_verifier import GoogleClaims
+from jobify_api.auth.tokens import sha256_token_hash
 
 pytestmark = pytest.mark.integration
 

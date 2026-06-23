@@ -9,7 +9,6 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from jobify.auth.tokens import mint_access_token
 from jobify.db.models import (
     Applicant,
     Application,
@@ -21,6 +20,7 @@ from jobify.db.models import (
     User,
     UserRole,
 )
+from jobify_api.auth.tokens import mint_access_token
 
 pytestmark = pytest.mark.integration
 

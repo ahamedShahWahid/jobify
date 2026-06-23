@@ -24,9 +24,9 @@ from sqlalchemy import text as sql_text
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
-from jobify.auth.google_verifier import GoogleClaims, get_google_verifier
 from jobify.db.models import Resume, ResumeParseStatus, User
 from jobify.integrations.embeddings import EmbeddingTask
+from jobify_api.auth.google_verifier import GoogleClaims, get_google_verifier
 
 pytestmark = pytest.mark.integration
 
@@ -147,8 +147,8 @@ async def eager_client(
     )
 
     import jobify.workers.celery_app as _celery_mod
-    from jobify.app_factory import create_app
     from jobify.workers.celery_app import celery_app
+    from jobify_api.app_factory import create_app
 
     app = create_app()
     app.dependency_overrides[get_google_verifier] = lambda: google_verifier

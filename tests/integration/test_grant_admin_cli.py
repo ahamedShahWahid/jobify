@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobify.db.models import AuditLog, User, UserRole
-from jobify.scripts.grant_admin import _apply_in_session
+from jobify_api.scripts.grant_admin import _apply_in_session
 
 pytestmark = pytest.mark.integration
 

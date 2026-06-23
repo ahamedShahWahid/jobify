@@ -19,8 +19,6 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from jobify.auth.google_verifier import GoogleClaims
-from jobify.auth.tokens import mint_access_token
 from jobify.consent import seed_default_consents
 from jobify.db.models import (
     Applicant,
@@ -42,6 +40,8 @@ from jobify.db.models import (
     UserConsent,
     UserRole,
 )
+from jobify_api.auth.google_verifier import GoogleClaims
+from jobify_api.auth.tokens import mint_access_token
 from tests.integration.conftest import FakeGoogleIdTokenVerifier
 
 pytestmark = pytest.mark.integration

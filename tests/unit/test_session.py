@@ -13,7 +13,8 @@ from fastapi import Depends, Request
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from jobify.db import session as session_module
+import jobify_api.dependencies as session_module
+from jobify.db import session as core_session_module
 
 
 def test_create_engine_uses_settings_db_url(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -24,7 +25,7 @@ def test_create_engine_uses_settings_db_url(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setenv("JOBIFY_JWT_SECRET", "x" * 32)
     monkeypatch.setenv("JOBIFY_GOOGLE_OAUTH_CLIENT_IDS", "test.apps.googleusercontent.com")
 
-    engine = session_module.create_engine_from_settings()
+    engine = core_session_module.create_engine_from_settings()
 
     assert engine.url.render_as_string(hide_password=False) == "postgresql+asyncpg://u:p@h:5432/d"
     # Engine is configured for the "jobify" schema.
@@ -81,7 +82,7 @@ def test_get_session_can_be_used_as_fastapi_dependency(monkeypatch: pytest.Monke
     monkeypatch.setenv("JOBIFY_JWT_SECRET", "x" * 32)
     monkeypatch.setenv("JOBIFY_GOOGLE_OAUTH_CLIENT_IDS", "test.apps.googleusercontent.com")
 
-    from jobify.app_factory import create_app
+    from jobify_api.app_factory import create_app
 
     app = create_app()
 

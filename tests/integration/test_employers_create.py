@@ -51,8 +51,8 @@ async def test_create_employer_duplicate_name_returns_409(
     assert r1.status_code == 201, r1.text
 
     # Second user attempts the same name
-    from jobify.auth.tokens import mint_access_token
     from jobify.db.models import User, UserRole
+    from jobify_api.auth.tokens import mint_access_token
 
     other = User(email="other@example.com", role=UserRole.APPLICANT)
     session.add(other)

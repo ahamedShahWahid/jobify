@@ -10,8 +10,8 @@ import jwt as pyjwt
 import pytest
 from sqlalchemy import select
 
-from jobify.auth.google_verifier import GoogleClaims
 from jobify.db.models import User
+from jobify_api.auth.google_verifier import GoogleClaims
 
 pytestmark = pytest.mark.integration
 
@@ -123,8 +123,8 @@ async def test_me_tolerates_nullable_email_and_scrubbed_applicant_fields(
     """users.email, applicants.full_name and applicants.locations are nullable
     in the DB (migration 0015 / phone-only-auth future). The wire contract must
     mirror that instead of 500-ing on a null or masking it as ""."""
-    from jobify.auth.tokens import mint_access_token
     from jobify.db.models import Applicant, UserRole
+    from jobify_api.auth.tokens import mint_access_token
 
     user = User(email=None, role=UserRole.APPLICANT)
     session.add(user)

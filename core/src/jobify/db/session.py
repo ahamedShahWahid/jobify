@@ -6,10 +6,8 @@ plan — see IMPLEMENTATION_SPEC.md §5 for the eventual split design.
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
 from typing import Any
 
-from fastapi import Request
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -49,18 +47,3 @@ def make_sessionmaker(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
         expire_on_commit=False,
         autoflush=False,
     )
-
-
-async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
-    """FastAPI dependency: yield a session, close on exit, rollback on error.
-
-    Pulls the sessionmaker off ``app.state`` so the engine is shared across
-    requests. Routes use ``Depends(get_session)`` with no further wiring.
-    """
-    sm: async_sessionmaker[AsyncSession] = request.app.state.db_sessionmaker
-    async with sm() as session:
-        try:
-            yield session
-        except Exception:
-            await session.rollback()
-            raise

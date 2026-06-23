@@ -6,7 +6,7 @@ import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-from jobify.app_factory import create_app
+from jobify_api.app_factory import create_app
 
 
 @pytest.fixture

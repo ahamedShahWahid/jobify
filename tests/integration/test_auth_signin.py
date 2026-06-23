@@ -9,7 +9,6 @@ import httpx
 import pytest
 from sqlalchemy import select
 
-from jobify.auth.google_verifier import GoogleClaims
 from jobify.db.models import (
     DEFAULT_CONSENTS,
     Applicant,
@@ -20,6 +19,7 @@ from jobify.db.models import (
     User,
     UserConsent,
 )
+from jobify_api.auth.google_verifier import GoogleClaims
 
 pytestmark = pytest.mark.integration
 

@@ -31,15 +31,15 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import NullPool
 
-from jobify.auth.google_verifier import (
+from jobify.db.models import User, UserRole
+from jobify.integrations.embeddings import EmbeddingResult, EmbeddingTask
+from jobify.scoring.explainer import ExplainContext
+from jobify_api.auth.google_verifier import (
     GoogleClaims,
     InvalidGoogleTokenError,
     get_google_verifier,
 )
-from jobify.auth.tokens import mint_access_token
-from jobify.db.models import User, UserRole
-from jobify.integrations.embeddings import EmbeddingResult, EmbeddingTask
-from jobify.scoring.explainer import ExplainContext
+from jobify_api.auth.tokens import mint_access_token
 
 pytestmark = pytest.mark.integration
 
@@ -275,8 +275,8 @@ def client(
         "test.apps.googleusercontent.com",
     )
 
-    from jobify.app_factory import create_app
-    from jobify.db.session import get_session
+    from jobify_api.app_factory import create_app
+    from jobify_api.dependencies import get_session
 
     app = create_app()
 
@@ -319,8 +319,8 @@ async def async_client(
         "test.apps.googleusercontent.com",
     )
 
-    from jobify.app_factory import create_app
-    from jobify.db.session import get_session
+    from jobify_api.app_factory import create_app
+    from jobify_api.dependencies import get_session
 
     app = create_app()
 
@@ -395,7 +395,7 @@ async def concurrent_async_client(
         "test.apps.googleusercontent.com",
     )
 
-    from jobify.app_factory import create_app
+    from jobify_api.app_factory import create_app
 
     app = create_app()
     app.dependency_overrides[get_google_verifier] = lambda: google_verifier

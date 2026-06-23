@@ -9,10 +9,11 @@ dependencies = []
 package = false
 
 [tool.uv.workspace]
-members = ["core"]
+members = ["core", "api"]
 
 [tool.uv.sources]
 jobify-core = { workspace = true }
+jobify-api = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -22,6 +23,7 @@ dev = [
     "mypy>=1.13,<2",
     "fpdf2>=2.7,<3",
     "jobify-core",
+    "jobify-api",
 ]
 
 [tool.ruff]
@@ -38,7 +40,7 @@ select = ["E", "F", "I", "B", "UP", "N", "S", "RUF"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["core/src/jobify"]
+files = ["core/src/jobify", "api/src/jobify_api"]
 exclude = ["core/src/jobify/db/migrations"]
 plugins = ["pydantic.mypy"]
 
@@ -58,7 +60,7 @@ ignore_missing_imports = true
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
-pythonpath = ["core/src"]
+pythonpath = ["core/src", "api/src"]
 markers = [
     "integration: tests that require a running local Postgres (see README §Database)",
     "eval: resume-parser quality gate against the gold dataset in core/data/parse_eval/",

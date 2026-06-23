@@ -9,8 +9,8 @@ from fpdf import FPDF
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from jobify.auth.tokens import mint_access_token
 from jobify.db.models import Applicant, Resume, ResumeParseStatus, User, UserRole
+from jobify_api.auth.tokens import mint_access_token
 
 pytestmark = pytest.mark.integration
 

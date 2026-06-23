@@ -61,7 +61,7 @@ def test_response_has_exactly_one_request_id_header(monkeypatch: pytest.MonkeyPa
     from fastapi.responses import PlainTextResponse
     from fastapi.testclient import TestClient
 
-    from jobify.middleware.request_id import REQUEST_ID_HEADER, RequestIdMiddleware
+    from jobify_api.middleware.request_id import REQUEST_ID_HEADER, RequestIdMiddleware
 
     app = FastAPI()
     app.add_middleware(RequestIdMiddleware)

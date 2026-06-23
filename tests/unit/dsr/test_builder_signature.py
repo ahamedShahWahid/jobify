@@ -5,7 +5,7 @@ from __future__ import annotations
 import inspect
 from types import SimpleNamespace
 
-from jobify.dsr import UserExport, _row_to_dict, build_user_export
+from jobify_api.dsr import UserExport, _row_to_dict, build_user_export
 
 
 def test_builder_signature() -> None:

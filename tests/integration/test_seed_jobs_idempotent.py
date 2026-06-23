@@ -17,7 +17,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobify.db.models import Employer, Job
-from jobify.scripts.seed_jobs import (
+from jobify_api.scripts.seed_jobs import (
     SeedPayload,
     SeedReport,
     _apply_in_session,
@@ -198,7 +198,7 @@ async def test_seed_dispatches_embed_per_upserted_job(
     )
     report = SeedReport()
     await _apply_in_session(session, payload, report)
-    from jobify.scripts.seed_jobs import _dispatch_embeds
+    from jobify_api.scripts.seed_jobs import _dispatch_embeds
 
     _dispatch_embeds(report.inserted_job_ids + report.updated_job_ids)
     assert len(calls) == 2
@@ -218,7 +218,7 @@ async def test_seed_swallows_broker_outage(
 
     # Capture structlog warning calls via the _log bound in seed_jobs.
     warning_events: list[str] = []
-    import jobify.scripts.seed_jobs as seed_jobs_mod
+    import jobify_api.scripts.seed_jobs as seed_jobs_mod
 
     original_log = seed_jobs_mod._log
 
@@ -234,7 +234,7 @@ async def test_seed_swallows_broker_outage(
     payload = _payload([_employer_dict()], [_job_dict()])
     report = SeedReport()
     await _apply_in_session(session, payload, report)
-    from jobify.scripts.seed_jobs import _dispatch_embeds
+    from jobify_api.scripts.seed_jobs import _dispatch_embeds
 
     # Should not raise.
     _dispatch_embeds(report.inserted_job_ids + report.updated_job_ids)

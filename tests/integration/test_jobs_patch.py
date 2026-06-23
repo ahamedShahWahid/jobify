@@ -108,8 +108,8 @@ async def test_patch_other_employer_returns_404(async_client, session, applicant
     _, job_id = await _make_recruiter_and_job(async_client, token)
 
     # Second recruiter from a different employer
-    from jobify.auth.tokens import mint_access_token
     from jobify.db.models import User, UserRole
+    from jobify_api.auth.tokens import mint_access_token
 
     other = User(email="other@example.com", role=UserRole.APPLICANT)
     session.add(other)

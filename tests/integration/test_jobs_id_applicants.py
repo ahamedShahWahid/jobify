@@ -72,7 +72,7 @@ async def test_applicants_other_employer_returns_404(
     job_id = await _create_job(async_client, token, emp_id)
 
     # Other recruiter
-    from jobify.auth.tokens import mint_access_token
+    from jobify_api.auth.tokens import mint_access_token
 
     other = User(email="other@example.com", role=UserRole.APPLICANT)
     session.add(other)

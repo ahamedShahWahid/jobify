@@ -21,8 +21,8 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
-from jobify.auth.tokens import mint_access_token
 from jobify.db.models import Applicant, Resume, ResumeParseStatus, User, UserRole
+from jobify_api.auth.tokens import mint_access_token
 
 pytestmark = pytest.mark.integration
 
@@ -58,8 +58,8 @@ async def pipeline_client(
     monkeypatch.setenv("JOBIFY_JWT_SECRET", _JWT_SECRET)
 
     import jobify.workers.celery_app as _celery_mod
-    from jobify.app_factory import create_app
     from jobify.workers.celery_app import celery_app
+    from jobify_api.app_factory import create_app
 
     app = create_app()
 

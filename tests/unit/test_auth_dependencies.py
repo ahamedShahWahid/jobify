@@ -10,7 +10,7 @@ import pytest
 from fastapi import HTTPException
 from starlette.requests import Request
 
-from jobify.auth.dependencies import _extract_bearer_or_raise_401
+from jobify_api.auth.dependencies import _extract_bearer_or_raise_401
 
 
 def _request_with_headers(headers: list[tuple[bytes, bytes]]) -> Request:

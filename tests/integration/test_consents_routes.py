@@ -9,9 +9,9 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from jobify.auth.tokens import mint_access_token
 from jobify.consent import seed_default_consents
 from jobify.db.models import DEFAULT_CONSENTS, AuditLog, User, UserRole
+from jobify_api.auth.tokens import mint_access_token
 
 pytestmark = pytest.mark.integration
 

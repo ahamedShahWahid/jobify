@@ -11,8 +11,8 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from jobify.auth.google_verifier import GoogleClaims
 from jobify.db.models import Resume, ResumeParseStatus
+from jobify_api.auth.google_verifier import GoogleClaims
 
 pytestmark = pytest.mark.integration
 
@@ -161,8 +161,8 @@ async def test_upload_resume_rejects_oversized_payload(
     monkeypatch.setenv("JOBIFY_STORAGE_ROOT", str(tmp_path))
     monkeypatch.setenv("JOBIFY_JWT_SECRET", "x" * 32)
 
-    from jobify.app_factory import create_app
-    from jobify.db.session import get_session
+    from jobify_api.app_factory import create_app
+    from jobify_api.dependencies import get_session
 
     app = create_app()
 

@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 import jwt as pyjwt
 import pytest
 
-from jobify.auth.tokens import (
+from jobify_api.auth.tokens import (
     AccessTokenError,
     decode_access_token,
     mint_access_token,
