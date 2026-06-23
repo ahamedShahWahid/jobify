@@ -51,7 +51,7 @@ export function UserActions() {
 
       <div className="notice rise">
         The API exposes no user search — moderation is keyed by user UUID. Find subjects in the{" "}
-        <Link to="/admin/audit">audit trail</Link> (any actor or user-resource id is clickable and
+        <Link to="/console/admin/audit">audit trail</Link> (any actor or user-resource id is clickable and
         lands here pre-filled). Every action below writes an <span className="acc">admin.user.*</span>{" "}
         audit row.
       </div>

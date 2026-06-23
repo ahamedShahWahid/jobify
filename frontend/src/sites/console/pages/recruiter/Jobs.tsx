@@ -85,7 +85,7 @@ export function Jobs() {
         </div>
         <button
           className="btn primary"
-          onClick={() => navigate("/recruiter/jobs/new")}
+          onClick={() => navigate("/console/recruiter/jobs/new")}
           disabled={employers.length === 0}
           title={employers.length === 0 ? "Create an employer first" : undefined}
         >
@@ -112,7 +112,7 @@ export function Jobs() {
             {rows.map((job) => (
               <tr key={job.id}>
                 <td style={{ maxWidth: 320 }}>
-                  <Link to={`/recruiter/jobs/${job.id}/applicants`}>{job.title}</Link>
+                  <Link to={`/console/recruiter/jobs/${job.id}/applicants`}>{job.title}</Link>
                   <div className="k" style={{ marginTop: 2 }}>
                     {job.locations.join(" · ")}
                     {!job.employer_verified && (
@@ -136,7 +136,7 @@ export function Jobs() {
                 <td className="r" style={{ whiteSpace: "nowrap" }}>
                   <button
                     className="btn ghost sm"
-                    onClick={() => navigate(`/recruiter/jobs/${job.id}/edit`, { state: { job } })}
+                    onClick={() => navigate(`/console/recruiter/jobs/${job.id}/edit`, { state: { job } })}
                   >
                     Edit
                   </button>{" "}

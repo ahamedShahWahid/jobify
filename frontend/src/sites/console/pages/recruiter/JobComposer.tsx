@@ -155,7 +155,7 @@ export function JobComposer() {
     }
     // Edit that changed nothing — skip the round-trip, just return to the list.
     if ("noChange" in built) {
-      navigate("/recruiter/jobs", { state: { status: form.status } });
+      navigate("/console/recruiter/jobs", { state: { status: form.status } });
       return;
     }
     setSaving(true);
@@ -168,7 +168,7 @@ export function JobComposer() {
       }
       // Return to the list on the tab matching the saved status, so editing a
       // closed posting doesn't drop the recruiter back on the Open tab.
-      navigate("/recruiter/jobs", { state: { status: form.status } });
+      navigate("/console/recruiter/jobs", { state: { status: form.status } });
     } catch (e) {
       setFormError(errorMessage(e));
     } finally {
@@ -190,7 +190,7 @@ export function JobComposer() {
   return (
     <div className="content">
       <div className="jc-top rise">
-        <Link to="/recruiter/jobs" className="jc-back">
+        <Link to="/console/recruiter/jobs" className="jc-back">
           ← Postings
         </Link>
       </div>
@@ -340,7 +340,7 @@ export function JobComposer() {
               </Field>
             </div>
             <div className="jc-foot">
-              <Link to="/recruiter/jobs" className="btn ghost">
+              <Link to="/console/recruiter/jobs" className="btn ghost">
                 Cancel
               </Link>
               <button className="btn primary" onClick={() => void save()} disabled={saving}>

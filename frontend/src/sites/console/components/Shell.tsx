@@ -12,28 +12,28 @@ const NAV: Array<{
     area: "admin",
     label: "Moderation",
     links: [
-      { to: "/admin/analytics", idx: "00", label: "Analytics" },
-      { to: "/admin/audit", idx: "01", label: "Audit explorer" },
-      { to: "/admin/users", idx: "02", label: "User actions" },
-      { to: "/admin/verification", idx: "03", label: "Verification" },
+      { to: "/console/admin/analytics", idx: "00", label: "Analytics" },
+      { to: "/console/admin/audit", idx: "01", label: "Audit explorer" },
+      { to: "/console/admin/users", idx: "02", label: "User actions" },
+      { to: "/console/admin/verification", idx: "03", label: "Verification" },
     ],
   },
   {
     area: "recruiter",
     label: "Recruiting",
     links: [
-      { to: "/recruiter", idx: "04", label: "Dashboard", end: true },
-      { to: "/recruiter/jobs", idx: "05", label: "Jobs" },
-      { to: "/recruiter/team", idx: "06", label: "Team & invites" },
+      { to: "/console/recruiter", idx: "04", label: "Dashboard", end: true },
+      { to: "/console/recruiter/jobs", idx: "05", label: "Jobs" },
+      { to: "/console/recruiter/team", idx: "06", label: "Team & invites" },
     ],
   },
 ];
 
 export function Shell() {
   const { identity, client } = useSession();
-  const { disconnect } = useSessionStore();
+  const { signOut } = useSessionStore();
   const { pathname } = useLocation();
-  const area = pathname.startsWith("/admin") ? "admin" : "recruiter";
+  const area = pathname.startsWith("/console/admin") ? "admin" : "recruiter";
   const crumb = pathname.split("/").filter(Boolean).join(" / ");
 
   // Only surface nav for areas this role can actually reach — otherwise every
@@ -86,7 +86,7 @@ export function Shell() {
               {identity.role}
             </span>
           </div>
-          <button className="btn sm" onClick={disconnect}>
+          <button className="btn sm" onClick={signOut}>
             Disconnect
           </button>
         </div>

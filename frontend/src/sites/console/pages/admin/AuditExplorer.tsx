@@ -46,7 +46,7 @@ export function AuditExplorer() {
   const set = (key: keyof AuditLogFilters) => (value: string) =>
     setDraft((d) => ({ ...d, [key]: value || undefined }));
 
-  const pickUser = (id: string) => navigate(`/admin/users?user=${id}`);
+  const pickUser = (id: string) => navigate(`/console/admin/users?user=${id}`);
 
   return (
     <>

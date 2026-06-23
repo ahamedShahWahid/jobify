@@ -82,7 +82,7 @@ export function Dashboard() {
       <div className="panel rise mb">
         <div className="panel-head">
           <span className="k">most active open postings</span>
-          <Link className="btn ghost sm" to="/recruiter/jobs">
+          <Link className="btn ghost sm" to="/console/recruiter/jobs">
             All jobs →
           </Link>
         </div>
@@ -104,7 +104,7 @@ export function Dashboard() {
                 .map((job) => (
                   <tr key={job.id}>
                     <td>
-                      <Link to={`/recruiter/jobs/${job.id}/applicants`}>{job.title}</Link>
+                      <Link to={`/console/recruiter/jobs/${job.id}/applicants`}>{job.title}</Link>
                       <div className="k" style={{ marginTop: 2 }}>
                         {job.locations.join(" · ")}
                       </div>
@@ -120,7 +120,7 @@ export function Dashboard() {
           </table>
           {open !== null && open.length === 0 && (
             <EmptyState>
-              No open postings yet — <Link to="/recruiter/jobs">post the first one</Link>.
+              No open postings yet — <Link to="/console/recruiter/jobs">post the first one</Link>.
             </EmptyState>
           )}
         </div>
@@ -129,7 +129,7 @@ export function Dashboard() {
       <div className="panel rise">
         <div className="panel-head">
           <span className="k">your employers</span>
-          <Link className="btn ghost sm" to="/recruiter/team">
+          <Link className="btn ghost sm" to="/console/recruiter/team">
             Team & invites →
           </Link>
         </div>
