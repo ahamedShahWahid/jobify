@@ -1,7 +1,7 @@
 """Seed employers and jobs from a JSON fixture (idempotent).
 
 Run via:
-    uv run python -m jobify.scripts.seed_jobs [--from PATH] [--dry-run]
+    uv run python -m jobify_api.scripts.seed_jobs [--from PATH] [--dry-run]
     uv run jobify-seed-jobs [--from PATH] [--dry-run]
 
 Behavior:
@@ -38,13 +38,17 @@ from pydantic import (
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import jobify
 from jobify.db.models import Employer, Job, JobStatus
 from jobify.db.session import create_engine_from_settings, make_sessionmaker
 from jobify.settings import Settings
 
 _log = structlog.get_logger(__name__)
 
-_DEFAULT_FIXTURE_PATH = Path(__file__).resolve().parents[3] / "data" / "sample_jobs.json"
+# The seed fixture lives in the core package's data dir (`core/data/`), not the
+# api package — anchor on the `jobify` (core) package so the path resolves
+# regardless of where this CLI module lives in the workspace.
+_DEFAULT_FIXTURE_PATH = Path(jobify.__file__).resolve().parents[2] / "data" / "sample_jobs.json"
 
 
 # --- Pydantic input models ---------------------------------------------------
