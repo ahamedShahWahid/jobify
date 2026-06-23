@@ -6,7 +6,7 @@
    Newsreader italic flavor
    ============================================================ */
 
-:root {
+.surface-console {
   /* ink layers, darkest → lightest */
   --bg0: #080b09;
   --bg1: #0d110e;
@@ -38,28 +38,8 @@
   --font-display: "Bricolage Grotesque", sans-serif;
   --font-mono: "Spline Sans Mono", monospace;
   --font-flavor: "Newsreader", serif;
-}
 
-[data-area="admin"] {
-  --acc: #ffb000;
-  --acc-ink: #140d00;
-}
-[data-area="recruiter"] {
-  --acc: #4fe3c1;
-  --acc-ink: #00150f;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html,
-body,
-#root {
-  height: 100%;
-}
-
-body {
+  /* body base styles folded from body { } */
   margin: 0;
   background: var(--bg0);
   color: var(--paper);
@@ -68,17 +48,33 @@ body {
   line-height: 1.55;
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
+
+  /* full-height shell (from html, body, #root { height: 100% }) */
+  min-height: 100dvh;
+}
+
+.surface-console [data-area="admin"] {
+  --acc: #ffb000;
+  --acc-ink: #140d00;
+}
+.surface-console [data-area="recruiter"] {
+  --acc: #4fe3c1;
+  --acc-ink: #00150f;
+}
+
+.surface-console * {
+  box-sizing: border-box;
 }
 
 /* ---- atmosphere: dotted grid + vignette + grain ------------- */
 
-.atmosphere {
+.surface-console .atmosphere {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
 }
-.atmosphere::before {
+.surface-console .atmosphere::before {
   /* dotted instrument grid */
   content: "";
   position: absolute;
@@ -88,7 +84,7 @@ body {
   opacity: 0.35;
   mask-image: radial-gradient(ellipse 90% 80% at 50% 0%, black 30%, transparent 100%);
 }
-.atmosphere::after {
+.surface-console .atmosphere::after {
   /* grain */
   content: "";
   position: absolute;
@@ -99,18 +95,18 @@ body {
 
 /* ---- type utilities ----------------------------------------- */
 
-.display {
+.surface-console .display {
   font-family: var(--font-display);
   font-weight: 800;
   letter-spacing: -0.02em;
 }
-.flavor {
+.surface-console .flavor {
   font-family: var(--font-flavor);
   font-style: italic;
   color: var(--paper-dim);
   font-size: 15px;
 }
-.k {
+.surface-console .k {
   /* a "key" label: tiny stamped uppercase */
   font-size: 10px;
   letter-spacing: 0.18em;
@@ -118,35 +114,35 @@ body {
   color: var(--muted);
   font-weight: 500;
 }
-.num {
+.surface-console .num {
   font-variant-numeric: tabular-nums;
 }
-.dim {
+.surface-console .dim {
   color: var(--paper-dim);
 }
-.acc {
+.surface-console .acc {
   color: var(--acc);
 }
-.danger-text {
+.surface-console .danger-text {
   color: var(--danger);
 }
 
-a {
+.surface-console a {
   color: var(--acc);
   text-decoration: none;
 }
-a:hover {
+.surface-console a:hover {
   text-decoration: underline;
 }
 
-::selection {
+.surface-console ::selection {
   background: var(--acc);
   color: var(--acc-ink);
 }
 
 /* ---- shell layout -------------------------------------------- */
 
-.shell {
+.surface-console .shell {
   position: relative;
   z-index: 1;
   display: grid;
@@ -154,7 +150,7 @@ a:hover {
   min-height: 100vh;
 }
 
-.rail {
+.surface-console .rail {
   border-right: 1px solid var(--hairline);
   padding: 22px 0;
   display: flex;
@@ -166,21 +162,21 @@ a:hover {
   height: 100vh;
 }
 
-.rail-brand {
+.surface-console .rail-brand {
   padding: 0 22px;
 }
-.rail-lockup {
+.surface-console .rail-lockup {
   display: flex;
   align-items: center;
   gap: 9px;
 }
-.rail-mark {
+.surface-console .rail-mark {
   height: 26px;
   width: auto;
   display: block;
   flex: none;
 }
-.rail-brand .wordmark {
+.surface-console .rail-brand .wordmark {
   font-family: var(--font-display);
   font-weight: 800;
   font-size: 19px;
@@ -190,27 +186,27 @@ a:hover {
   gap: 7px;
 }
 /* SignIn gate brand mark — solid J-person above the OPERATIONS CONSOLE title. */
-.gate-mark {
+.surface-console .gate-mark {
   height: 52px;
   width: auto;
   display: block;
   margin-bottom: 14px;
 }
-.rail-brand .wordmark em {
+.surface-console .rail-brand .wordmark em {
   font-style: normal;
   color: var(--acc);
 }
 
-.rail-section {
+.surface-console .rail-section {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
-.rail-section > .k {
+.surface-console .rail-section > .k {
   padding: 0 22px 8px;
 }
 
-.rail-link {
+.surface-console .rail-link {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -223,23 +219,23 @@ a:hover {
     background 120ms,
     border-color 120ms;
 }
-.rail-link:hover {
+.surface-console .rail-link:hover {
   color: var(--paper);
   text-decoration: none;
   background: var(--bg2);
 }
-.rail-link.active {
+.surface-console .rail-link.active {
   color: var(--acc);
   border-left-color: var(--acc);
   background: linear-gradient(90deg, var(--acc-faint), transparent 80%);
 }
-.rail-link .idx {
+.surface-console .rail-link .idx {
   font-size: 10px;
   color: var(--muted);
   width: 22px;
 }
 
-.rail-foot {
+.surface-console .rail-foot {
   margin-top: auto;
   padding: 0 22px;
   display: flex;
@@ -249,13 +245,13 @@ a:hover {
 
 /* ---- masthead ------------------------------------------------ */
 
-.main {
+.surface-console .main {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-.masthead {
+.surface-console .masthead {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -268,33 +264,33 @@ a:hover {
   top: 0;
   z-index: 20;
 }
-.masthead .crumbs {
+.surface-console .masthead .crumbs {
   font-size: 11px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--muted);
 }
-.masthead .crumbs b {
+.surface-console .masthead .crumbs b {
   color: var(--acc);
   font-weight: 500;
 }
-.masthead .clock {
+.surface-console .masthead .clock {
   font-size: 11px;
   letter-spacing: 0.08em;
   color: var(--paper-dim);
 }
 
-.content {
+.surface-console .content {
   padding: 34px 30px 80px;
   max-width: 1180px;
   width: 100%;
 }
 
 /* page headline block */
-.headline {
+.surface-console .headline {
   margin-bottom: 30px;
 }
-.headline h1 {
+.surface-console .headline h1 {
   font-family: var(--font-display);
   font-weight: 800;
   font-size: clamp(30px, 4.4vw, 46px);
@@ -302,11 +298,11 @@ a:hover {
   letter-spacing: -0.025em;
   margin: 0 0 8px;
 }
-.headline h1 .ghost {
+.surface-console .headline h1 .ghost {
   color: transparent;
   -webkit-text-stroke: 1px var(--hairline-bright);
 }
-.headline .sub {
+.surface-console .headline .sub {
   display: flex;
   align-items: baseline;
   gap: 14px;
@@ -325,28 +321,28 @@ a:hover {
     transform: translateY(0);
   }
 }
-.rise {
+.surface-console .rise {
   animation: rise 480ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
-.rise:nth-child(2) {
+.surface-console .rise:nth-child(2) {
   animation-delay: 60ms;
 }
-.rise:nth-child(3) {
+.surface-console .rise:nth-child(3) {
   animation-delay: 120ms;
 }
-.rise:nth-child(4) {
+.surface-console .rise:nth-child(4) {
   animation-delay: 180ms;
 }
-.rise:nth-child(5) {
+.surface-console .rise:nth-child(5) {
   animation-delay: 240ms;
 }
-.rise:nth-child(6) {
+.surface-console .rise:nth-child(6) {
   animation-delay: 300ms;
 }
 
 /* ---- LEDs / chips / badges ----------------------------------- */
 
-.led {
+.surface-console .led {
   display: inline-block;
   width: 7px;
   height: 7px;
@@ -354,18 +350,18 @@ a:hover {
   background: var(--ok);
   box-shadow: 0 0 6px var(--ok);
 }
-.led.live {
+.surface-console .led.live {
   animation: pulse 2.2s ease-in-out infinite;
 }
-.led.amber {
+.surface-console .led.amber {
   background: var(--acc);
   box-shadow: 0 0 6px var(--acc);
 }
-.led.off {
+.surface-console .led.off {
   background: var(--muted);
   box-shadow: none;
 }
-.led.red {
+.surface-console .led.red {
   background: var(--danger);
   box-shadow: 0 0 6px var(--danger);
 }
@@ -379,7 +375,7 @@ a:hover {
   }
 }
 
-.chip {
+.surface-console .chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -391,16 +387,16 @@ a:hover {
   color: var(--paper-dim);
   white-space: nowrap;
 }
-.chip.acc {
+.surface-console .chip.acc {
   border-color: var(--acc-dim);
   color: var(--acc);
   background: var(--acc-faint);
 }
-.chip.ok {
+.surface-console .chip.ok {
   border-color: color-mix(in srgb, var(--ok) 40%, transparent);
   color: var(--ok);
 }
-.chip.danger {
+.surface-console .chip.danger {
   border-color: color-mix(in srgb, var(--danger) 45%, transparent);
   color: var(--danger);
   background: color-mix(in srgb, var(--danger) 9%, transparent);
@@ -408,7 +404,7 @@ a:hover {
 
 /* ---- buttons -------------------------------------------------- */
 
-.btn {
+.surface-console .btn {
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.14em;
@@ -425,51 +421,51 @@ a:hover {
     border-color 130ms,
     box-shadow 130ms;
 }
-.btn:hover {
+.surface-console .btn:hover {
   border-color: var(--acc);
   color: var(--acc);
 }
-.btn:disabled {
+.surface-console .btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
-.btn.primary {
+.surface-console .btn.primary {
   background: var(--acc);
   border-color: var(--acc);
   color: var(--acc-ink);
 }
-.btn.primary:hover:not(:disabled) {
+.surface-console .btn.primary:hover:not(:disabled) {
   box-shadow: 0 0 18px var(--acc-dim);
   color: var(--acc-ink);
 }
-.btn.danger {
+.surface-console .btn.danger {
   border-color: color-mix(in srgb, var(--danger) 55%, transparent);
   color: var(--danger);
 }
-.btn.danger:hover:not(:disabled) {
+.surface-console .btn.danger:hover:not(:disabled) {
   background: var(--danger);
   border-color: var(--danger);
   color: #1b0502;
 }
-.btn.ghost {
+.surface-console .btn.ghost {
   border-color: transparent;
   color: var(--paper-dim);
 }
-.btn.ghost:hover {
+.surface-console .btn.ghost:hover {
   color: var(--acc);
 }
-.btn.sm {
+.surface-console .btn.sm {
   padding: 5px 10px;
   font-size: 10px;
 }
 
 /* ---- panels --------------------------------------------------- */
 
-.panel {
+.surface-console .panel {
   border: 1px solid var(--hairline);
   background: color-mix(in srgb, var(--bg1) 85%, transparent);
 }
-.panel-head {
+.surface-console .panel-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -477,28 +473,28 @@ a:hover {
   padding: 12px 16px;
   border-bottom: 1px solid var(--hairline);
 }
-.panel-body {
+.surface-console .panel-body {
   padding: 16px;
 }
 
 /* stat tiles */
-.tiles {
+.surface-console .tiles {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 1px;
   background: var(--hairline);
   border: 1px solid var(--hairline);
 }
-.tile {
+.surface-console .tile {
   background: var(--bg1);
   padding: 18px 18px 14px;
   position: relative;
   overflow: hidden;
 }
-.tile:hover {
+.surface-console .tile:hover {
   background: var(--bg2);
 }
-.tile .value {
+.surface-console .tile .value {
   font-family: var(--font-display);
   font-weight: 800;
   font-size: 40px;
@@ -506,10 +502,10 @@ a:hover {
   letter-spacing: -0.03em;
   margin: 10px 0 2px;
 }
-.tile .value.acc {
+.surface-console .tile .value.acc {
   color: var(--acc);
 }
-.tile::after {
+.surface-console .tile::after {
   content: "";
   position: absolute;
   top: 0;
@@ -521,17 +517,17 @@ a:hover {
 
 /* ---- tables --------------------------------------------------- */
 
-.table-wrap {
+.surface-console .table-wrap {
   border: 1px solid var(--hairline);
   overflow-x: auto;
   background: color-mix(in srgb, var(--bg1) 80%, transparent);
 }
-table.console {
+.surface-console table.console {
   width: 100%;
   border-collapse: collapse;
   font-size: 12.5px;
 }
-table.console th {
+.surface-console table.console th {
   font-size: 10px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -542,41 +538,41 @@ table.console th {
   border-bottom: 1px solid var(--hairline-bright);
   white-space: nowrap;
 }
-table.console td {
+.surface-console table.console td {
   padding: 11px 14px;
   border-bottom: 1px solid var(--hairline);
   vertical-align: top;
 }
-table.console tbody tr {
+.surface-console table.console tbody tr {
   transition: background 120ms;
 }
-table.console tbody tr:hover {
+.surface-console table.console tbody tr:hover {
   background: linear-gradient(90deg, var(--acc-faint), transparent 60%);
 }
-table.console tr.expandable {
+.surface-console table.console tr.expandable {
   cursor: pointer;
 }
-table.console .r {
+.surface-console table.console .r {
   text-align: right;
 }
-td.mono-id {
+.surface-console td.mono-id {
   font-size: 11px;
   color: var(--paper-dim);
 }
 
 /* score bars */
-.scorebar {
+.surface-console .scorebar {
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
-.scorebar .track {
+.surface-console .scorebar .track {
   width: 64px;
   height: 4px;
   background: var(--bg3);
   position: relative;
 }
-.scorebar .fill {
+.surface-console .scorebar .fill {
   position: absolute;
   inset: 0 auto 0 0;
   background: var(--acc);
@@ -585,15 +581,15 @@ td.mono-id {
 
 /* ---- forms ---------------------------------------------------- */
 
-.field {
+.surface-console .field {
   display: flex;
   flex-direction: column;
   gap: 6px;
   margin-bottom: 16px;
 }
-.field input,
-.field textarea,
-.field select {
+.surface-console .field input,
+.surface-console .field textarea,
+.surface-console .field select {
   font-family: var(--font-mono);
   font-size: 13px;
   color: var(--paper);
@@ -605,21 +601,21 @@ td.mono-id {
     border-color 130ms,
     box-shadow 130ms;
 }
-.field input:focus,
-.field textarea:focus,
-.field select:focus {
+.surface-console .field input:focus,
+.surface-console .field textarea:focus,
+.surface-console .field select:focus {
   border-color: var(--acc);
   box-shadow: 0 0 0 1px var(--acc-dim);
 }
-.field textarea {
+.surface-console .field textarea {
   resize: vertical;
   min-height: 90px;
 }
-.field .hint {
+.surface-console .field .hint {
   font-size: 11px;
   color: var(--muted);
 }
-.field-row {
+.surface-console .field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
@@ -627,7 +623,7 @@ td.mono-id {
 
 /* ---- drawer (right slide-over) -------------------------------- */
 
-.drawer-veil {
+.surface-console .drawer-veil {
   position: fixed;
   inset: 0;
   background: rgba(4, 6, 5, 0.62);
@@ -640,7 +636,7 @@ td.mono-id {
     opacity: 0;
   }
 }
-.drawer {
+.surface-console .drawer {
   position: fixed;
   top: 0;
   right: 0;
@@ -660,26 +656,26 @@ td.mono-id {
     opacity: 0;
   }
 }
-.drawer-head {
+.surface-console .drawer-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 18px 22px;
   border-bottom: 1px solid var(--hairline);
 }
-.drawer-head h2 {
+.surface-console .drawer-head h2 {
   font-family: var(--font-display);
   font-size: 21px;
   font-weight: 700;
   margin: 0;
   letter-spacing: -0.01em;
 }
-.drawer-body {
+.surface-console .drawer-body {
   padding: 22px;
   overflow-y: auto;
   flex: 1;
 }
-.drawer-foot {
+.surface-console .drawer-foot {
   padding: 16px 22px;
   border-top: 1px solid var(--hairline);
   display: flex;
@@ -689,7 +685,7 @@ td.mono-id {
 
 /* ---- JSON / context view -------------------------------------- */
 
-.json-view {
+.surface-console .json-view {
   font-size: 11.5px;
   background: var(--bg0);
   border: 1px solid var(--hairline);
@@ -701,13 +697,13 @@ td.mono-id {
   white-space: pre-wrap;
   word-break: break-word;
 }
-.json-view .jk {
+.surface-console .json-view .jk {
   color: var(--acc);
 }
 
 /* ---- notices --------------------------------------------------- */
 
-.notice {
+.surface-console .notice {
   border: 1px solid var(--hairline-bright);
   border-left: 2px solid var(--acc);
   background: var(--acc-faint);
@@ -716,23 +712,23 @@ td.mono-id {
   color: var(--paper-dim);
   margin-bottom: 22px;
 }
-.notice.error {
+.surface-console .notice.error {
   border-left-color: var(--danger);
   background: color-mix(in srgb, var(--danger) 8%, transparent);
   color: var(--danger);
 }
 
-.empty {
+.surface-console .empty {
   padding: 56px 20px;
   text-align: center;
 }
-.empty .flavor {
+.surface-console .empty .flavor {
   font-size: 17px;
 }
 
 /* ---- sign-in gate ---------------------------------------------- */
 
-.gate {
+.surface-console .gate {
   position: relative;
   z-index: 1;
   min-height: 100vh;
@@ -740,7 +736,7 @@ td.mono-id {
   grid-template-columns: minmax(0, 1.1fr) minmax(360px, 460px);
   align-items: stretch;
 }
-.gate-left {
+.surface-console .gate-left {
   padding: 6vh 5vw;
   display: flex;
   flex-direction: column;
@@ -748,7 +744,7 @@ td.mono-id {
   border-right: 1px solid var(--hairline);
   overflow: hidden;
 }
-.gate-title {
+.surface-console .gate-title {
   font-family: var(--font-display);
   font-weight: 800;
   font-size: clamp(54px, 9vw, 124px);
@@ -756,36 +752,36 @@ td.mono-id {
   letter-spacing: -0.04em;
   margin: 0;
 }
-.gate-title .line2 {
+.surface-console .gate-title .line2 {
   display: block;
   color: transparent;
   -webkit-text-stroke: 1.5px var(--hairline-bright);
 }
-.gate-right {
+.surface-console .gate-right {
   padding: 6vh 44px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   background: var(--bg1);
 }
-.gate-meta {
+.surface-console .gate-meta {
   display: flex;
   gap: 26px;
   flex-wrap: wrap;
 }
-.gate-meta .cell {
+.surface-console .gate-meta .cell {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.mode-tabs {
+.surface-console .mode-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
   border: 1px solid var(--hairline-bright);
   margin-bottom: 22px;
 }
-.mode-tabs button {
+.surface-console .mode-tabs button {
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.14em;
@@ -796,7 +792,7 @@ td.mono-id {
   border: 0;
   cursor: pointer;
 }
-.mode-tabs button.on {
+.surface-console .mode-tabs button.on {
   background: var(--acc);
   color: var(--acc-ink);
   font-weight: 600;
@@ -804,41 +800,41 @@ td.mono-id {
 
 /* ---- misc ------------------------------------------------------ */
 
-.row {
+.surface-console .row {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
 }
-.spread {
+.surface-console .spread {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
 }
-.stack {
+.surface-console .stack {
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
-.mt {
+.surface-console .mt {
   margin-top: 22px;
 }
-.mb {
+.surface-console .mb {
   margin-bottom: 22px;
 }
 
-.clickable-id {
+.surface-console .clickable-id {
   cursor: pointer;
   border-bottom: 1px dashed var(--hairline-bright);
 }
-.clickable-id:hover {
+.surface-console .clickable-id:hover {
   color: var(--acc);
   border-bottom-color: var(--acc);
 }
 
-.filters {
+.surface-console .filters {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 12px;
@@ -847,15 +843,15 @@ td.mono-id {
   background: var(--bg1);
   margin-bottom: 18px;
 }
-.filters .field {
+.surface-console .filters .field {
   margin-bottom: 0;
 }
 
 @media (max-width: 900px) {
-  .shell {
+  .surface-console .shell {
     grid-template-columns: 1fr;
   }
-  .rail {
+  .surface-console .rail {
     position: static;
     height: auto;
     flex-direction: row;
@@ -865,13 +861,13 @@ td.mono-id {
     border-bottom: 1px solid var(--hairline);
     padding: 12px;
   }
-  .rail-foot {
+  .surface-console .rail-foot {
     margin-top: 0;
   }
-  .gate {
+  .surface-console .gate {
     grid-template-columns: 1fr;
   }
-  .gate-left {
+  .surface-console .gate-left {
     border-right: 0;
     border-bottom: 1px solid var(--hairline);
   }
@@ -883,27 +879,27 @@ td.mono-id {
    ============================================================ */
 
 /* two-up grid: funnel + role mix */
-.analytics-grid {
+.surface-console .analytics-grid {
   display: grid;
   grid-template-columns: 1.35fr 1fr;
   gap: 18px;
 }
 @media (max-width: 860px) {
-  .analytics-grid {
+  .surface-console .analytics-grid {
     grid-template-columns: 1fr;
   }
 }
 
 /* ---- activity chart ------------------------------------------- */
 
-.chart {
+.surface-console .chart {
   width: 100%;
 }
-.chart svg {
+.surface-console .chart svg {
   display: block;
   overflow: visible;
 }
-.chart-skeleton {
+.surface-console .chart-skeleton {
   height: 132px;
   display: flex;
   align-items: center;
@@ -911,11 +907,11 @@ td.mono-id {
   font-size: 24px;
   color: var(--muted);
 }
-.chart-axis {
+.surface-console .chart-axis {
   stroke: var(--hairline-bright);
   stroke-width: 1;
 }
-.chart-line {
+.surface-console .chart-line {
   stroke: var(--acc);
   stroke-width: 1.6;
   stroke-linejoin: round;
@@ -923,20 +919,20 @@ td.mono-id {
   vector-effect: non-scaling-stroke;
   filter: drop-shadow(0 0 5px var(--acc-dim));
 }
-.chart-area {
+.surface-console .chart-area {
   fill: var(--acc-faint);
   stroke: none;
 }
-.chart-dot {
+.surface-console .chart-dot {
   fill: var(--acc);
 }
-.chart-dot.peak {
+.surface-console .chart-dot.peak {
   fill: var(--acc);
   stroke: var(--acc-ink);
   stroke-width: 1;
   filter: drop-shadow(0 0 6px var(--acc));
 }
-.chart-axislabels {
+.surface-console .chart-axislabels {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -945,35 +941,35 @@ td.mono-id {
 
 /* ---- the funnel ----------------------------------------------- */
 
-.funnel {
+.surface-console .funnel {
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
-.funnel-step {
+.surface-console .funnel-step {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-.funnel-meta {
+.surface-console .funnel-meta {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   font-size: 12px;
 }
-.funnel-label {
+.surface-console .funnel-label {
   color: var(--paper);
 }
-.funnel-pct {
+.surface-console .funnel-pct {
   font-size: 11px;
 }
-.funnel-track {
+.surface-console .funnel-track {
   height: 14px;
   background: var(--bg3);
   border: 1px solid var(--hairline);
   overflow: hidden;
 }
-.funnel-fill {
+.surface-console .funnel-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--acc), color-mix(in srgb, var(--acc) 55%, transparent));
   box-shadow: 0 0 10px var(--acc-dim);
@@ -982,22 +978,22 @@ td.mono-id {
 
 /* ---- actor-role mix ------------------------------------------- */
 
-.rolebar {
+.surface-console .rolebar {
   display: flex;
   height: 18px;
   width: 100%;
   border: 1px solid var(--hairline-bright);
   overflow: hidden;
 }
-.rolebar-seg {
+.surface-console .rolebar-seg {
   flex-basis: 0;
   min-width: 2px;
   transition: filter 120ms;
 }
-.rolebar-seg:hover {
+.surface-console .rolebar-seg:hover {
   filter: brightness(1.25);
 }
-.role-dot {
+.surface-console .role-dot {
   display: inline-block;
   width: 8px;
   height: 8px;
@@ -1006,36 +1002,36 @@ td.mono-id {
   border-radius: 1px;
 }
 /* role palette — amber-keyed admin/system, cool applicant/recruiter */
-.role-applicant {
+.surface-console .role-applicant {
   background: #5aa9e6;
 }
-.role-recruiter {
+.surface-console .role-recruiter {
   background: var(--ok);
 }
-.role-admin {
+.surface-console .role-admin {
   background: var(--acc);
 }
-.role-system {
+.surface-console .role-system {
   background: var(--muted);
 }
 
 /* ---- compliance strip ----------------------------------------- */
 
-.compliance-strip {
+.surface-console .compliance-strip {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 1px;
   background: var(--hairline);
   border: 1px solid var(--hairline);
 }
-.compliance-cell {
+.surface-console .compliance-cell {
   background: var(--bg1);
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
-.compliance-cell .num {
+.surface-console .compliance-cell .num {
   font-family: var(--font-display);
   font-weight: 800;
   font-size: 26px;
@@ -1045,7 +1041,7 @@ td.mono-id {
 
 /* ---- action histogram bar ------------------------------------- */
 
-.hist-track {
+.surface-console .hist-track {
   display: block;
   width: 100%;
   min-width: 80px;
@@ -1054,7 +1050,7 @@ td.mono-id {
   background: var(--bg3);
   position: relative;
 }
-.hist-fill {
+.surface-console .hist-fill {
   position: absolute;
   inset: 0 auto 0 0;
   background: var(--acc);
@@ -1062,7 +1058,7 @@ td.mono-id {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .funnel-fill {
+  .surface-console .funnel-fill {
     transition: none;
   }
 }
@@ -1072,7 +1068,7 @@ td.mono-id {
 /* Status tiles double as the queue's segmented filter. Reset the button chrome
    so they read identically to the read-only Analytics tiles, then add a clear
    selected state in the admin accent. */
-.tile-button {
+.surface-console .tile-button {
   display: block;
   width: 100%;
   text-align: left;
@@ -1082,16 +1078,16 @@ td.mono-id {
   cursor: pointer;
   transition: background 0.12s ease;
 }
-.tile-button.on {
+.surface-console .tile-button.on {
   background: var(--bg2);
   box-shadow: inset 2px 0 0 var(--acc);
 }
-.tile-button.on .value {
+.surface-console .tile-button.on .value {
   color: var(--acc);
 }
 
 /* Review-drawer verification checklist. */
-.checklist {
+.surface-console .checklist {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -1099,72 +1095,74 @@ td.mono-id {
   flex-direction: column;
   gap: 9px;
 }
-.checklist li {
+.surface-console .checklist li {
   display: flex;
   align-items: flex-start;
   gap: 9px;
   font-size: 13px;
   color: var(--paper);
 }
-.checklist li .mark {
+.surface-console .checklist li .mark {
   font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1.3;
   width: 14px;
   flex: none;
 }
-.checklist li.ok .mark {
+.surface-console .checklist li.ok .mark {
   color: var(--ok);
 }
-.checklist li.miss {
+.surface-console .checklist li.miss {
   color: var(--paper-dim);
 }
-.checklist li.miss .mark {
+.surface-console .checklist li.miss .mark {
   color: var(--danger);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tile-button {
+  .surface-console .tile-button {
     transition: none;
   }
 }
 
 /* ---- Google sign-in (primary, above the manual session controls) ---- */
+/* NOTE: class names renamed from google-signin/google-btn-host to gsi/gsi-btn
+   to match the shared GSI button component emitted class names. */
 
-.google-block {
+.surface-console .google-block {
   display: flex;
   flex-direction: column;
   gap: 12px;
   margin-bottom: 18px;
 }
-.google-signin {
+.surface-console .gsi {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 /* GIS renders its own (dark) button into this host; give it a stable footprint
    so the panel doesn't reflow as the SDK swaps in the iframe. */
-.google-btn-host {
+.surface-console .gsi-btn {
   min-height: 44px;
   display: flex;
 }
-.google-hint {
+.surface-console .gsi-hint {
   font-size: 13px;
   padding: 12px 14px;
   border: 1px dashed var(--hairline-bright);
   background: var(--bg2);
 }
-.google-hint code,
-.google-note code {
+.surface-console .gsi-hint code,
+.surface-console .google-note code {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--acc);
 }
-.google-note {
+.surface-console .google-note {
   line-height: 1.5;
   max-width: 360px;
 }
-.google-divider {
+.surface-console .google-divider {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1175,8 +1173,8 @@ td.mono-id {
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
-.google-divider::before,
-.google-divider::after {
+.surface-console .google-divider::before,
+.surface-console .google-divider::after {
   content: "";
   flex: 1;
   height: 1px;
@@ -1190,20 +1188,20 @@ td.mono-id {
    recruiter literally sees the candidate's screen.
    ========================================================================== */
 
-.jc-top {
+.surface-console .jc-top {
   margin-bottom: 10px;
 }
-.jc-back {
+.surface-console .jc-back {
   font-family: var(--font-mono);
   font-size: 12px;
   letter-spacing: 0.04em;
   color: var(--paper-dim);
   transition: color 120ms;
 }
-.jc-back:hover {
+.surface-console .jc-back:hover {
   color: var(--acc);
 }
-.jc-resolving {
+.surface-console .jc-resolving {
   font-family: var(--font-mono);
   font-size: 13px;
   color: var(--muted);
@@ -1211,25 +1209,25 @@ td.mono-id {
   text-align: center;
 }
 
-.jc-grid {
+.surface-console .jc-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
   gap: 26px;
   align-items: start;
 }
 @media (max-width: 980px) {
-  .jc-grid {
+  .surface-console .jc-grid {
     grid-template-columns: 1fr;
   }
 }
 
 /* ---- authoring column --------------------------------------------------- */
-.jc-form .field input:disabled {
+.surface-console .jc-form .field input:disabled {
   color: var(--muted);
   background: var(--bg1);
   cursor: not-allowed;
 }
-.jc-foot {
+.surface-console .jc-foot {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -1238,11 +1236,11 @@ td.mono-id {
 }
 
 /* ---- live preview column ------------------------------------------------ */
-.jc-preview-col {
+.surface-console .jc-preview-col {
   position: sticky;
   top: 22px;
 }
-.jc-preview-label {
+.surface-console .jc-preview-label {
   display: flex;
   align-items: center;
   gap: 9px;
@@ -1253,7 +1251,7 @@ td.mono-id {
   color: var(--muted);
   margin-bottom: 12px;
 }
-.jc-preview-label .dot {
+.surface-console .jc-preview-label .dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
@@ -1272,7 +1270,7 @@ td.mono-id {
     box-shadow: 0 0 0 0 transparent;
   }
 }
-.jc-preview-note {
+.surface-console .jc-preview-note {
   font-family: var(--font-mono);
   font-size: 11px;
   line-height: 1.5;
@@ -1281,7 +1279,7 @@ td.mono-id {
 }
 
 /* the candidate card — warm paper, persimmon accent, forest "verified" */
-.jc-card {
+.surface-console .jc-card {
   --c-paper: #f4efe3;
   --c-ink: #221c16;
   --c-soft: #6c6354;
@@ -1298,14 +1296,14 @@ td.mono-id {
     0 24px 48px -24px rgba(0, 0, 0, 0.7);
   font-family: "Hanken Grotesk", system-ui, sans-serif;
 }
-.jc-card-top {
+.surface-console .jc-card-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 14px;
 }
-.jc-status {
+.surface-console .jc-status {
   font-family: "Spline Sans Mono", monospace;
   font-size: 10px;
   letter-spacing: 0.12em;
@@ -1315,15 +1313,15 @@ td.mono-id {
   color: var(--c-soft);
   background: #ece4d3;
 }
-.jc-status.open {
+.surface-console .jc-status.open {
   border-color: var(--c-forest);
   color: var(--c-forest);
   background: #cfdcd2;
 }
-.jc-status.closed {
+.surface-console .jc-status.closed {
   opacity: 0.7;
 }
-.jc-badge {
+.surface-console .jc-badge {
   font-family: "Spline Sans Mono", monospace;
   font-size: 10px;
   letter-spacing: 0.08em;
@@ -1332,12 +1330,12 @@ td.mono-id {
   border: 1px solid var(--c-line);
   color: var(--c-soft);
 }
-.jc-badge.ok {
+.surface-console .jc-badge.ok {
   border-color: var(--c-forest);
   color: var(--c-forest);
   background: #cfdcd2;
 }
-.jc-company {
+.surface-console .jc-company {
   font-family: "Spline Sans Mono", monospace;
   font-size: 11px;
   letter-spacing: 0.1em;
@@ -1345,7 +1343,7 @@ td.mono-id {
   color: var(--c-soft);
   margin-bottom: 4px;
 }
-.jc-title {
+.surface-console .jc-title {
   font-family: "Bricolage Grotesque", sans-serif;
   font-weight: 800;
   font-size: 26px;
@@ -1354,13 +1352,13 @@ td.mono-id {
   color: var(--c-ink);
   margin: 0 0 16px;
 }
-.jc-facts {
+.surface-console .jc-facts {
   border-top: 1px solid var(--c-line);
   border-bottom: 1px solid var(--c-line);
   padding: 4px 0;
   margin-bottom: 14px;
 }
-.jc-fact {
+.surface-console .jc-fact {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -1368,29 +1366,29 @@ td.mono-id {
   padding: 8px 0;
   border-bottom: 1px solid color-mix(in srgb, var(--c-line) 55%, transparent);
 }
-.jc-fact:last-child {
+.surface-console .jc-fact:last-child {
   border-bottom: 0;
 }
-.jc-fact .k {
+.surface-console .jc-fact .k {
   font-family: "Spline Sans Mono", monospace;
   font-size: 10px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--c-soft);
 }
-.jc-fact .v {
+.surface-console .jc-fact .v {
   font-size: 14px;
   font-weight: 600;
   color: var(--c-ink);
   text-align: right;
 }
-.jc-chips {
+.surface-console .jc-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 16px;
 }
-.jc-chip {
+.surface-console .jc-chip {
   font-family: "Spline Sans Mono", monospace;
   font-size: 10.5px;
   letter-spacing: 0.04em;
@@ -1399,26 +1397,26 @@ td.mono-id {
   color: var(--c-soft);
   background: #ece4d3;
 }
-.jc-desc {
+.surface-console .jc-desc {
   font-size: 13.5px;
   line-height: 1.6;
   color: #3a3228;
   max-height: 320px;
   overflow-y: auto;
 }
-.jc-desc p {
+.surface-console .jc-desc p {
   margin: 0 0 10px;
 }
-.jc-desc p:last-child {
+.surface-console .jc-desc p:last-child {
   margin-bottom: 0;
 }
-.jc-placeholder {
+.surface-console .jc-placeholder {
   color: #a99e88;
   font-style: italic;
 }
 
 /* invalid CTC entry flagged in the live preview (vs. silent "Undisclosed") */
-.jc-card .jc-invalid {
+.surface-console .jc-card .jc-invalid {
   color: #b23a20;
   font-weight: 600;
 }
