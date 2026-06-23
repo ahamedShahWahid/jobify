@@ -57,8 +57,9 @@ async def pipeline_client(
     monkeypatch.setenv("JOBIFY_STORAGE_ROOT", str(tmp_path))
     monkeypatch.setenv("JOBIFY_JWT_SECRET", _JWT_SECRET)
 
-    import jobify.workers.celery_app as _celery_mod
-    from jobify.workers.celery_app import celery_app
+    import jobify.celery_app as _celery_mod
+    import jobify_worker.worker_app  # noqa: F401  — registers tasks onto celery_app
+    from jobify.celery_app import celery_app
     from jobify_api.app_factory import create_app
 
     app = create_app()

@@ -146,8 +146,9 @@ async def eager_client(
         "test.apps.googleusercontent.com",
     )
 
-    import jobify.workers.celery_app as _celery_mod
-    from jobify.workers.celery_app import celery_app
+    import jobify_worker.runtime as _runtime_mod
+    import jobify_worker.worker_app  # noqa: F401  — registers tasks onto celery_app
+    from jobify.celery_app import celery_app
     from jobify_api.app_factory import create_app
 
     app = create_app()
@@ -156,6 +157,8 @@ async def eager_client(
     # Enable eager mode so parse_resume + embed_applicant run synchronously.
     monkeypatch.setattr(celery_app.conf, "task_always_eager", True)
     monkeypatch.setattr(celery_app.conf, "task_eager_propagates", True)
+    import jobify.celery_app as _celery_mod
+
     monkeypatch.setattr(_celery_mod.settings, "storage_root", tmp_path)
 
     async with httpx.AsyncClient(
@@ -173,8 +176,8 @@ async def eager_client(
     # Reset worker's cached sessionmaker so subsequent tests don't reuse
     # this test's engine. The patched_embedding_provider fixture handles
     # resetting _embedding_provider via monkeypatch teardown.
-    _celery_mod._engine = None
-    _celery_mod._sessionmaker = None
+    _runtime_mod._engine = None
+    _runtime_mod._sessionmaker = None
 
 
 async def test_embed_after_parse_writes_row(
@@ -233,8 +236,8 @@ async def test_rerun_with_same_content_is_noop(
 ) -> None:
     """Re-running embed_applicant on unchanged parsed_json hits the hash gate and
     skips the provider."""
-    from jobify.workers.celery_app import get_session_maker
-    from jobify.workers.tasks.embed import _embed_applicant_async
+    from jobify_worker.runtime import get_session_maker
+    from jobify_worker.tasks.embed import _embed_applicant_async
 
     pdf = FPDF()
     pdf.add_page()
@@ -292,8 +295,8 @@ async def test_embed_no_parsed_resume_is_no_op(
     forcing the Txn3 race within a test is fiddly. The "no parsed resume"
     branch exercises the same defensive load-and-check pattern.
     """
-    from jobify.workers.celery_app import get_session_maker
-    from jobify.workers.tasks.embed import _embed_applicant_async
+    from jobify_worker.runtime import get_session_maker
+    from jobify_worker.tasks.embed import _embed_applicant_async
 
     applicant_id_str, _access = await _signin_as_applicant(eager_client, google_verifier)
     applicant_id = uuid.UUID(applicant_id_str)
@@ -325,7 +328,7 @@ async def test_dispatch_resilient_to_embed_broker_failure(
 ) -> None:
     """If embed_applicant.delay() raises, parse still commits PARSED and no
     embedding row is written."""
-    from jobify.workers.tasks import embed as embed_mod
+    from jobify_worker.tasks import embed as embed_mod
 
     pdf = FPDF()
     pdf.add_page()
@@ -381,7 +384,7 @@ async def test_embed_applicant_dispatches_score_applicant(
     def _spy(applicant_id_str: str) -> None:
         calls.append(applicant_id_str)
 
-    monkeypatch.setattr("jobify.workers.tasks.score_applicant.score_applicant.delay", _spy)
+    monkeypatch.setattr("jobify_worker.tasks.score_applicant.score_applicant.delay", _spy)
 
     user = User(email="dispatch@example.com", role=UserRole.APPLICANT)
     session.add(user)
@@ -416,7 +419,7 @@ async def test_embed_applicant_dispatches_score_applicant(
         join_transaction_mode="create_savepoint",
     )
 
-    from jobify.workers.tasks.embed import _embed_applicant_async
+    from jobify_worker.tasks.embed import _embed_applicant_async
 
     await _embed_applicant_async(applicant.id, sm=sm, provider=patched_embedding_provider)
     assert len(calls) == 1

@@ -115,13 +115,13 @@ async def test_create_job_dispatches_embed(async_client, applicant_user_and_toke
 
     called_with: list[str] = []
 
-    class _Stub:
-        def delay(self, job_id: str) -> None:
-            called_with.append(job_id)
+    import jobify.celery_app as _celery_mod
 
-    import jobify.workers.tasks.embed_job as _embed_job_mod
+    def _spy_enqueue(name: str, *args: object) -> None:
+        if name == "jobify.embed_job":
+            called_with.extend(args)
 
-    monkeypatch.setattr(_embed_job_mod, "embed_job", _Stub(), raising=False)
+    monkeypatch.setattr(_celery_mod, "enqueue", _spy_enqueue)
 
     body = {
         "employer_id": emp_id,

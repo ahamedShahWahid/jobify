@@ -190,7 +190,13 @@ async def test_seed_dispatches_embed_per_upserted_job(
     def _spy(job_id_str: str) -> None:
         calls.append(job_id_str)
 
-    monkeypatch.setattr("jobify.workers.tasks.embed_job.embed_job.delay", _spy)
+    import jobify.celery_app as _celery_mod
+
+    def _spy_enqueue(name: str, *args: object) -> None:
+        if name == "jobify.embed_job":
+            calls.extend(args)
+
+    monkeypatch.setattr(_celery_mod, "enqueue", _spy_enqueue)
 
     payload = _payload(
         [_employer_dict()],
@@ -209,12 +215,14 @@ async def test_seed_dispatches_embed_per_upserted_job(
 async def test_seed_swallows_broker_outage(
     session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """If embed_job.delay raises, the seed CLI logs and continues without raising."""
+    """If enqueue raises (broker down), the seed CLI logs and continues without raising."""
 
-    def _broken(job_id_str: str) -> None:
+    import jobify.celery_app as _celery_mod
+
+    def _broken(name: str, *args: object) -> None:
         raise RuntimeError("broker down")
 
-    monkeypatch.setattr("jobify.workers.tasks.embed_job.embed_job.delay", _broken)
+    monkeypatch.setattr(_celery_mod, "enqueue", _broken)
 
     # Capture structlog warning calls via the _log bound in seed_jobs.
     warning_events: list[str] = []

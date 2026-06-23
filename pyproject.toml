@@ -9,11 +9,12 @@ dependencies = []
 package = false
 
 [tool.uv.workspace]
-members = ["core", "api"]
+members = ["core", "api", "worker"]
 
 [tool.uv.sources]
 jobify-core = { workspace = true }
 jobify-api = { workspace = true }
+jobify-worker = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -24,6 +25,7 @@ dev = [
     "fpdf2>=2.7,<3",
     "jobify-core",
     "jobify-api",
+    "jobify-worker",
 ]
 
 [tool.ruff]
@@ -60,7 +62,7 @@ ignore_missing_imports = true
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
-pythonpath = ["core/src", "api/src"]
+pythonpath = ["core/src", "api/src", "worker/src"]
 markers = [
     "integration: tests that require a running local Postgres (see README §Database)",
     "eval: resume-parser quality gate against the gold dataset in core/data/parse_eval/",

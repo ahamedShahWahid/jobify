@@ -9,7 +9,7 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-import jobify.workers.tasks.score_job as score_job_task
+import jobify_worker.tasks.score_job as score_job_task
 from jobify.db.models import (
     Applicant,
     ApplicantEmbedding,
@@ -21,7 +21,7 @@ from jobify.db.models import (
     UserRole,
 )
 from jobify.scoring.match import TransientScoringError
-from jobify.workers.tasks.score_job import _score_job_async
+from jobify_worker.tasks.score_job import _score_job_async
 
 pytestmark = pytest.mark.integration
 

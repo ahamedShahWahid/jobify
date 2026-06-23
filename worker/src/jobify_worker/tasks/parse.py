@@ -25,6 +25,7 @@ from uuid import UUID
 
 import structlog
 
+from jobify.celery_app import celery_app, settings
 from jobify.db.models import Resume, ResumeParseStatus
 from jobify.integrations.parser.base import (
     ParsedResume,
@@ -34,7 +35,7 @@ from jobify.integrations.parser.base import (
 )
 from jobify.integrations.parser.library import LibraryResumeParser
 from jobify.integrations.storage.local import LocalFileStorage
-from jobify.workers.celery_app import celery_app, get_session_maker, settings
+from jobify_worker.runtime import get_session_maker
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -183,12 +184,12 @@ async def _parse_resume_async(
     # because parsed_json is already durable. Admin tooling can replay
     # missing applicant_embeddings rows after the broker recovers.
     #
-    # Lazy import: jobify.workers.tasks.embed is autodiscovered by Celery but
+    # Lazy import: jobify_worker.tasks.embed is autodiscovered by Celery but
     # we keep the import deferred to dispatch time so that import-time
     # failures in test collection (where env vars aren't yet set) don't
     # cascade through this module.
     try:
-        from jobify.workers.tasks.embed import embed_applicant
+        from jobify_worker.tasks.embed import embed_applicant
 
         embed_applicant.delay(str(resume.applicant_id))
     except Exception as exc:

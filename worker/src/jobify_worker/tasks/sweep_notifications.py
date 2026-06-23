@@ -30,6 +30,8 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.sql import func
 
+from jobify.celery_app import celery_app
+from jobify.celery_app import settings as _worker_settings
 from jobify.consent import get_consent
 from jobify.db.models import (
     DEFAULT_CONSENTS,
@@ -40,12 +42,7 @@ from jobify.db.models import (
     User,
 )
 from jobify.integrations.notifications.base import ChannelResult
-from jobify.workers.celery_app import (
-    celery_app,
-    get_email_channel,
-    get_session_maker,
-)
-from jobify.workers.celery_app import settings as _worker_settings
+from jobify_worker.runtime import get_email_channel, get_session_maker
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker

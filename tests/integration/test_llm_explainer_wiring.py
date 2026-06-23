@@ -21,7 +21,7 @@ from jobify.db.models import (
     User,
     UserRole,
 )
-from jobify.workers.tasks.score_applicant import _score_applicant_async
+from jobify_worker.tasks.score_applicant import _score_applicant_async
 
 pytestmark = pytest.mark.integration
 

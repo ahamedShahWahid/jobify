@@ -148,13 +148,10 @@ async def upload_resume(
     # the resume row + file are already durable. Admin tooling can replay
     # pending rows after the broker recovers.
     #
-    # Lazy import: jobify.workers.celery_app instantiates Settings() at module
-    # level (needs JOBIFY_REDIS_URL). Deferring the import to request time avoids
-    # import-time failures in test collection where env vars aren't yet set.
     try:
-        from jobify.workers.tasks.parse import parse_resume
+        from jobify.celery_app import enqueue
 
-        parse_resume.delay(str(resume.id))
+        enqueue("jobify.parse_resume", str(resume.id))
     except Exception as exc:
         # Broad catch is deliberate: the row + blob are already durable, so
         # any dispatch-time error (broker down, import failure, eager-mode

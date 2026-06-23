@@ -7,6 +7,7 @@ members = [
     "jobify",
     "jobify-api",
     "jobify-core",
+    "jobify-worker",
 ]
 
 [[package]]
@@ -459,6 +460,7 @@ dev = [
     { name = "fpdf2" },
     { name = "jobify-api" },
     { name = "jobify-core" },
+    { name = "jobify-worker" },
     { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -472,6 +474,7 @@ dev = [
     { name = "fpdf2", specifier = ">=2.7,<3" },
     { name = "jobify-api", editable = "api" },
     { name = "jobify-core", editable = "core" },
+    { name = "jobify-worker", editable = "worker" },
     { name = "mypy", specifier = ">=1.13,<2" },
     { name = "pytest", specifier = ">=8.3,<9" },
     { name = "pytest-asyncio", specifier = ">=0.24,<0.25" },
@@ -537,6 +540,17 @@ requires-dist = [
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.36,<2.1" },
     { name = "structlog", specifier = ">=24.4,<25" },
 ]
+
+[[package]]
+name = "jobify-worker"
+version = "0.1.0"
+source = { editable = "worker" }
+dependencies = [
+    { name = "jobify-core" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "jobify-core", editable = "core" }]
 
 [[package]]
 name = "kombu"

@@ -1,14 +1,12 @@
-"""Celery instance + broker config + per-worker DB engine lifecycle.
+"""Per-worker engine lifecycle, signal handlers, and provider singletons.
 
-Run a worker (from `api/`):
+Imported by :mod:`jobify_worker.worker_app` on startup. Importing this module
+connects the ``worker_process_init`` and ``worker_shutting_down`` Celery signals,
+which fire per worker process (including on ``--pool=solo`` and ``--pool=prefork``).
 
-    uv run --env-file=.env celery -A jobify.workers.celery_app worker \\
-        --pool=solo --concurrency=1 -Q parse
-
---pool=solo is the MVP choice: single-concurrency, no subprocess fan-out,
-plays cleanly with `asyncio.run()` in the task body. P5 hardening switches
-to --pool=prefork + per-process engine without changes here (the
-worker_process_init signal handles both).
+In eager test mode the signals don't fire — all factories fall back to building
+their objects lazily on first call, which is why every getter checks for ``None``
+rather than relying on the signal-time initialisation.
 """
 
 from __future__ import annotations
@@ -16,11 +14,10 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
-from celery import Celery
 from celery.signals import worker_process_init, worker_shutting_down
 from sqlalchemy.pool import NullPool
 
-from jobify.settings import Settings
+from jobify.celery_app import settings
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
@@ -28,42 +25,6 @@ if TYPE_CHECKING:
     from jobify.integrations.embeddings.gemini import GeminiEmbeddingProvider
     from jobify.integrations.notifications.base import EmailChannel
     from jobify.scoring.explainer import MatchExplainer
-
-# Settings is built at import time — one Settings object for the worker process.
-# Tasks read this rather than instantiating Settings repeatedly.
-settings = Settings()
-
-celery_app = Celery(
-    "jobify",
-    broker=settings.redis_url,
-    backend=settings.redis_url,
-    include=[
-        "jobify.workers.tasks.parse",
-        "jobify.workers.tasks.embed",
-        "jobify.workers.tasks.embed_job",
-        "jobify.workers.tasks.score_applicant",
-        "jobify.workers.tasks.score_job",
-        "jobify.workers.tasks.sweep_notifications",
-    ],
-)
-
-celery_app.conf.update(
-    task_default_queue="parse",
-    task_acks_late=True,
-    worker_prefetch_multiplier=1,
-    task_always_eager=settings.celery_task_always_eager,
-    task_eager_propagates=True,
-    broker_connection_retry_on_startup=True,
-    result_expires=3600,  # 1h — most jobs surface state via DB row, not result
-    task_routes={
-        "jobify.parse_resume": {"queue": "parse"},
-        "jobify.embed_applicant": {"queue": "embed"},
-        "jobify.embed_job": {"queue": "embed"},
-        "jobify.score_applicant": {"queue": "score"},
-        "jobify.score_job": {"queue": "score"},
-        "jobify.sweep_notifications": {"queue": "notify"},
-    },
-)
 
 
 # --- Per-worker engine + sessionmaker ---

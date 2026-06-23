@@ -139,10 +139,15 @@ async def test_patch_recruiter_returns_403(
 async def test_patch_matching_field_dispatches_rescore(
     async_client: httpx.AsyncClient, google_verifier, monkeypatch
 ) -> None:
-    import jobify.workers.tasks.score_applicant as score_mod
+    import jobify.celery_app as _celery_mod
 
     calls: list[str] = []
-    monkeypatch.setattr(score_mod.score_applicant, "delay", lambda aid: calls.append(aid))
+
+    def _spy_enqueue(name: str, *args: object) -> None:
+        if name == "jobify.score_applicant":
+            calls.extend(args)
+
+    monkeypatch.setattr(_celery_mod, "enqueue", _spy_enqueue)
 
     signin = await _signin(async_client, google_verifier)
     headers = {"Authorization": f"Bearer {signin['access_token']}"}
@@ -157,10 +162,15 @@ async def test_patch_matching_field_dispatches_rescore(
 async def test_patch_non_matching_field_no_rescore(
     async_client: httpx.AsyncClient, google_verifier, monkeypatch
 ) -> None:
-    import jobify.workers.tasks.score_applicant as score_mod
+    import jobify.celery_app as _celery_mod
 
     calls: list[str] = []
-    monkeypatch.setattr(score_mod.score_applicant, "delay", lambda aid: calls.append(aid))
+
+    def _spy_enqueue(name: str, *args: object) -> None:
+        if name == "jobify.score_applicant":
+            calls.extend(args)
+
+    monkeypatch.setattr(_celery_mod, "enqueue", _spy_enqueue)
 
     signin = await _signin(async_client, google_verifier)
     headers = {"Authorization": f"Bearer {signin['access_token']}"}

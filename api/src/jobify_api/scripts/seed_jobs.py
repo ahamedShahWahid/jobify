@@ -284,19 +284,17 @@ async def _upsert_job(
 
 
 def _dispatch_embeds(job_ids: list[uuid.UUID]) -> None:
-    """Fire ``embed_job.delay(...)`` for each job_id, fire-and-forget.
+    """Fire ``enqueue("jobify.embed_job", ...)`` for each job_id, fire-and-forget.
 
     Broker outage MUST NOT fail the seed — the rows are durable. The broad
     except + warning log mirrors the upload-route → parse-resume dispatch
     pattern in ``routes/resumes.py``. Don't tighten the except.
     """
-    # Lazy import to avoid celery_app import at module load (keeps the CLI
-    # invocable without Celery configured for dry-run / unit-test paths).
-    from jobify.workers.tasks.embed_job import embed_job
+    from jobify.celery_app import enqueue
 
     for jid in job_ids:
         try:
-            embed_job.delay(str(jid))
+            enqueue("jobify.embed_job", str(jid))
         except Exception:
             _log.warning("embed.dispatch-failed", job_id=str(jid), exc_info=True)
 

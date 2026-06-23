@@ -60,12 +60,12 @@ class ProfileUpdate(BaseModel):
 
 
 def _dispatch_score(applicant_id: UUID) -> None:
-    """Fire score_applicant.delay(...) post-commit, fire-and-forget. A broker
+    """Fire score_applicant dispatch post-commit, fire-and-forget. A broker
     outage MUST NOT fail the save — same pattern as embed.py:_dispatch_score."""
-    from jobify.workers.tasks.score_applicant import score_applicant
+    from jobify.celery_app import enqueue
 
     try:
-        score_applicant.delay(str(applicant_id))
+        enqueue("jobify.score_applicant", str(applicant_id))
     except Exception:
         _log.warning("score.dispatch-failed", applicant_id=str(applicant_id), exc_info=True)
 

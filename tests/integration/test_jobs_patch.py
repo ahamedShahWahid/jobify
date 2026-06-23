@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-import jobify.workers.tasks.embed_job as _embed_job_mod
+import jobify.celery_app as _celery_mod
 
 pytestmark = pytest.mark.integration
 
@@ -27,12 +27,13 @@ async def _make_recruiter_and_job(async_client, token):
     return emp.json()["id"], job_resp.json()["id"]
 
 
-class _RecordingStub:
+class _RecordingEnqueue:
     def __init__(self) -> None:
         self.calls: list[str] = []
 
-    def delay(self, job_id: str) -> None:
-        self.calls.append(job_id)
+    def __call__(self, name: str, *args: object) -> None:
+        if name == "jobify.embed_job":
+            self.calls.extend(args)
 
 
 async def test_patch_content_field_redispatches_embed(
@@ -41,8 +42,8 @@ async def test_patch_content_field_redispatches_embed(
     _, token = applicant_user_and_token
     _, job_id = await _make_recruiter_and_job(async_client, token)
 
-    stub = _RecordingStub()
-    monkeypatch.setattr(_embed_job_mod, "embed_job", stub, raising=False)
+    stub = _RecordingEnqueue()
+    monkeypatch.setattr(_celery_mod, "enqueue", stub)
 
     r = await async_client.patch(
         f"/v1/jobs/{job_id}",
@@ -60,8 +61,8 @@ async def test_patch_status_only_does_not_redispatch_embed(
     _, token = applicant_user_and_token
     _, job_id = await _make_recruiter_and_job(async_client, token)
 
-    stub = _RecordingStub()
-    monkeypatch.setattr(_embed_job_mod, "embed_job", stub, raising=False)
+    stub = _RecordingEnqueue()
+    monkeypatch.setattr(_celery_mod, "enqueue", stub)
 
     r = await async_client.patch(
         f"/v1/jobs/{job_id}",
@@ -79,8 +80,8 @@ async def test_patch_combined_content_and_status_redispatches_once(
     _, token = applicant_user_and_token
     _, job_id = await _make_recruiter_and_job(async_client, token)
 
-    stub = _RecordingStub()
-    monkeypatch.setattr(_embed_job_mod, "embed_job", stub, raising=False)
+    stub = _RecordingEnqueue()
+    monkeypatch.setattr(_celery_mod, "enqueue", stub)
 
     r = await async_client.patch(
         f"/v1/jobs/{job_id}",

@@ -24,6 +24,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.sql import func
 
+from jobify.celery_app import celery_app
 from jobify.db.models import Employer, Job, JobEmbedding
 from jobify.integrations.embeddings.base import (
     EmbeddingProvider,
@@ -32,11 +33,7 @@ from jobify.integrations.embeddings.base import (
     TransientEmbeddingError,
 )
 from jobify.integrations.embeddings.canonicalize_job import canonicalize_job
-from jobify.workers.celery_app import (
-    celery_app,
-    get_embedding_provider,
-    get_session_maker,
-)
+from jobify_worker.runtime import get_embedding_provider, get_session_maker
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -186,7 +183,7 @@ async def _embed_job_async(
 
 def _dispatch_score(job_id: UUID) -> None:
     """Fire score_job.delay(...) post-embed, fire-and-forget."""
-    from jobify.workers.tasks.score_job import score_job
+    from jobify_worker.tasks.score_job import score_job
 
     try:
         score_job.delay(str(job_id))

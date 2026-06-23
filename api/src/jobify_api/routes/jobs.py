@@ -308,13 +308,10 @@ async def create_job(
     await session.commit()
     await session.refresh(job)
 
-    # Lazy import: jobify.workers.celery_app instantiates Settings() at module
-    # level (needs JOBIFY_REDIS_URL). Deferring the import to request time avoids
-    # import-time failures in test collection where env vars aren't yet set.
     try:
-        from jobify.workers.tasks.embed_job import embed_job
+        from jobify.celery_app import enqueue
 
-        embed_job.delay(str(job.id))
+        enqueue("jobify.embed_job", str(job.id))
     except Exception:
         _log.warning("embed.dispatch-failed", job_id=str(job.id), exc_info=True)
 
@@ -390,9 +387,9 @@ async def patch_job(
 
     if content_changed:
         try:
-            from jobify.workers.tasks.embed_job import embed_job
+            from jobify.celery_app import enqueue
 
-            embed_job.delay(str(job.id))
+            enqueue("jobify.embed_job", str(job.id))
         except Exception:
             _log.warning("embed.dispatch-failed", job_id=str(job.id), exc_info=True)
 

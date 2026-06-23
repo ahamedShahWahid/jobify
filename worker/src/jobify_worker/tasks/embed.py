@@ -24,6 +24,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.sql import func
 
+from jobify.celery_app import celery_app
 from jobify.db.models import Applicant, ApplicantEmbedding, Resume, ResumeParseStatus
 from jobify.integrations.embeddings.base import (
     EmbeddingProvider,
@@ -33,11 +34,7 @@ from jobify.integrations.embeddings.base import (
 )
 from jobify.integrations.embeddings.canonicalize import canonicalize_profile
 from jobify.integrations.parser.base import ParsedResume
-from jobify.workers.celery_app import (
-    celery_app,
-    get_embedding_provider,
-    get_session_maker,
-)
+from jobify_worker.runtime import get_embedding_provider, get_session_maker
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -209,7 +206,7 @@ def _dispatch_score(applicant_id: UUID) -> None:
     Broker outage MUST NOT propagate — the embedding is durable. Same broad-except
     + warning-log pattern as the upload route → parse worker dispatch.
     """
-    from jobify.workers.tasks.score_applicant import score_applicant
+    from jobify_worker.tasks.score_applicant import score_applicant
 
     try:
         score_applicant.delay(str(applicant_id))

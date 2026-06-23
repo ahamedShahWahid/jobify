@@ -52,7 +52,7 @@ class GeminiMatchExplainer:
     """Constructor-injected genai client + model.
 
     Tests pass a MagicMock(); production wires this via
-    ``jobify.workers.celery_app.get_match_explainer``.
+    ``jobify_worker.runtime.get_match_explainer``.
     """
 
     def __init__(self, *, client: GenaiClient, model: str) -> None:

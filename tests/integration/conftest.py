@@ -114,23 +114,24 @@ def patched_embedding_provider(
     """Patch get_embedding_provider() to return the fake so eager-mode Celery
     embed tasks use the fake without hitting the network.
 
-    Two patches are needed because embed.py imports get_embedding_provider by
-    name at module load time (``from jobify.workers.celery_app import
-    get_embedding_provider``), creating a local reference that is not affected
-    by patching the celery_app module attribute alone.  We therefore patch both
-    the celery_app attribute and the embed-module local reference.  We also set
-    the module-level ``_embedding_provider`` cache directly so that the original
-    (unpatched) function body, if somehow reached, also returns the fake.
+    Three patches are needed because embed.py and embed_job.py import
+    get_embedding_provider by name at module load time
+    (``from jobify_worker.runtime import get_embedding_provider``), creating
+    local references that are not affected by patching the runtime module
+    attribute alone.  We therefore patch both task-module local references
+    plus the runtime module.  We also set the module-level
+    ``_embedding_provider`` cache directly so that the original (unpatched)
+    function body, if somehow reached, also returns the fake.
     """
-    import jobify.workers.celery_app as cel
-    import jobify.workers.tasks.embed as embed_mod
-    import jobify.workers.tasks.embed_job as embed_job_mod
+    import jobify_worker.runtime as runtime_mod
+    import jobify_worker.tasks.embed as embed_mod
+    import jobify_worker.tasks.embed_job as embed_job_mod
 
-    monkeypatch.setattr(cel, "get_embedding_provider", lambda: embedding_provider)
+    monkeypatch.setattr(runtime_mod, "get_embedding_provider", lambda: embedding_provider)
     monkeypatch.setattr(embed_mod, "get_embedding_provider", lambda: embedding_provider)
     monkeypatch.setattr(embed_job_mod, "get_embedding_provider", lambda: embedding_provider)
     # Also seed the module-level cache so the original function body short-circuits.
-    monkeypatch.setattr(cel, "_embedding_provider", embedding_provider)
+    monkeypatch.setattr(runtime_mod, "_embedding_provider", embedding_provider)
     return embedding_provider
 
 
@@ -167,18 +168,18 @@ def patched_match_explainer(
 
     Mirrors patched_embedding_provider: three patch sites + the cache, because
     score_applicant.py and score_job.py do
-    ``from jobify.workers.celery_app import get_match_explainer`` locally inside
+    ``from jobify_worker.runtime import get_match_explainer`` locally inside
     the async body. Each local import creates a separate reference; we patch
-    both call sites plus the source module, then seed the module-level cache.
+    both call sites plus the runtime module, then seed the module-level cache.
     """
-    import jobify.workers.celery_app as cel
-    import jobify.workers.tasks.score_applicant as sa_mod
-    import jobify.workers.tasks.score_job as sj_mod
+    import jobify_worker.runtime as runtime_mod
+    import jobify_worker.tasks.score_applicant as sa_mod
+    import jobify_worker.tasks.score_job as sj_mod
 
-    monkeypatch.setattr(cel, "get_match_explainer", lambda: match_explainer)
+    monkeypatch.setattr(runtime_mod, "get_match_explainer", lambda: match_explainer)
     monkeypatch.setattr(sa_mod, "get_match_explainer", lambda: match_explainer, raising=False)
     monkeypatch.setattr(sj_mod, "get_match_explainer", lambda: match_explainer, raising=False)
-    monkeypatch.setattr(cel, "_match_explainer", match_explainer)
+    monkeypatch.setattr(runtime_mod, "_match_explainer", match_explainer)
     return match_explainer
 
 

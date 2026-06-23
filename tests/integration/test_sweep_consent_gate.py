@@ -22,7 +22,7 @@ from jobify.db.models import (
     UserRole,
 )
 from jobify.integrations.notifications.base import ChannelResult
-from jobify.workers.tasks.sweep_notifications import _sweep_notifications_async
+from jobify_worker.tasks.sweep_notifications import _sweep_notifications_async
 from tests.integration.test_sweep_notifications import (
     _make_sm,
     _seed_notification,

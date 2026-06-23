@@ -47,14 +47,14 @@ async def test_upload_returns_201_even_if_broker_dispatch_raises(
     session,
     monkeypatch,
 ) -> None:
-    """If parse_resume.delay() raises (broker down), upload still returns 201
+    """If enqueue() raises (broker down), upload still returns 201
     and the row exists with parse_status=pending."""
-    from jobify.workers.tasks import parse as parse_module
+    import jobify.celery_app as celery_app_mod
 
     def _raise_broker_down(*args, **kwargs):  # type: ignore[no-untyped-def]
         raise ConnectionError("broker unreachable")
 
-    monkeypatch.setattr(parse_module.parse_resume, "delay", _raise_broker_down)
+    monkeypatch.setattr(celery_app_mod, "enqueue", _raise_broker_down)
 
     applicant_id, access = await _make_applicant_with_token(session)
     pdf = _tiny_pdf()

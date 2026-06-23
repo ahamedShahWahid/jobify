@@ -1,15 +1,6 @@
-"""score_applicant task — score an applicant against every open job with an embedding.
+"""score_job task — score every applicant-with-embedding against this job.
 
-Dispatched from embed_applicant Txn 3 post-commit. The body processes a bounded
-batch of jobs, then dispatches a follow-up task after commit if more scoreable
-jobs remain. Each batch has a two-transaction split: load + collect → no-DB
-compute → UPSERT. No external API call so there's no need for the embed
-worker's three-transaction shape.
-
-surfaced_at semantics: set on first run that crosses threshold; preserved on
-subsequent rescores even if total later drops below threshold. The UPSERT's
-``set_`` clause uses ``coalesce(surfaced_at, CASE WHEN crosses THEN now() ELSE NULL END)``
-so once non-null, the value is never overwritten.
+Mirror of score_applicant. Dispatched from embed_job Txn 3 post-commit.
 """
 
 from __future__ import annotations
@@ -26,6 +17,8 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.sql import func
 
+from jobify.celery_app import celery_app
+from jobify.celery_app import settings as _settings
 from jobify.db.models import (
     Applicant,
     ApplicantEmbedding,
@@ -36,8 +29,7 @@ from jobify.db.models import (
     Match,
 )
 from jobify.scoring.match import TransientScoringError, score_match
-from jobify.workers.celery_app import celery_app, get_session_maker
-from jobify.workers.celery_app import settings as _settings
+from jobify_worker.runtime import get_session_maker
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -49,7 +41,7 @@ _EXPLAIN_CONCURRENCY = 10
 
 
 @celery_app.task(  # type: ignore[untyped-decorator]
-    name="jobify.score_applicant",
+    name="jobify.score_job",
     bind=True,
     max_retries=3,
     autoretry_for=(TransientScoringError,),
@@ -58,8 +50,8 @@ _EXPLAIN_CONCURRENCY = 10
     retry_jitter=True,
     acks_late=True,
 )
-def score_applicant(  # type: ignore[no-untyped-def]
-    self, applicant_id_str: str, after_job_id_str: str | None = None
+def score_job(  # type: ignore[no-untyped-def]
+    self, job_id_str: str, after_applicant_id_str: str | None = None
 ) -> None:
     """Sync entry. Wraps the async body in a fresh event loop, with eager-mode thread hop."""
 
@@ -75,106 +67,104 @@ def score_applicant(  # type: ignore[no-untyped-def]
         else:
             asyncio.run(coro_factory())
 
-    after_job_id = UUID(after_job_id_str) if after_job_id_str is not None else None
-    _run(lambda: _score_applicant_async(UUID(applicant_id_str), after_job_id=after_job_id))
+    after_applicant_id = (
+        UUID(after_applicant_id_str) if after_applicant_id_str is not None else None
+    )
+    _run(lambda: _score_job_async(UUID(job_id_str), after_applicant_id=after_applicant_id))
 
 
-async def _score_applicant_async(
-    applicant_id: UUID,
+async def _score_job_async(
+    job_id: UUID,
     *,
     sm: async_sessionmaker[AsyncSession] | None = None,
-    after_job_id: UUID | None = None,
+    after_applicant_id: UUID | None = None,
     batch_size: int | None = None,
 ) -> None:
     sm = sm or get_session_maker()
     limit = batch_size or _settings.score_batch_size
 
-    # --- Txn 1: load applicant + emb, list a bounded batch of scoreable jobs ---
+    # --- Txn 1: load job + emb, list a bounded batch of applicants with embeddings ---
     async with sm() as session:
-        applicant_row = (
+        job_row = (
             await session.execute(
-                select(Applicant, ApplicantEmbedding)
-                .join(ApplicantEmbedding, ApplicantEmbedding.applicant_id == Applicant.id)
+                select(Job, JobEmbedding, Employer.name)
+                .join(JobEmbedding, JobEmbedding.job_id == Job.id)
+                .join(Employer, Employer.id == Job.employer_id)
                 .where(
-                    Applicant.id == applicant_id,
-                    Applicant.deleted_at.is_(None),
-                    ApplicantEmbedding.deleted_at.is_(None),
+                    Job.id == job_id,
+                    Job.status == JobStatus.OPEN,
+                    Job.deleted_at.is_(None),
+                    JobEmbedding.deleted_at.is_(None),
+                    Employer.deleted_at.is_(None),
                 )
             )
         ).first()
-        if applicant_row is None:
-            _log.info("score.applicant-skipped", applicant_id=str(applicant_id))
+        if job_row is None:
+            _log.info("score.job-skipped", job_id=str(job_id))
             return
-        applicant, applicant_emb = applicant_row
+        job, job_emb, employer_name = job_row
 
-        jobs_stmt = (
-            select(Job, JobEmbedding, Employer.name)
-            .join(JobEmbedding, JobEmbedding.job_id == Job.id)
-            .join(Employer, Employer.id == Job.employer_id)
+        apps_stmt = (
+            select(Applicant, ApplicantEmbedding)
+            .join(ApplicantEmbedding, ApplicantEmbedding.applicant_id == Applicant.id)
             .where(
-                Job.status == JobStatus.OPEN,
-                Job.deleted_at.is_(None),
-                JobEmbedding.deleted_at.is_(None),
-                Employer.deleted_at.is_(None),
+                Applicant.deleted_at.is_(None),
+                ApplicantEmbedding.deleted_at.is_(None),
             )
-            .order_by(Job.id.asc())
+            .order_by(Applicant.id.asc())
             .limit(limit + 1)
         )
-        if after_job_id is not None:
-            jobs_stmt = jobs_stmt.where(Job.id > after_job_id)
-        job_rows = (await session.execute(jobs_stmt)).all()
-        has_more = len(job_rows) > limit
-        job_rows = job_rows[:limit]
-        next_after_job_id = job_rows[-1][0].id if has_more and job_rows else None
+        if after_applicant_id is not None:
+            apps_stmt = apps_stmt.where(Applicant.id > after_applicant_id)
+        app_rows = (await session.execute(apps_stmt)).all()
+        has_more = len(app_rows) > limit
+        app_rows = app_rows[:limit]
+        next_after_applicant_id = app_rows[-1][0].id if has_more and app_rows else None
         # Detach all entities from this session before closing — we read scalars in compute step.
         scored_inputs = []
-        for job, job_emb, employer_name in job_rows:
+        for applicant, applicant_emb in app_rows:
             scored_inputs.append(
                 (
-                    job.id,
-                    job.title,
-                    list(job.locations or []),
-                    job.min_exp_years,
-                    job.max_exp_years,
-                    job.ctc_min,
-                    job.ctc_max,
-                    list(job_emb.embedding),
-                    job_emb.model_name,
-                    employer_name,
+                    applicant.id,
+                    list(applicant.locations or []),
+                    applicant.years_experience,
+                    applicant.expected_ctc,
+                    list(applicant_emb.embedding),
+                    applicant_emb.model_name,
                 )
             )
-        applicant_emb_vec = list(applicant_emb.embedding)
-        applicant_emb_model = applicant_emb.model_name
-        applicant_locs = list(applicant.locations or [])
-        applicant_years = applicant.years_experience
-        applicant_ctc = applicant.expected_ctc
+        job_emb_vec = list(job_emb.embedding)
+        job_emb_model = job_emb.model_name
+        job_title = job.title
+        job_locs = list(job.locations or [])
+        job_min_exp = job.min_exp_years
+        job_max_exp = job.max_exp_years
+        job_ctc_min = job.ctc_min
+        job_ctc_max = job.ctc_max
+        job_employer_name = employer_name
 
     if not scored_inputs:
         _log.info(
-            "score.no-scoreable-jobs",
-            applicant_id=str(applicant_id),
-            after_job_id=str(after_job_id) if after_job_id else None,
+            "score.no-scoreable-applicants",
+            job_id=str(job_id),
+            after_applicant_id=str(after_applicant_id) if after_applicant_id else None,
         )
         return
 
     # --- (no DB) compute ---
     from jobify.scoring.explainer import ExplainContext
-    from jobify.workers.celery_app import get_match_explainer
+    from jobify_worker.runtime import get_match_explainer
 
     _explainer = get_match_explainer()
 
     pending: list[tuple[UUID, Any, str, ExplainContext]] = []
     for (
-        job_id,
-        job_title,
-        job_locs,
-        job_min_exp,
-        job_max_exp,
-        job_ctc_min,
-        job_ctc_max,
-        job_emb_vec,
-        job_emb_model,
-        employer_name,
+        applicant_id,
+        applicant_locs,
+        applicant_years,
+        applicant_ctc,
+        applicant_emb_vec,
+        applicant_emb_model,
     ) in scored_inputs:
         ms = score_match(
             applicant_embedding=applicant_emb_vec,
@@ -201,15 +191,15 @@ async def _score_applicant_async(
             job_min_exp_years=job_min_exp,
             job_max_exp_years=job_max_exp,
             job_ctc_max=job_ctc_max,
-            employer_name=employer_name,
+            employer_name=job_employer_name,
             applicant_expected_ctc=applicant_ctc,
             applicant_locations=applicant_locs,
         )
-        pending.append((job_id, ms, job_emb_model, ctx))
+        pending.append((applicant_id, ms, applicant_emb_model, ctx))
 
     # explain() never raises (explainer contract) and the LLM impl is
     # I/O-bound — run the batch concurrently instead of one Gemini round-trip
-    # per job, bounded so a large batch doesn't stampede the API.
+    # per applicant, bounded so a large batch doesn't stampede the API.
     sem = asyncio.Semaphore(_EXPLAIN_CONCURRENCY)
 
     async def _explain_bounded(ctx: ExplainContext) -> dict[str, str]:
@@ -218,14 +208,14 @@ async def _score_applicant_async(
 
     explanations = await asyncio.gather(*(_explain_bounded(ctx) for *_, ctx in pending))
     scores: list[tuple[UUID, Any, str, dict[str, str]]] = [
-        (job_id, ms, model, explanation)
-        for (job_id, ms, model, _ctx), explanation in zip(pending, explanations, strict=True)
+        (applicant_id, ms, model, explanation)
+        for (applicant_id, ms, model, _ctx), explanation in zip(pending, explanations, strict=True)
     ]
 
     # --- Txn 2: UPSERT each row ---
     async with sm() as session:
         try:
-            for job_id, ms, job_emb_model, explanation in scores:
+            for applicant_id, ms, applicant_emb_model, explanation in scores:
                 model_versions = {
                     "applicant_model": applicant_emb_model,
                     "job_model": job_emb_model,
@@ -270,27 +260,22 @@ async def _score_applicant_async(
             await session.commit()
         except Exception as exc:
             await session.rollback()
-            _log.exception("score.upsert-failed", applicant_id=str(applicant_id))
+            _log.exception("score.upsert-failed", job_id=str(job_id))
             raise TransientScoringError(f"upsert failed: {type(exc).__name__}") from exc
 
-    _log.info(
-        "score.applicant-complete",
-        applicant_id=str(applicant_id),
-        scored=len(scores),
-        has_more=has_more,
-    )
-    if next_after_job_id is not None:
-        _dispatch_next_batch(applicant_id, next_after_job_id)
+    _log.info("score.job-complete", job_id=str(job_id), scored=len(scores), has_more=has_more)
+    if next_after_applicant_id is not None:
+        _dispatch_next_batch(job_id, next_after_applicant_id)
 
 
-def _dispatch_next_batch(applicant_id: UUID, after_job_id: UUID) -> None:
-    """Continue applicant scoring after a successful committed batch."""
+def _dispatch_next_batch(job_id: UUID, after_applicant_id: UUID) -> None:
+    """Continue job scoring after a successful committed batch."""
     try:
-        score_applicant.delay(str(applicant_id), str(after_job_id))
+        score_job.delay(str(job_id), str(after_applicant_id))
     except Exception as exc:
         _log.exception(
             "score.next-batch-dispatch-failed",
-            applicant_id=str(applicant_id),
-            after_job_id=str(after_job_id),
+            job_id=str(job_id),
+            after_applicant_id=str(after_applicant_id),
         )
         raise TransientScoringError("next batch dispatch failed") from exc
