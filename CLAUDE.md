@@ -158,7 +158,7 @@ SQLAlchemy models are never response models. Define `*Read`/`*Create`/`*Update` 
 - **`/v1/feed`** filters `surfaced_at IS NOT NULL` AND `jobs.status='open'` AND both sides `deleted_at IS NULL`; uses `ix_matches_applicant_surfaced (applicant_id, total_score DESC) WHERE ...` for seek + order.
 - **Cursor = opaque base64 `{score, match_id}`** (no server state); compare `(total_score, id) < (cursor...)`; malformed → `400 invalid_cursor`. **Peek-one+1:** `LIMIT limit+1`, trim, set `next_cursor` if the extra was present. **Weak ETag** `W/"<sha256(applicant_id + max(updated_at) + count)>"`.
 - **`/v1/jobs/{id}` returns the match unconditionally** when a row exists (ignores `surfaced_at`) — a pasted URL shows the score. **Uniform 404** across unknown/closed/soft-deleted. All applicant routes use the shared `require_applicant` guard (see Resume route invariants).
-- **Shared route plumbing:** response shapes (`JobRead`, `EmployerRead`, `JobDetail*`) live in `jobify_api.routes.schemas` (a leaf module — hosting them in `feed.py` forced a mid-file import split to dodge the cycle); cursor base64+JSON encode/decode + `make_weak_etag` live in `jobify.pagination` with typed per-module wrappers. New list routes reuse both.
+- **Shared route plumbing:** response shapes (`JobRead`, `EmployerRead`, `JobDetail*`) live in `jobify_api.routes.schemas` (a leaf module — hosting them in `feed.py` forced a mid-file import split to dodge the cycle); cursor base64+JSON encode/decode + `make_weak_etag` live in `jobify_api.pagination` with typed per-module wrappers. New list routes reuse both.
 
 ### Match explanations — specs `p2.4` + `2026-05-28-llm-match-explanations-design.md`
 
