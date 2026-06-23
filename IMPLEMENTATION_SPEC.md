@@ -1,6 +1,6 @@
 # Jobify — Implementation Spec v0.2
 
-**Source of truth for product scope:** `~/Downloads/KPA_Enhanced_BRD_v1_1.pdf` (BRD/PRD v1.1, dated 2026-05-15).
+**Source of truth for product scope:** `docs/prd/KPA_Enhanced_BRD_v1_1.pdf` (BRD/PRD v1.1, dated 2026-05-15).
 **This document:** how we build it. Owner: Ahamed. Status: MVP-first draft.
 
 > Frontend decision (overrides BRD): **Flutter for mobile + web from a single Dart codebase.** Next.js is out of scope. A separate static/SSR surface for SEO-sensitive pages is an open decision (see §14).
@@ -74,37 +74,13 @@ Explicitly **out** of MVP:
 
 ### 3.1 Project layout
 
-```
-app/
-  lib/
-    main.dart                   # entry, env bootstrap, error zone
-    app.dart                    # MaterialApp.router, theming, locale
-    core/
-      config/                   # env, feature flags, build flavors
-      network/                  # Dio client, interceptors, error mapping
-      auth/                     # token store, refresh, MFA flows
-      result/                   # Result<T,E> + failure model
-      analytics/                # event sink (abstract; impl per flavor)
-    features/
-      onboarding/               # signup, resume upload, consent
-      profile/                  # applicant profile editor
-      feed/                     # match feed, filters, why-this-fits
-      job_detail/
-      applications/             # tracking
-      saved/
-      recruiter_jobs/
-      recruiter_inbox/
-      admin/                    # gated by role claim
-      notifications/            # in-app + system push handling
-    shared/
-      ui/                       # design system: tokens, atoms, components
-      widgets/                  # cross-feature widgets
-    routing/                    # go_router config, guards, deep links
-  test/                         # widget + golden + unit
-  integration_test/             # e2e flows on device/web
-```
+`app/lib/` is organized **by layer, not by feature** (Pragmatic Clean Architecture):
 
-Three build flavors: `dev`, `staging`, `prod`. Web build is gated behind same flavor (`flutter build web --dart-define=FLAVOR=...`).
+- `data/` — DTOs, abstract repository interfaces + their `_impl` concretes, the dio client + interceptors.
+- `presentation/` — Riverpod providers and screens, the shared paging primitives, routing (go_router with `StatefulShellRoute.indexedStack`).
+- `core/` — cross-layer infrastructure: env validation, typed exceptions, logger. There is **no separate `domain/` layer**.
+
+Config is compile-time via `--dart-define` (`JOBIFY_API_BASE_URL`, `JOBIFY_GOOGLE_WEB_CLIENT_ID`) — **no build flavors** in v0. See `app/README.md` for the authoritative structure, run, and test commands.
 
 ### 3.2 State management
 
@@ -148,54 +124,28 @@ For long-running server work (resume parse, first match batch):
 
 ### 4.1 Module layout
 
+The backend is a **uv workspace of three packages** (run/test from the repo root; `.env` and `tests/` live at the root). `api → core ← worker`: `core` is FastAPI-free, and `api`/`worker` never import each other.
+
 ```
-api/
-  pyproject.toml                # uv-managed; ruff, mypy, pytest
-  src/jobify/
-    main.py                     # FastAPI app factory
-    settings.py                 # pydantic-settings; env-driven
-    deps.py                     # request-scoped deps (db, current user)
-    middleware/                 # request_id, logging, error handler
-    auth/                       # OAuth2 token verify, role claims, MFA
-    domain/
-      applicants/
-      employers/
-      jobs/
-      resumes/
-      matches/
-      applications/
-      notifications/
-      audit/
-      consent/
-    db/
-      models.py                 # SQLAlchemy 2.x declarative
-      session.py                # async engine, R/W routing
-      migrations/               # alembic
-    workers/
-      celery_app.py
-      tasks/parse.py
-      tasks/ingest.py
-      tasks/embed.py
-      tasks/score.py
-      tasks/notify.py
-      tasks/dsr.py              # data subject requests (export/delete)
-    integrations/
-      llm/                      # interface + provider impls (see §7)
-      embeddings/
-      email_ses.py
-      push_fcm.py
-      whatsapp_stub.py
-      storage_s3.py
-    observability/               # logging, metrics, tracing
-  tests/
-    unit/
-    integration/
-    contract/                    # OpenAPI snapshot tests
+pyproject.toml                  # uv workspace (members: core, api, worker)
+.env                            # JOBIFY_* vars (gitignored)
+tests/                          # unit/ + integration/ + eval/ (all at root)
+core/src/jobify/                # domain package (FastAPI-free):
+                                #   db (models + alembic migrations), settings,
+                                #   integrations (storage, parser, embeddings,
+                                #   email, scoring, explainer), consent/dsr/audit,
+                                #   seeding CLI, Celery bare app (jobify.celery_app)
+api/src/jobify_api/             # FastAPI service: app_factory, routes, auth,
+                                #   middleware, dependencies, dsr/admin/employer routes
+worker/src/jobify_worker/       # Celery daemon: tasks (parse, embed, score,
+                                #   sweep_notifications), runtime singletons, worker_app
 ```
+
+See `core/README.md`, `api/README.md`, and `worker/README.md` for per-package detail; `CLAUDE.md` holds the load-bearing invariants.
 
 ### 4.2 Conventions
 
-- Python 3.12. `uv` for env + dep management. `ruff` (lint+format), `mypy --strict` on `src/jobify/domain/**`.
+- Python 3.12. `uv` for env + dep management. `ruff` (lint+format), `mypy` in `strict` mode across all three packages (`core`, `api`, `worker`).
 - SQLAlchemy 2.x async sessions; never block in request handlers.
 - Pydantic v2 for I/O models. **Never** reuse SQLAlchemy models as response schemas — separate `*Read` / `*Create` / `*Update` Pydantic models per resource.
 - All handlers `async def`. CPU-bound work goes to Celery, never to the request thread.
@@ -432,10 +382,10 @@ The MVP path is deliberately small — local first, with one minimal hosted foot
 ### 11.1 MVP runtime
 
 - **Local dev:**
-  - Python service: `uv run uvicorn jobify.main:app --reload` (no container required).
+  - Python service: `uv run --env-file=.env uvicorn jobify_api.main:app --reload` (no container required).
   - Postgres 16: Homebrew (`brew install postgresql@16`, `brew services start postgresql@16`). One local cluster, two databases: `jobify` (dev) and `jobify_test` (integration tests). pgvector via `CREATE EXTENSION vector;` once we hit P1.
   - Redis: introduced at P1 by the resume parse worker plan (was originally planned for P3; advanced because §6.1 needs async parse). Local Redis via Homebrew (`brew install redis && brew services start redis`). The Celery broker + result backend both point at it.
-  - Object storage: local filesystem under `./var/uploads/` during dev; an S3 bucket can be slotted in via `integrations/storage_s3.py` once the parse pipeline lands.
+  - Object storage: local filesystem (`LocalFileStorage`) under `core/var/uploads/` during dev; an S3 impl can be slotted in behind the `Storage` protocol in `jobify.integrations.storage` once needed.
   - Secrets: a git-ignored `.env` file loaded by `uv run --env-file=.env ...`. No AWS at this stage.
 - **CI:** GitHub Actions runs ruff + mypy + pytest (unit + integration) against a Postgres service container provided by the workflow (the *one* container in the loop, owned by CI, not the developer). The repo itself ships no Dockerfile/compose file.
 - **Deployment target for MVP launch:** **TBD — picked at P5 (§13).** Candidates considered: Fly.io (region: BOM/SIN, DPDP-friendly), Render (region: SIN), a small EC2 box. The choice is intentionally late so we keep options open until we know real traffic shape, latency requirements, and budget. Whatever we pick must be in/near `ap-south-1` to honour the DPDP residency commitment (§9.2).
@@ -512,7 +462,7 @@ Approved-source ingestion (§6.2) is **off the critical path** for MVP and start
 | # | Decision | Owner | Blocks |
 |---|---|---|---|
 | 1 | LLM provider (Anthropic / Bedrock / OpenAI / hybrid) and region | Ahamed | P2 launch (parsing + explanation quality); cost model |
-| 2 | Embedding provider + dimension (1024 default is a placeholder) | Ahamed | DB schema (vector dim is fixed at table create) |
+| 2 | ~~Embedding provider + dimension~~ — **resolved:** Gemini `gemini-embedding-2`, dim 1536 (`JOBIFY_EMBEDDING_DIM`) | Ahamed | DB schema (vector dim is fixed at table create; migrate to change) |
 | 3 | Approved third-party job sources + legal posture on scraping | Ahamed + legal | Programmatic ingestion (§6.2); MVP excludes until resolved |
 | 4 | SEO surface for public job pages (separate Next.js? pre-render service? Flutter web only?) | Ahamed | Marketing/SEO; if needed, adds a service to §2 |
 | 5 | WhatsApp BSP selection (Meta cloud API vs Gupshup vs Karix) | Ahamed | WhatsApp notification channel; MVP scaffolds adapter |
@@ -534,4 +484,4 @@ Approved-source ingestion (§6.2) is **off the critical path** for MVP and start
 
 ---
 
-*End of v0.1. Revisit after Open Decisions §14 #1–#4 are answered.*
+*End of v0.2. Revisit after the remaining Open Decisions (§14) are answered.*
