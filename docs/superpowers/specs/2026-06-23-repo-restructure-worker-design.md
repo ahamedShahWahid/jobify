@@ -1,120 +1,206 @@
-# Repo restructure — `worker/` daemon folder + 3 product folders — design
+# Repo restructure — shared `core/` + peer `api/` & `worker/` packages — design
 
 **Date:** 2026-06-23
-**Status:** Approved (design); implementation plan to follow.
+**Status:** Approved (architecture); spec under review.
 
 ## Goal
 
-Make the repo root cleanly express its parts: three product folders (`api`, `app`,
-`frontend`) plus an explicit top-level home for the background daemon(s)
-(`worker/`). Relocate the two stray static web dirs (`emails/`, `styleguide/`) to
-their functional homes so the root isn't cluttered.
+Split the single backend package (`jobify`, today living entirely under `api/`)
+into **three packages in a uv workspace**, so the worker is a true peer of the api
+rather than nested inside it:
 
-This is an **organizational reorg with no code-behavior change** — no new features,
-no logic changes. The only edits beyond file moves are repointing path references
-(all in docs today) and adding thin shell entrypoints + READMEs.
+```
+deps:   api ─► core ◄─ worker
+```
+
+- **core/** — the shared domain (models, db, settings, integrations, scoring,
+  consent, audit, observability, the Celery producer + email templates).
+- **api/** — the FastAPI service (app, routes, middleware, auth, dsr, employers,
+  pagination, request-scoped dependencies, operational CLIs). Depends on core.
+- **worker/** — the Celery daemon (celery_app + tasks). Depends on core.
+
+Plus the existing `app/` (Flutter) and `frontend/` (web). Static `styleguide/`
+moves under `frontend/`. This restructure also resolves the original ask (a
+top-level home for the daemon) — `worker/` IS that home, now as a real package.
 
 ## Decisions taken during brainstorming
 
-- **Driver = clearer org** (not an independent deployable, not a shared-core split).
-  One Python package (`jobify`); the worker is a separate deployable *entrypoint*,
-  not separate code.
-- **Daemon layout = top-level `worker/` entrypoint.** The heavy task code STAYS in
-  the `jobify` package (`api/src/jobify/workers/`) because it is domain code — it
-  imports `jobify.db.models`, `jobify.scoring.*`, `jobify.integrations.*`,
-  `jobify.settings`, `jobify.consent`, `jobify.db.session`. `worker/` holds only the
-  run/deploy surface.
-- **`emails/` → `api/emails/`** — server-rendered templates mailed by the
-  notification system; their eventual consumer is the email channel in
-  `jobify.integrations.email` (SES later). Keeping them in `api/` keeps the backend
-  self-contained.
-- **`styleguide/` → `frontend/styleguide/`** — a static brand/design reference;
-  belongs with the web frontend. Stays standalone static (NOT part of the Vite
-  build).
-- **Include an inert `run-beat.sh` now** — the "schedulers/cron" surface made
-  explicit, documented as inert until a `beat_schedule` is defined (no feature
-  invented).
+- **Driver:** the worker must not live under the api layer. Chosen architecture =
+  **shared core, api + worker as peers** (not "worker depends on api", not "worker
+  nested in api").
+- **Churn-minimizing package naming:** the shared domain package keeps the import
+  name **`jobify`** (moved to `core/src/jobify/`). So every `from jobify.<domain>
+  import …` in the domain itself and in the worker stays unchanged. Only
+  api-specific modules move to a NEW package **`jobify_api`** (`api/src/jobify_api/`),
+  and the worker moves to **`jobify_worker`** (`worker/src/jobify_worker/`).
+- **Dispatch decoupling (breaks the cycle):** the **Celery app instance lives in
+  core** (`jobify.celery_app`) — bare: broker/backend + task_routes + conf only, with
+  **no task imports and no reference to the worker package**. The worker registers
+  the task implementations onto that shared app and owns the worker-runtime signals;
+  the api dispatches **by task name** via `celery_app.send_task(...)`, so api never
+  imports worker. Task names are already explicit (`name="jobify.parse_resume"`, etc.).
+  This single-shared-app design (vs a separate producer) also makes Celery eager mode
+  work in tests: the task modules are imported in-process (tests already import them),
+  registering them on the shared app, so `send_task` runs inline under
+  `task_always_eager`.
+- **Static dirs:** `styleguide/` → `frontend/styleguide/`. `emails/` → `core/emails/`
+  (the email channel that renders+sends them lives in `integrations/email`, which is
+  core).
+- **Tests:** one workspace-level suite at repo-root `tests/` (moved from
+  `api/tests/`). A per-package test split is explicitly **out of scope** (the
+  integration fixtures span routes→tasks→domain; fragmenting them adds risk for no
+  near-term benefit).
 
-## Current state (why this is low-risk)
+## Module mapping (`jobify` package today → target package)
 
-- Worker code: `api/src/jobify/workers/celery_app.py` + `tasks/{parse,embed,embed_job,
-  score_applicant,score_job,sweep_notifications}.py`. Deeply coupled to the `jobify`
-  package — must stay in it.
-- No `beat_schedule` is configured today; `sweep_notifications` is dispatched on the
-  `notify` queue but not periodically scheduled.
-- The ONLY live references to `emails/` / `styleguide/` paths are in docs:
-  `CLAUDE.md`, `frontend/README.md`, `emails/README.md`, `styleguide/README.md`.
-  No Python/TS code loads from either dir (the notification email channel is the
-  `LoggingEmailChannel` stub — it logs, it does not read templates yet).
+Determined by FastAPI coupling + who imports each module (worker imports were
+audited: it touches only db, settings, integrations, scoring, consent, audit).
 
-## Target root layout
+### core/ — package `jobify` (framework-free domain)
+- `db/` — `models.py`, the engine/sessionmaker in `session.py` (see split below),
+  `migrations/` + alembic.
+- `settings.py`, `observability/`, `consent/`, `audit/`, `scoring/`.
+- `integrations/` — `parser/`, `embeddings/`, `storage/` (Storage protocol +
+  `LocalFileStorage`), `notifications/`, `email/`.
+- `eval/` — the parse-F1 quality gate (exercises the library parser = domain).
+- **NEW `celery_app.py`** — the bare shared Celery app: `Celery("jobify",
+  broker=settings.redis_url, backend=…)` + `conf.update(task_default_queue,
+  task_acks_late, worker_prefetch_multiplier, task_always_eager from settings,
+  task_routes, …)`. **No `include=`, no task imports, no worker reference.** Plus a
+  thin `enqueue(name, *args)` helper wrapping `celery_app.send_task(name, args=[…])`
+  for the api's dispatch sites.
+- `emails/` — the email templates (moved from repo root).
 
-```
-api/                FastAPI service — the jobify package (code location UNCHANGED)
-  src/jobify/workers/   task code stays here (parse, embed, score, sweep, celery_app)
-  emails/               ← moved from repo root
-app/                Flutter client (unchanged)
-frontend/           unified Vite web app (unchanged)
-  styleguide/           ← moved from repo root
-worker/             ← NEW daemon run-surface (entrypoints + README, no domain code)
-docs/  scripts/     tooling (unchanged)
-```
+### api/ — package `jobify_api` (FastAPI service, depends on core)
+- `app_factory.py`, `main.py`, `routes/`, `middleware/`, `auth/`, `dsr/`,
+  `employers/`, `pagination.py`.
+- **NEW `dependencies.py`** (or `deps/`) — the two request-scoped FastAPI
+  dependencies extracted from core: `get_session(request: Request)` (was in
+  `db/session.py`) and `get_storage(request: Request)` (was in
+  `integrations/storage/base.py`). Core keeps the engine/sessionmaker + Storage
+  protocol; the `Request`-typed wrappers (the only FastAPI imports in those domain
+  files) move here so core is framework-free.
+- `scripts/` — operational CLIs (`jobify-seed-jobs`, `jobify-seed-consents`,
+  `jobify-grant-admin`). `seed_jobs` dispatches via the core producer. The
+  `[project.scripts]` entry points move to api's pyproject.
 
-## Components
+### worker/ — package `jobify_worker` (Celery daemon, depends on core)
+- `tasks/` (parse, embed, embed_job, score_applicant, score_job,
+  sweep_notifications) — each `@celery_app.task(name="jobify.…")` where
+  `celery_app` is imported from core (`from jobify.celery_app import celery_app`).
+  Domain imports stay `from jobify.…`; intra-worker imports become
+  `from jobify_worker.…`. Worker→worker dispatch (`.delay()` chaining) is unchanged.
+- **`worker_app.py`** — the `celery -A` entry target: imports the core `celery_app`,
+  imports every task module (to register them), and connects the worker-runtime
+  signals (`worker_process_init`/`worker_shutting_down` → the per-worker
+  `NullPool` engine + sessionmaker lifecycle, moved here from today's celery_app).
+  Run: `celery -A jobify_worker.worker_app worker -Q parse,embed,score,notify`.
+- `README.md` — run worker + (inert) beat, queue list, the Redis + root `.env`
+  dependency, and a pointer that the shared Celery app config lives in
+  `core` (`jobify.celery_app`).
 
-### `worker/` (new)
+## The dispatch decoupling (concrete)
 
-- **`worker/run-worker.sh`** — wraps the canonical worker command, executed from the
-  `api/` workspace so `uv`, `.env`, and the `jobify` package resolve:
-  ```bash
-  #!/usr/bin/env bash
-  set -euo pipefail
-  cd "$(dirname "$0")/../api"
-  exec uv run --env-file=.env celery -A jobify.workers.celery_app worker \
-      --pool=solo --concurrency=1 -Q parse,embed,score,notify --loglevel=info
-  ```
-- **`worker/run-beat.sh`** — Celery beat entrypoint, same `cd api` + `uv run` shape,
-  `celery -A jobify.workers.celery_app beat --loglevel=info`. INERT today (no
-  periodic tasks scheduled); the README says so explicitly.
-- **`worker/README.md`** — run instructions (worker + beat), the `parse,embed,score,
-  notify` queue list, the Redis + `api/.env` dependency, and a pointer: "task code
-  lives in `api/src/jobify/workers/`; this folder is the run/deploy surface only."
-- Both scripts are `chmod +x`.
+The 4 api→worker sites change from importing the task function to a name-based
+dispatch via the core `enqueue` helper:
 
-### Moves
+| Site | Was | Becomes |
+| --- | --- | --- |
+| `scripts/seed_jobs.py` | `from jobify.workers.tasks.embed_job import embed_job; embed_job.delay(jid)` | `from jobify.celery_app import enqueue; enqueue("jobify.embed_job", jid)` |
+| `routes/resumes.py` | `parse_resume.delay(rid)` | `enqueue("jobify.parse_resume", rid)` |
+| `routes/applicants.py` | `score_applicant.delay(aid)` | `enqueue("jobify.score_applicant", aid)` |
+| `routes/jobs.py` (×2) | `embed_job.delay(jid)` | `enqueue("jobify.embed_job", jid)` |
 
-- `git mv emails api/emails`
-- `git mv styleguide frontend/styleguide`
-- Repoint the doc references found in the pre-scan:
-  - `CLAUDE.md` "What this repo is" — add `worker/`, relocate emails/styleguide
-    mentions (emails under `api/`, styleguide under `frontend/`).
-  - `frontend/README.md:33` — `styleguide/` → `frontend/styleguide/`.
-  - `emails/README.md` (now `api/emails/README.md`) — `open emails/…` →
-    `open api/emails/…`.
-  - `styleguide/README.md` (now `frontend/styleguide/README.md`) — `open
-    styleguide/…` → `open frontend/styleguide/…`.
+`enqueue(name, *args)` wraps `celery_app.send_task(name, args=[...])`; the routing
+comes from the app's `task_routes`. Because the app is the SAME instance the worker
+registers tasks onto, `task_always_eager` (set from settings) makes `send_task` run
+the task inline in tests — provided the task modules are imported in-process so they
+register. The integration tests already import the task modules (they assert on task
+behavior), and the eager fixture will import `jobify_worker.tasks` to guarantee
+registration. This removes the two-app eager hazard a separate producer would have
+created.
 
-### Doc updates
+## Workspace + packaging
 
-- `api/README.md` — replace the inline worker run command with a pointer to
-  `worker/run-worker.sh` (and mention `worker/run-beat.sh`); note `api/emails/`.
-- Root `CLAUDE.md` — structure section reflects the new root + `worker/`.
-- Project memory — `jobify-web-frontends.md` (styleguide now under frontend) + a
-  short worker-structure note; update `MEMORY.md` pointers.
+- **Root `pyproject.toml`** (NEW) — `[tool.uv.workspace] members = ["core", "api",
+  "worker"]`; owns dev/test deps (pytest, ruff, mypy, fpdf2) and the shared
+  `[tool.ruff]` / `[tool.mypy]` / `[tool.pytest.ini_options]` config.
+- **`core/pyproject.toml`** — runtime domain deps: sqlalchemy[asyncio], asyncpg,
+  alembic, pgvector, pydantic, pydantic-settings, structlog, google-genai, pdf libs
+  (pdfminer.six, pypdf, python-docx), celery[redis] (for the producer), httpx,
+  pyjwt[crypto] (token utils if domain), anyio.
+- **`api/pyproject.toml`** — `jobify` (core, workspace dep) + fastapi, uvicorn,
+  python-multipart. Holds the `[project.scripts]` entry points.
+- **`worker/pyproject.toml`** — `jobify` (core) + celery[redis].
+- uv workspace = one lockfile, one venv; `uv sync` at root installs all three.
+- Per-dep placement (which lib is core vs api vs worker) is finalized in the plan by
+  grepping actual imports per package; the lists above are the starting split.
+
+### `.env` / config
+
+- The single `.env` moves to the **repo root** (`api/.env` → `./.env`); all run
+  commands load it (`uv run --env-file=.env …` from root, or `--env-file=../.env`
+  from a package dir). `JOBIFY_DB_URL`, `JOBIFY_REDIS_URL`, `JOBIFY_TEST_DB_URL`,
+  and the rest are unchanged. `.gitignore` already ignores `.env`; add the root
+  `.env` / `.env.example`. Alembic (`cd core && uv run alembic …`) and the worker
+  (`cd worker && uv run …`) both reference the root env file.
+
+## Alembic
+
+Moves to `core/` (core owns the models). `core/alembic.ini` +
+`core/src/jobify/db/migrations/`. `env.py` imports are unchanged
+(`from jobify.db.models import Base`, `from jobify.settings import Settings`). Run
+via `cd core && uv run alembic upgrade head` (README updated).
+
+## Tests
+
+- Move `api/tests/` → repo-root `tests/` (unit, integration, eval, conftest).
+- Update imports: `jobify.app_factory` → `jobify_api.app_factory`, route/middleware/
+  auth/dsr/employers/pagination references → `jobify_api.*`; worker task references →
+  `jobify_worker.*`; domain references stay `jobify.*`.
+- The savepoint/integration conftest is unchanged in behavior; it imports
+  `jobify_api.app_factory.create_app` for the ASGI clients and `jobify.*` for domain.
+- CI runs from root: `uv run ruff check core api worker tests`,
+  `uv run ruff format --check …`, `uv run mypy`, `uv run pytest …` (same markers).
+
+## Verification (behavior must be identical)
+
+- `uv sync` at root succeeds; all three packages import.
+- `uv run pytest -v -m "not integration and not eval"`, `-m eval`, and `-m
+  integration` all green (the existing suite is the behavioral contract — same
+  tests, new import paths).
+- `uv run ruff check`, `ruff format --check`, `uv run mypy` clean across all three
+  packages.
+- Worker smoke: `cd worker && uv run celery -A jobify_worker.celery_app worker
+  -Q parse,embed,score,notify` starts and logs ready; a dispatched task
+  (`enqueue(...)` from an api route) is consumed.
+- `frontend` untouched → `npm run build` clean; `frontend/styleguide/index.html`
+  still opens.
+- A grep proves no remaining `from jobify.workers` / `jobify.routes` / `jobify.app_factory`
+  imports (those moved) and no dangling `emails/` / `styleguide/` path refs.
+
+## Phasing (one cohesive refactor; each phase ends green)
+
+1. **Workspace skeleton** — root `pyproject.toml` (workspace + tool config) and the
+   three empty package dirs with pyprojects; `uv sync` works.
+2. **Extract core** — move domain modules into `core/src/jobify/` (names unchanged);
+   move the engine/sessionmaker + Storage protocol, stripping the two FastAPI
+   `Request` deps (they reappear in api in phase 3); add `jobify.celery_app` (bare
+   app + `enqueue`); move alembic + `emails/`. Core imports/builds with no FastAPI.
+3. **Carve api** — move api modules into `api/src/jobify_api/`; create
+   `jobify_api/dependencies.py` (get_session/get_storage); repoint intra-api imports
+   to `jobify_api.*`; move `[project.scripts]`.
+4. **Move worker** — relocate to `worker/src/jobify_worker/`; intra-worker imports →
+   `jobify_worker.*`; `celery -A` path; rewire the 4 dispatch sites to
+   `jobify.queue.enqueue`; resolve eager-mode dispatch for tests.
+5. **Tests + CI + docs** — move tests to root, fix imports, update CI commands;
+   `styleguide → frontend/`; update `CLAUDE.md`, the three READMEs, project memory.
+   Full green run from root.
 
 ## Out of scope
 
-- Defining an actual `beat_schedule` / periodic tasks (run-beat.sh stays inert).
-- Any change to worker task logic, queues, or the FastAPI app.
-- Wiring the email channel to read `api/emails/` templates (SES work is separate).
-- Containerization (Dockerfile/Procfile) — the README notes `worker/` as the future
-  home, but none is added now.
-
-## Verification (no behavior change — pure reorg)
-
-- `git mv` preserves history; a grep proves zero dangling references to the old
-  `emails/` / `styleguide/` paths in code, config, or docs.
-- API unchanged → `uv run pytest -v -m "not integration and not eval"` green;
-  `worker/run-worker.sh` smoke-starts and connects to Redis (logs `celery@… ready`).
-- `frontend` unchanged → `npm run build` clean; `frontend/styleguide/index.html`
-  still opens as static HTML.
+- Per-package test suites (one root suite for now).
+- Defining a real `beat_schedule` / periodic tasks.
+- Containerization (Dockerfiles/Procfiles) — `worker/`, `api/` are the future homes.
+- Optimizing prod dependency closures beyond the core/api/worker split.
+- Any change to runtime behavior, endpoints, queues, or task logic.
