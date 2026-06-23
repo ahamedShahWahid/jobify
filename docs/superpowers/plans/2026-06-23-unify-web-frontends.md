@@ -179,6 +179,17 @@ VITE_GOOGLE_CLIENT_ID=
 VITE_API_BASE_URL=http://localhost:8000
 ```
 
+- [ ] **Step 7b: Create `frontend/.gitignore`** (BEFORE any `git add frontend/` — the root `.gitignore` does NOT cover `node_modules`/`dist`; each old app carried its own). Mirror the old apps' ignore file:
+
+```
+node_modules/
+dist/
+*.tsbuildinfo
+.env
+.env.local
+.env.*.local
+```
+
 - [ ] **Step 8: Create `frontend/src/main.tsx`**
 
 ```tsx
