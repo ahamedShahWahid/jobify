@@ -1,7 +1,7 @@
 """Uvicorn entrypoint.
 
 Run locally:
-    uv run uvicorn jobify.main:app --reload --port 8000
+    uv run uvicorn jobify_api.main:app --reload --port 8000
 """
 
 from __future__ import annotations
