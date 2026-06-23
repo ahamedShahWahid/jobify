@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { CONSOLE_URL } from "../App";
+import { CONSOLE_URL } from "../EmployersRoutes";
 import { Footer, Masthead } from "../components/Chrome";
 
 export function Verify() {
@@ -15,7 +15,7 @@ export function Verify() {
 
       <section className="verify-hero">
         <div className="wrap">
-          <Link to="/" className="back-link">
+          <Link to="/employers" className="back-link">
             <span aria-hidden="true">←</span> Back to overview
           </Link>
           <p className="label amber rise d1">Trust &amp; verification</p>
@@ -190,7 +190,7 @@ export function Verify() {
                 Open the console <span className="arrow" aria-hidden="true">→</span>
               </a>
               <Link
-                to="/"
+                to="/employers"
                 className="btn btn-ghost"
                 style={{ color: "var(--paper)", borderColor: "rgba(243,244,241,0.3)" }}
               >

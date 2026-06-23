@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { CONSOLE_URL } from "../App";
+import { CONSOLE_URL } from "../EmployersRoutes";
 import { Footer, Masthead } from "../components/Chrome";
 import { RankedStack } from "../components/RankedStack";
 
@@ -224,7 +224,7 @@ export function Landing() {
                 Verification confirms a real, registered organisation behind the role.
                 Applicants respond more to verified posts — the badge is trust they can
                 see before they spend a single résumé.{" "}
-                <Link to="/verify" className="textlink">
+                <Link to="/employers/verify" className="textlink">
                   How verification works
                 </Link>
               </p>
@@ -356,7 +356,7 @@ export function Landing() {
                 Proof of a registered organisation — typically your GST details and a domain
                 check. It&apos;s a short review, and the badge then appears on every role you
                 post.{" "}
-                <Link to="/verify" className="textlink">
+                <Link to="/employers/verify" className="textlink">
                   See the steps
                 </Link>
               </dd>
@@ -421,7 +421,7 @@ export function Landing() {
               <a className="btn btn-amber" href={CONSOLE_URL} target="_blank" rel="noreferrer">
                 Open the console <span className="arrow" aria-hidden="true">→</span>
               </a>
-              <Link to="/verify" className="btn btn-ghost" style={{ color: "var(--paper)", borderColor: "rgba(243,244,241,0.3)" }}>
+              <Link to="/employers/verify" className="btn btn-ghost" style={{ color: "var(--paper)", borderColor: "rgba(243,244,241,0.3)" }}>
                 Get verified first
               </Link>
             </div>

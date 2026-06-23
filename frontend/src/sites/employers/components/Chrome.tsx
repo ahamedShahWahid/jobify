@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { CONSOLE_URL } from "../App";
+import { CONSOLE_URL } from "../EmployersRoutes";
 
 // The brand lockup (mark + JOBIFY + "Job will find you") lives in the SVG asset;
 // alt text carries the wordmark + punchline for a11y. The Link's aria-label stays
@@ -11,7 +11,7 @@ export function Masthead({ onLanding = false }: { onLanding?: boolean }) {
   return (
     <header className="masthead">
       <div className="wrap masthead-inner">
-        <Link to="/" className="brand" aria-label="Jobify for employers — home">
+        <Link to="/employers" className="brand" aria-label="Jobify for employers — home">
           <img
             src="/jobify-logo.svg"
             alt={BRAND_ALT}
@@ -28,10 +28,10 @@ export function Masthead({ onLanding = false }: { onLanding?: boolean }) {
             </>
           ) : (
             <>
-              <Link to="/#how">How it works</Link>
-              <Link to="/verify">Get verified</Link>
-              <Link to="/#pricing">Pricing</Link>
-              <Link to="/#faq">FAQ</Link>
+              <Link to="/employers#how">How it works</Link>
+              <Link to="/employers/verify">Get verified</Link>
+              <Link to="/employers#pricing">Pricing</Link>
+              <Link to="/employers#faq">FAQ</Link>
             </>
           )}
         </nav>
@@ -56,7 +56,7 @@ export function Footer() {
       <div className="wrap">
         <div className="foot-grid">
           <div className="col foot-brand">
-            <Link to="/" className="brand" aria-label="Jobify for employers — home">
+            <Link to="/employers" className="brand" aria-label="Jobify for employers — home">
               <img
                 src="/jobify-logo.svg"
                 alt={BRAND_ALT}
@@ -72,7 +72,7 @@ export function Footer() {
             <h4>Product</h4>
             <a href="/#how">How it works</a>
             <a href="/#showcase">Match reasoning</a>
-            <Link to="/verify">Get verified</Link>
+            <Link to="/employers/verify">Get verified</Link>
             <a href="/#pricing">Pricing</a>
           </div>
           <div className="col">
