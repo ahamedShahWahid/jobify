@@ -1,0 +1,85 @@
+/* frontend/src/shared/styles/components.css
+   Shared component primitives on semantic tokens — render correctly in both
+   themes. Surfaces converge onto these in Task 5. */
+
+.ds-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  font-family: var(--sans);
+  font-weight: 600;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  color: var(--ink);
+  border-radius: 2px;
+  padding: 0.6em 1.1em;
+  cursor: pointer;
+  transition: background-color 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+.ds-btn:hover {
+  background: var(--paper-3);
+}
+.ds-btn-primary {
+  background: var(--accent);
+  border-color: var(--accent-deep);
+  color: var(--accent-ink);
+}
+.ds-btn-primary:hover {
+  background: var(--accent-deep);
+}
+
+.ds-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  box-shadow: var(--shadow);
+}
+
+.ds-input {
+  font-family: var(--sans);
+  font-size: 1rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  padding: 0.55em 0.75em;
+}
+.ds-input::placeholder {
+  color: var(--ink-faint);
+}
+.ds-input:focus-visible {
+  outline: 2px solid var(--brand-blue);
+  outline-offset: 1px;
+}
+
+.ds-badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 0.15em 0.5em;
+}
+
+.ds-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1em;
+  height: 2.1em;
+  color: var(--ink-soft);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: color 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+.ds-theme-toggle:hover {
+  color: var(--accent);
+  border-color: var(--line-strong);
+}
