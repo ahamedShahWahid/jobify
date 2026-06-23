@@ -2,10 +2,13 @@
 .DS_Store
 ._*
 
-# Local upload storage (LocalFileStorage default root).
-api/var/
+# Local upload storage (LocalFileStorage root — lives under whichever package
+# owns storage; currently core/var/). Match any package's var/ dir.
+**/var/
 
-# Local secrets scratch files (Gemini key, JWT secret, DB password, etc.) — never commit.
+# Local secrets scratch files (Gemini key, JWT secret, DB password, etc.) — never
+# commit. `.env` holds live values; `.env.example` is the tracked template.
+.env
 keys.txt
 working
 
