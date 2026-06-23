@@ -44,7 +44,7 @@ All backend commands run from the **repo root** (`pyproject.toml` + `uv.lock` li
 
 ### Error handling — RFC 7807 problem+json
 
-`middleware/error_handler.py`: `HTTPException` + unhandled `Exception` flow through `_problem()` → `application/problem+json` with `request_id`. The unhandled path re-attaches `X-Request-Id` (`ServerErrorMiddleware` sits outside `RequestIdMiddleware`). `HTTPException.detail` is user-visible — a user-facing string, not a debug aid.
+`jobify_api.middleware.error_handler`: `HTTPException` + unhandled `Exception` flow through `_problem()` → `application/problem+json` with `request_id`. The unhandled path re-attaches `X-Request-Id` (`ServerErrorMiddleware` sits outside `RequestIdMiddleware`). `HTTPException.detail` is user-visible — a user-facing string, not a debug aid.
 
 ### Resume route invariants — error ladder
 
@@ -67,7 +67,7 @@ Every domain table: `id` (uuid4), `created_at`, `updated_at`, `deleted_at TIMEST
 - **Append-only, caller-owns-txn:** flushes one row in the caller's txn (no commit, no fire-and-forget; rolls back with the business action). The **documented exception** to soft-delete: `AuditLog` skips the `Created/Updated/DeletedAt` types and never filters `deleted_at IS NULL`. No UPDATE/DELETE.
 - `actor_user_id` is `ON DELETE SET NULL` (so a DSR hard-delete leaves the audit row, re-identification impossible). `actor_role` is a plain-TEXT **snapshot** (`'system'` valid for cron/worker, `actor=None`). `audit_log(actor=None, actor_role=None)` raises `ValueError`.
 - Slugs dotted-lowercase-verb-past; reserved prefixes `resume.*` `application.*` `job.*` `consent.*` `user.*` `admin.*` `auth.*` `employer.*` (table in spec §4).
-- **structlog FIRST, `audit_log()` SECOND, then side-effect** (canonical `routes/applications.py:recruiter_download_application_resume`). structlog → Fluent Bit → Elasticsearch is the live channel; the DB row is durable — complementary.
+- **structlog FIRST, `audit_log()` SECOND, then side-effect** (canonical `jobify_api.routes.applications:recruiter_download_application_resume`). structlog → Fluent Bit → Elasticsearch is the live channel; the DB row is durable — complementary.
 
 ### Consent + channel prefs — spec `2026-05-29-consent-channel-prefs-design.md`
 
@@ -158,7 +158,7 @@ SQLAlchemy models are never response models. Define `*Read`/`*Create`/`*Update` 
 - **`/v1/feed`** filters `surfaced_at IS NOT NULL` AND `jobs.status='open'` AND both sides `deleted_at IS NULL`; uses `ix_matches_applicant_surfaced (applicant_id, total_score DESC) WHERE ...` for seek + order.
 - **Cursor = opaque base64 `{score, match_id}`** (no server state); compare `(total_score, id) < (cursor...)`; malformed → `400 invalid_cursor`. **Peek-one+1:** `LIMIT limit+1`, trim, set `next_cursor` if the extra was present. **Weak ETag** `W/"<sha256(applicant_id + max(updated_at) + count)>"`.
 - **`/v1/jobs/{id}` returns the match unconditionally** when a row exists (ignores `surfaced_at`) — a pasted URL shows the score. **Uniform 404** across unknown/closed/soft-deleted. All applicant routes use the shared `require_applicant` guard (see Resume route invariants).
-- **Shared route plumbing:** response shapes (`JobRead`, `EmployerRead`, `JobDetail*`) live in `routes/schemas.py` (a leaf module — hosting them in `feed.py` forced a mid-file import split to dodge the cycle); cursor base64+JSON encode/decode + `make_weak_etag` live in `jobify/pagination.py` with typed per-module wrappers. New list routes reuse both.
+- **Shared route plumbing:** response shapes (`JobRead`, `EmployerRead`, `JobDetail*`) live in `jobify_api.routes.schemas` (a leaf module — hosting them in `feed.py` forced a mid-file import split to dodge the cycle); cursor base64+JSON encode/decode + `make_weak_etag` live in `jobify.pagination` with typed per-module wrappers. New list routes reuse both.
 
 ### Match explanations — specs `p2.4` + `2026-05-28-llm-match-explanations-design.md`
 
@@ -198,9 +198,9 @@ SQLAlchemy models are never response models. Define `*Read`/`*Create`/`*Update` 
 ### Employer team management (R4) — spec `2026-06-06-recruiter-employer-experience-design.md` §5
 
 - **Role is DERIVED from membership, never set directly.** `jobify/employers/membership.py`: `flip_to_recruiter` (any join → APPLICANT→RECRUITER, never ADMIN) + `maybe_demote_to_applicant` (zero live memberships left → RECRUITER→APPLICANT) are the only `users.role` writers in this flow. `current_user` re-fetches per request → a removed recruiter loses access within the access-TTL (no token revocation). **Any new join/leave path must call these.**
-- **RBAC helpers (`auth/dependencies.py`):** `_require_employer_member` (uniform 404 if no live link — don't leak existence), `_require_employer_owner` (404 if not a member, then 403 `not_an_owner`). Owner mutates members/invites; any member reads. Called BEFORE any resource lookup.
+- **RBAC helpers (`jobify_api.auth.dependencies`):** `_require_employer_member` (uniform 404 if no live link — don't leak existence), `_require_employer_owner` (404 if not a member, then 403 `not_an_owner`). Owner mutates members/invites; any member reads. Called BEFORE any resource lookup.
 - **Last-owner guard is lock-based:** `_count_live_owners(..., lock=True)` does `SELECT … FOR UPDATE` on owner rows (aggregates can't carry FOR UPDATE — lock rows, count in Python), used in the demote/remove guards — else two concurrent owner removals both pass `<=1` → zero owners. Membership inserts (`add_member`, `accept_invite`) catch the `ix_employer_users_pair_live` `IntegrityError → 409 already_a_member` (mirrors `create_employer`).
-- **Invites:** `POST …/invites` outboxes a `Notification` (kind `employer_invite`) ONLY when the email maps to an existing user (`notifications.user_id` NOT NULL); brand-new invitees discover via `GET /v1/me/invites`; SES deferred. Invitee routes (`routes/invites.py`) authorize by `invite.email == current_user.email` (NOT membership); lazy expiry (`pending`→`expired` on read/accept, 410); accept verifies the employer is live; decline reuses the `revoked` status. Slugs: `employer.{member_added,member_role_changed,member_removed,invite_created,invite_accepted,invite_revoked}`.
+- **Invites:** `POST …/invites` outboxes a `Notification` (kind `employer_invite`) ONLY when the email maps to an existing user (`notifications.user_id` NOT NULL); brand-new invitees discover via `GET /v1/me/invites`; SES deferred. Invitee routes (`jobify_api.routes.invites`) authorize by `invite.email == current_user.email` (NOT membership); lazy expiry (`pending`→`expired` on read/accept, 410); accept verifies the employer is live; decline reuses the `revoked` status. Slugs: `employer.{member_added,member_role_changed,member_removed,invite_created,invite_accepted,invite_revoked}`.
 - **`employer_invites.email` is PII** → DSR export adds `received_invites`/`sent_invites`, delete erases invites where `email==user.email OR accepted_user_id==user.id`. **Any new PII *table* must be added to `jobify/dsr/__init__.py` + `deleter.py` + the `test_user_export_top_level_fields` pin.** No self-leave endpoint yet (direct-add is one-way; removing yourself needs another owner).
 
 ## Test patterns

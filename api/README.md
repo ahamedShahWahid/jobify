@@ -221,6 +221,7 @@ All settings are read from environment variables prefixed `JOBIFY_`. The `.env` 
 | `JOBIFY_GOOGLE_JWKS_URL`         | no | `https://www.googleapis.com/oauth2/v3/certs` | Override for tests |
 | `JOBIFY_GOOGLE_JWKS_CACHE_TTL_SECONDS` | no | `3600` | JWKS in-process cache TTL |
 | `JOBIFY_AUTH_REQUIRE_EMAIL_VERIFIED`   | no | `false` | Reject unverified Google sign-ins |
+| `JOBIFY_CORS_ALLOW_ORIGINS` | no | `http://localhost:8080` | Comma-separated list of allowed CORS origins (web frontend). |
 | `JOBIFY_REDIS_URL`    | yes      | —       | Redis connection string. Required for Celery broker. |
 | `JOBIFY_CELERY_TASK_ALWAYS_EAGER` | no | `false` | Run tasks synchronously (tests only). |
 | `JOBIFY_GEMINI_API_KEY` | yes    | —       | Gemini Developer API key for embedding worker |
