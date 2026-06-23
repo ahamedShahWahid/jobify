@@ -8,6 +8,27 @@ One Vite + React + TS app; three surfaces under one HashRouter:
 
 Shared transport/session/auth/env live in `src/shared`.
 
+## Entry points
+
+One app, one bootstrap: `index.html` → `src/main.tsx` → `src/App.tsx` (a single
+`<HashRouter>` that mounts each surface's route fragment). Routes are hash-based, so
+every URL lives under `/#/`. Per surface:
+
+| Surface | Dev entry URL | Route module | Mount root |
+| --- | --- | --- | --- |
+| **web** (applicant + public marketing) | `http://localhost:5173/#/` | `src/sites/web/WebRoutes.tsx` | `/` |
+| **employers** (recruiter marketing) | `http://localhost:5173/#/employers` | `src/sites/employers/EmployersRoutes.tsx` | `/employers` |
+| **console** (internal admin + recruiter ops) | `http://localhost:5173/#/console/signin` | `src/sites/console/ConsoleRoutes.tsx` | `/console` |
+
+- **web** is the root surface — `/`, `/explore`, `/applications`, `/inbox`, `/invites`, `/profile`, `/trust`, `/welcome`.
+- **employers** — `/employers` (landing) and `/employers/verify`.
+- **console** — entered at `/console/signin`; after sign-in, role-aware routing sends admins to `/console/admin/audit` and recruiters to `/console/recruiter`.
+
+Each surface mounts its own `SessionProvider` (from `src/shared/session`) inside its
+route fragment, so sessions are independent per surface. In production all three ship
+in one static `dist/` served from a single origin — the surfaces are sibling route
+subtrees, not separate builds.
+
 ## Run
 
     cd frontend
