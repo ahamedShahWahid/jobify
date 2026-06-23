@@ -130,7 +130,7 @@ export function Jobs() {
                   <Stamp iso={job.posted_at} />
                 </td>
                 <td className="r num">
-                  <Link to={`/recruiter/jobs/${job.id}/applicants`}>{job.applicant_count}</Link>
+                  <Link to={`/console/recruiter/jobs/${job.id}/applicants`}>{job.applicant_count}</Link>
                 </td>
                 <td className="r num acc">{job.surfaced_match_count}</td>
                 <td className="r" style={{ whiteSpace: "nowrap" }}>

@@ -147,7 +147,7 @@ export function UserActions() {
               </>
             )}
             <div className="row">
-              <Link className="btn ghost sm" to={`/admin/audit?actor=${result.id}`}>
+              <Link className="btn ghost sm" to={`/console/admin/audit?actor=${result.id}`}>
                 View their actions in the trail →
               </Link>
             </div>
