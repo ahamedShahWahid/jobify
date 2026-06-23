@@ -89,7 +89,7 @@ Every domain table: `id` (uuid4), `created_at`, `updated_at`, `deleted_at TIMEST
 
 - **Soft-delete + scrub, NOT hard-delete the User row** — hard-delete CASCADE-wipes applications/matches (lose analytics + eval substrate). Tombstone `users` + `applicants` with PII scrubbed; hard-delete the truly-PII tables around them.
 - **Migration 0015 made `applicants.full_name` + `applicants.locations` nullable** for scrubbing. New PII column on applicants/users/resumes → decide nullability + tombstone, update `delete_user_data` + a migration.
-- **Application-layer deletion graph** (`jobify.dsr.deleter.delete_user_data`), not FK CASCADE — walks the graph for correct counts + order-sensitive blob-delete-before-scrub.
+- **Application-layer deletion graph** (`jobify_api.dsr.deleter.delete_user_data`), not FK CASCADE — walks the graph for correct counts + order-sensitive blob-delete-before-scrub.
 - **Atomic txn** (handler does explicit `await session.commit()` at success) — partial deletion is worse than none. Re-signup works (email-collision filters `deleted_at IS NULL`). Confirmation token in **body** not query: `DELETE /v1/me/dsr` `{"confirmation": "DELETE_MY_ACCOUNT"}`.
 - Sole-owner employer → a `warnings` entry (employer stays). Blob deletion best-effort (`dsr.blob-delete-failed`, no rollback).
 - **No HTTP idempotency** — later calls 401 `user_not_found` (tombstone soft-deleted); clients treat as "done". The 401-after-delete test uses `concurrent_async_client` (real pool forces a refetch past the identity map).
