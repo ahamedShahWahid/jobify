@@ -25,7 +25,7 @@ from jobify.scripts.seed_jobs import (
 
 pytestmark = pytest.mark.integration
 
-SAMPLE_JOBS_PATH = Path(__file__).resolve().parents[2] / "data" / "sample_jobs.json"
+SAMPLE_JOBS_PATH = Path(__file__).resolve().parents[2] / "core" / "data" / "sample_jobs.json"
 
 
 def _payload(employers: list[dict], jobs: list[dict]) -> SeedPayload:

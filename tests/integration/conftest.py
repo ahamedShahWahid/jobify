@@ -216,7 +216,9 @@ def migrated_db(db_url: str, monkeypatch_session: pytest.MonkeyPatch) -> str:
         "JOBIFY_GOOGLE_OAUTH_CLIENT_IDS",
         "test.apps.googleusercontent.com",
     )
-    cfg = Config("alembic.ini")
+    _here = Path(__file__).resolve().parents[2] / "core"
+    cfg = Config(str(_here / "alembic.ini"))
+    cfg.set_main_option("script_location", str(_here / "src" / "jobify" / "db" / "migrations"))
     command.upgrade(cfg, "head")
     return db_url
 
