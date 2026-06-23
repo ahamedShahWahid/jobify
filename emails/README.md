@@ -3,7 +3,7 @@
 Production-grade HTML email templates for the Jobify **notifications outbox**.
 
 > "Warm editorial broadsheet" — bone paper, warm ink, persimmon accent, forest-green
-> "verified". Same brand language as the applicant web property (`web/src/styles/site.css`).
+> "verified". Same brand language as the applicant web surface (`frontend/src/sites/web/styles/site.css`).
 
 These are **real transactional emails**. Today the outbox's email channel is the
 `LoggingEmailChannel` stub (it logs `email.sent`); real SES is deferred. When a real

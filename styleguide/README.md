@@ -47,9 +47,9 @@ the most faithful rendering (it degrades to system fonts offline).
 This is a **hand-maintained snapshot**. The design tokens are authoritative
 **in each app's CSS**, not here:
 
-- `console/src/styles/console.css`
-- `web/src/styles/site.css`
-- `employers/src/styles/site.css`
+- `frontend/src/sites/console/styles/console.css`
+- `frontend/src/sites/web/styles/site.css`
+- `frontend/src/sites/employers/styles/site.css`
 
 When a token value or font changes in one of those files, update the matching
 swatch / specimen on this page to keep the catalogue accurate. It is
