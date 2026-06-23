@@ -1,0 +1,69 @@
+[project]
+name = "jobify"
+version = "0.1.0"
+description = "Jobify monorepo workspace"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["core", "api", "worker"]
+
+[tool.uv.sources]
+jobify-core = { workspace = true }
+jobify-api = { workspace = true }
+jobify-worker = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3,<9",
+    "pytest-asyncio>=0.24,<0.25",
+    "ruff>=0.7,<0.8",
+    "mypy>=1.13,<2",
+    "fpdf2>=2.7,<3",
+    "jobify-core",
+    "jobify-api",
+    "jobify-worker",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["core/src", "api/src", "worker/src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "S", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["core/src/jobify", "api/src/jobify_api", "worker/src/jobify_worker"]
+exclude = ["core/src/jobify/db/migrations"]
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["celery", "celery.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["google", "google.genai", "google.genai.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["pgvector", "pgvector.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+pythonpath = ["core/src", "api/src", "worker/src"]
+markers = [
+    "integration: tests that require a running local Postgres (see README §Database)",
+    "eval: resume-parser quality gate against the gold dataset in core/data/parse_eval/",
+]

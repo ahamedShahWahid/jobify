@@ -1,44 +1,42 @@
 # Jobify API
 
-FastAPI service for the Jobify platform. This directory contains the backend foundations, DB layer, and the resume upload data plane. Auth, parsing, and matching code land in follow-on plans.
+FastAPI service for the Jobify platform (`jobify_api` package). Part of the `core/api/worker` uv workspace.
 
 ## Requirements
 
 - Python 3.12
 - [uv](https://docs.astral.sh/uv/) 0.5+
 - Postgres 16 (Homebrew — see [Database](#database) for setup)
+- Redis (for the Celery worker — see [Worker](#worker))
 
 Docker is **not** required for MVP work. Containerization rejoins the project at the deploy-target step (see `IMPLEMENTATION_SPEC.md` §11.1 / §13 P5).
 
 ## First-time setup
 
 ```bash
-cd api
+# From repo root
 uv sync
-cp .env.example .env   # adjust as needed
+cp .env.example .env   # adjust as needed (root .env — not inside api/)
 ```
 
 Then set up Postgres — see [Database](#database).
 
 ## Run locally
 
-The service reads its config from environment variables (all prefixed `JOBIFY_`).
-The easiest path is to keep them in `.env` (created in First-time setup above)
-and let `uv` load it:
+All commands run from the **repo root** (not from `api/`). The `.env` file lives at the repo root.
 
 ```bash
-uv run --env-file=.env uvicorn jobify.main:app --reload --port 8000
+uv run --env-file=.env uvicorn jobify_api.main:app --reload --port 8000
 ```
 
-- `--reload` watches `src/` and restarts the server on code changes. Drop it
-  for production-style runs.
+- `--reload` watches source dirs and restarts on code changes.
 - `--port 8000` is the convention; pick anything free if 8000 is in use.
 
-If you'd rather pass vars inline (e.g., CI, one-off overrides), skip `.env`:
+Inline env vars (for one-off overrides):
 
 ```bash
 JOBIFY_ENV=local JOBIFY_SERVICE_NAME=jobify-api \
-  uv run uvicorn jobify.main:app --reload --port 8000
+  uv run uvicorn jobify_api.main:app --reload --port 8000
 ```
 
 ### Verify it's up
@@ -47,7 +45,7 @@ JOBIFY_ENV=local JOBIFY_SERVICE_NAME=jobify-api \
 curl -s http://127.0.0.1:8000/health | python -m json.tool
 ```
 
-Expected response:
+Expected:
 
 ```json
 {
@@ -58,21 +56,17 @@ Expected response:
 }
 ```
 
-Other useful URLs while the server is running:
+Other useful URLs:
 
-- `http://127.0.0.1:8000/docs` — Swagger UI (interactive API docs)
-- `http://127.0.0.1:8000/redoc` — ReDoc (alternative docs view)
+- `http://127.0.0.1:8000/docs` — Swagger UI
+- `http://127.0.0.1:8000/redoc` — ReDoc
 - `http://127.0.0.1:8000/openapi.json` — raw OpenAPI schema
 
-Every response (including errors) carries an `X-Request-Id` header — that's
-the correlation handle that shows up in the structured logs, so grep for it
-when chasing a request through the system.
-
-Stop the server with `Ctrl-C`.
+Every response carries an `X-Request-Id` header — the log correlation handle.
 
 ## Database
 
-Local dev runs Postgres 16 directly via Homebrew — no Docker. CI runs the same Postgres as a service container.
+Local dev runs Postgres 16 directly via Homebrew — no Docker.
 
 ### First-time setup (one-time, per machine)
 
@@ -80,39 +74,47 @@ Local dev runs Postgres 16 directly via Homebrew — no Docker. CI runs the same
 brew install postgresql@16
 brew services start postgresql@16
 
-# Create the role and the two databases (dev + integration tests).
 psql -d postgres <<'SQL'
 CREATE ROLE jobify WITH LOGIN PASSWORD 'jobify' CREATEDB;
 CREATE DATABASE jobify OWNER jobify;
 CREATE DATABASE jobify_test OWNER jobify;
 SQL
 
-uv run alembic upgrade head         # applies migrations to the dev DB
+cd core && uv run alembic upgrade head   # applies migrations to the dev DB
 ```
 
-The dev connection string lives in `.env`:
+The dev connection string lives in `.env` (repo root):
 
 ```
 JOBIFY_DB_URL=postgresql+asyncpg://jobify:jobify@localhost:5432/jobify
 ```
 
-Integration tests connect to `jobify_test` by default; override with `JOBIFY_TEST_DB_URL` if your local Postgres isn't on `localhost:5432`.
+Integration tests connect to `jobify_test` by default; override with `JOBIFY_TEST_DB_URL` if needed.
+
+### Migrations (Alembic)
+
+Alembic config lives in `core/`. All migration commands run from `core/`:
+
+```bash
+cd core && uv run alembic upgrade head
+cd core && uv run alembic revision -m "describe the change"
+# Edit the generated file under core/src/jobify/db/migrations/versions/
+cd core && uv run alembic upgrade head
+```
+
+Hand-written migrations — autogenerate is intentionally off.
 
 ### Reset the dev database
 
 ```bash
 psql -d postgres -c "DROP DATABASE jobify;"
 psql -d postgres -c "CREATE DATABASE jobify OWNER jobify;"
-uv run alembic upgrade head
+cd core && uv run alembic upgrade head
 ```
-
-The integration test DB stays clean across runs (savepoint rollback per test), so you rarely need to reset it.
 
 ### pgvector (required for embedding worker)
 
-The embedding worker uses a `vector(1536)` column on `applicant_embeddings`. Local Postgres needs the `pgvector` extension installed at the OS level.
-
-Homebrew currently bottles pgvector only for PG17/18. For Postgres 16 (the project's pinned version), build from source:
+Homebrew bottles pgvector only for PG17/18. For Postgres 16, build from source:
 
 ```bash
 git clone --branch v0.8.0 https://github.com/pgvector/pgvector.git
@@ -121,34 +123,12 @@ PG_CONFIG=/opt/homebrew/opt/postgresql@16/bin/pg_config make
 PG_CONFIG=/opt/homebrew/opt/postgresql@16/bin/pg_config make install
 ```
 
-Then create the extension as a Postgres superuser (preferred — keeps the `jobify` role at normal privilege):
+Create the extension as a Postgres superuser:
 
 ```bash
-# Run as a superuser (e.g. the default 'postgres' role):
 psql -U postgres -d jobify -c "CREATE EXTENSION IF NOT EXISTS vector;"
 psql -U postgres -d jobify_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
 ```
-
-If you don't have a separate superuser role set up locally, the quickest fallback is to temporarily grant superuser to `jobify` so the Alembic migration can create the extension itself:
-
-```bash
-# dev only — revert after migrations run if desired
-psql -d postgres -c "ALTER ROLE jobify SUPERUSER;"
-psql -d jobify -c "CREATE EXTENSION IF NOT EXISTS vector;"
-psql -d jobify_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
-```
-
-The Alembic migration `0004_applicant_embeddings.py` runs `CREATE EXTENSION IF NOT EXISTS vector` idempotently as the first step of `upgrade()`.
-
-### Generate a new migration
-
-```bash
-uv run alembic revision -m "describe the change"
-# Edit the generated file under src/jobify/db/migrations/versions/.
-uv run alembic upgrade head
-```
-
-Autogeneration (`--autogenerate`) is intentionally not the default workflow yet — hand-written migrations keep schema changes explicit while the model surface is small. Revisit once the table count grows past ~10.
 
 ### Verify readiness
 
@@ -156,87 +136,28 @@ Autogeneration (`--autogenerate`) is intentionally not the default workflow yet 
 curl -s http://127.0.0.1:8000/ready | python -m json.tool
 ```
 
-`/ready` returns 200 when Postgres responds to `SELECT 1`, 503 otherwise. Use it for load-balancer readiness checks; use `/health` (no DB) for liveness.
+## Worker
 
-## Redis (for the parse worker)
+Resume parse, embedding, scoring, and notification tasks run on Celery + Redis. See `worker/README.md` for the run command and queue details.
 
-The resume parse pipeline runs on Celery + Redis. Local dev uses Homebrew Redis on the default port.
-
-### First-time setup
+### Redis first-time setup
 
 ```bash
 brew install redis
 brew services start redis
 ```
 
-Verify it's up:
-
-```bash
-redis-cli ping     # → PONG
-```
-
-The connection string lives in `.env`:
+The connection string in `.env` (repo root):
 
 ```
 JOBIFY_REDIS_URL=redis://localhost:6379/0
 ```
 
-### Run the parse worker
-
-In a second terminal (uvicorn keeps running in the first):
-
-```bash
-cd api
-uv run --env-file=.env celery -A jobify.workers.celery_app worker \
-    --pool=solo --concurrency=1 -Q parse,embed,score --loglevel=info
-```
-
-- `--pool=solo`: single-concurrency. The MVP pattern; switch to `--pool=prefork` later when load justifies parallelism.
-- `-Q parse,embed,score`: consume from the `parse` queue (resume parsing), the `embed` queue (Gemini embedding), and the `score` queue (match scoring). Run a second worker pinned to `-Q embed` or `-Q score` if you want to isolate queue consumption. Future `notify` queues land in their own plans.
-
-Upload a resume in the first terminal; the worker logs `parse.complete` when it's done. Poll `GET /v1/applicants/me/resumes/{rid}` (with the same Bearer token used for the upload) to see `parse_status` transition.
-
 ### Skipping the worker for tests
 
-Tests use Celery eager mode (set via `JOBIFY_CELERY_TASK_ALWAYS_EAGER=true` in test fixtures) so `.delay()` runs the task body inline — no Redis required during `pytest`. Production never sets this flag.
-
-## Resume uploads
-
-Two endpoints, both scoped to the caller's own applicant record:
-
-```
-POST   /v1/applicants/me/resumes
-GET    /v1/applicants/me/resumes/{resume_id}
-```
-
-POST accepts `multipart/form-data` with one field `file`. Content-type is checked against `JOBIFY_ALLOWED_RESUME_CONTENT_TYPES`; size against `JOBIFY_MAX_UPLOAD_BYTES`. The file is persisted under `JOBIFY_STORAGE_ROOT` (gitignored `var/` by default); the resume row in `jobify.resumes` lands with `parse_status=pending`. Parsing is a later plan.
-
-Both routes require an `Authorization: Bearer <access_jwt>` header — the applicant id is derived from the access token (via the `current_user` dependency), not from the URL. Expect `401` for a missing or invalid token (or a soft-deleted user), `403 not_an_applicant` for recruiter/admin roles, and a uniform `404` for unknown or other-user resume ids. Size violations return `413`; disallowed content-types return `415`. Obtain the access token via the Google OAuth sign-in endpoint documented in [Auth](#auth) below.
-
-Quick test from the shell once the server is running:
-
-```bash
-ACCESS=...   # access JWT from POST /v1/auth/oauth/google — see Auth below
-curl -s -X POST "http://127.0.0.1:8000/v1/applicants/me/resumes" \
-    -H "Authorization: Bearer $ACCESS" \
-    -F "file=@/path/to/cv.pdf" | python -m json.tool
-```
-
-### Run with JSON logs (prod-style)
-
-For Fluent Bit / Elasticsearch compatibility, flip the log format:
-
-```bash
-JOBIFY_LOG_FORMAT=json uv run --env-file=.env uvicorn jobify.main:app --port 8000
-```
-
-(Inline env vars override anything in `.env`, so this works even with the
-default `JOBIFY_LOG_FORMAT=text` in the file.)
+Integration tests set `JOBIFY_CELERY_TASK_ALWAYS_EAGER=true` so `.delay()` runs tasks inline — no Redis required during `pytest`.
 
 ## Seeding demo data
-
-The `jobify-seed-jobs` script populates `employers` + `jobs` from a versioned JSON
-fixture so a backend-only demo of the future feed is possible.
 
 ```bash
 # Apply (idempotent — safe to re-run)
@@ -244,95 +165,74 @@ uv run --env-file=.env jobify-seed-jobs
 
 # Validate the JSON only; nothing written
 uv run --env-file=.env jobify-seed-jobs --dry-run
-
-# Use a different fixture
-uv run --env-file=.env jobify-seed-jobs --from path/to/jobs.json
 ```
 
-The canonical fixture lives at `api/data/sample_jobs.json` (10 employers,
-27 jobs). Idempotency is by `name_norm` on employers and `(employer_id,
-lower(title))` on jobs. Re-running updates mutable fields; `name` and an
-existing `verified_at` timestamp are preserved.
-
-The seeder dispatches `embed_job` for each inserted or updated job after the
-COMMIT. For embeddings (and downstream scoring) to materialize, a Celery worker
-on the `embed,score` queues must be running (`uv run --env-file=.env celery -A jobify.workers.celery_app worker
---pool=solo --concurrency=1 -Q parse,embed,score`). If the broker is down, the
-seeder logs `embed.dispatch-failed` per job and continues; re-running the seed
-CLI re-dispatches.
+The canonical fixture lives at `core/data/sample_jobs.json` (10 employers, 27 jobs).
+Email templates live at `core/emails/`.
 
 ## Tests
 
-Unit tests (no DB required):
+All test commands run from the **repo root**:
 
 ```bash
-uv run pytest -v -m "not integration"
-```
+# Unit tests (no DB required):
+uv run pytest -v -m "not integration and not eval"
 
-Integration tests (require local Postgres + `jobify_test` database — see [Database](#database)):
+# Parse F1 quality gate (no DB):
+uv run pytest -v -s -m eval
 
-```bash
+# Integration tests (require local Postgres + jobify_test database):
 uv run pytest -v -m integration
-```
 
-Full suite:
-
-```bash
+# Full suite:
 uv run pytest -v
 ```
 
-Parse F1 quality gate (in-process, no DB — runs the library parser against the gold
-dataset in `data/parse_eval/` and asserts the macro-F1 + per-field floors):
-
-```bash
-uv run pytest -m eval
-uv run pytest -m eval -v -s     # per-example breakdown when adding/debugging gold cases
-```
-
-CI runs the gate as the `lint-types-unit-eval` job before the heavier integration job.
+Tests live in `tests/` at repo root. The integration conftest uses `JOBIFY_TEST_DB_URL` (falls back to `postgresql+asyncpg://jobify:jobify@localhost:5432/jobify_test`).
 
 ## Lint, format, type-check
 
+Run from repo root:
+
 ```bash
-uv run ruff check src/ tests/
-uv run ruff format src/ tests/
+uv run ruff check core/src api/src worker/src tests
+uv run ruff format core/src api/src worker/src tests
 uv run mypy
 ```
 
 ## Configuration
 
-All settings are read from environment variables prefixed `JOBIFY_`:
+All settings are read from environment variables prefixed `JOBIFY_`. The `.env` file lives at the **repo root** (not inside `api/`).
 
 | Variable           | Required | Default | Purpose                         |
 | ------------------ | -------- | ------- | ------------------------------- |
 | `JOBIFY_ENV`          | yes      | —       | `local` \| `dev` \| `staging` \| `prod` |
 | `JOBIFY_SERVICE_NAME` | yes      | —       | Reported in `/health`           |
-| `JOBIFY_DB_URL`       | yes      | —       | SQLAlchemy DSN; must use the `postgresql+asyncpg://` driver |
-| `JOBIFY_STORAGE_ROOT` | no       | `var/uploads` | Filesystem root for `LocalFileStorage`. Relative paths resolve against CWD. |
-| `JOBIFY_MAX_UPLOAD_BYTES` | no   | `10485760` | Max bytes per upload (10 MiB).                      |
+| `JOBIFY_DB_URL`       | yes      | —       | SQLAlchemy DSN; must use `postgresql+asyncpg://` |
+| `JOBIFY_STORAGE_ROOT` | no       | `var/uploads` | Filesystem root for `LocalFileStorage`. |
+| `JOBIFY_MAX_UPLOAD_BYTES` | no   | `10485760` | Max bytes per upload (10 MiB). |
 | `JOBIFY_ALLOWED_RESUME_CONTENT_TYPES` | no | (pdf, doc, docx) | Comma-separated content-type whitelist. |
 | `JOBIFY_LOG_LEVEL`    | no       | `INFO`  | Stdlib log level                |
 | `JOBIFY_LOG_FORMAT`   | no       | `text`  | `text` (key=value) or `json`    |
 | `JOBIFY_JWT_SECRET`   | yes      | —       | HS256 signing secret; min 32 bytes |
-| `JOBIFY_JWT_ACCESS_TTL_SECONDS`  | no | `600`     | Access token lifetime (10 min default) |
-| `JOBIFY_JWT_REFRESH_TTL_SECONDS` | no | `2592000` | Refresh token lifetime (30 d default)  |
-| `JOBIFY_GOOGLE_OAUTH_CLIENT_IDS` | yes | —        | CSV of Google Client IDs (web/iOS/Android) |
-| `JOBIFY_GOOGLE_JWKS_URL`         | no | `https://www.googleapis.com/oauth2/v3/certs` | Override for tests / offline dev |
+| `JOBIFY_JWT_ACCESS_TTL_SECONDS`  | no | `600`     | Access token lifetime (10 min) |
+| `JOBIFY_JWT_REFRESH_TTL_SECONDS` | no | `2592000` | Refresh token lifetime (30 d) |
+| `JOBIFY_GOOGLE_OAUTH_CLIENT_IDS` | yes | —        | CSV of Google Client IDs       |
+| `JOBIFY_GOOGLE_JWKS_URL`         | no | `https://www.googleapis.com/oauth2/v3/certs` | Override for tests |
 | `JOBIFY_GOOGLE_JWKS_CACHE_TTL_SECONDS` | no | `3600` | JWKS in-process cache TTL |
-| `JOBIFY_AUTH_REQUIRE_EMAIL_VERIFIED`   | no | `false` | Reject Google sign-ins without `email_verified=true` |
-| `JOBIFY_REDIS_URL`    | yes      | —       | Redis connection string (`redis://` or `rediss://`). Required for Celery broker. |
-| `JOBIFY_CELERY_TASK_ALWAYS_EAGER` | no | `false` | When true, Celery tasks run synchronously in-process. Tests only. |
-| `JOBIFY_GEMINI_API_KEY` | yes    | —       | Gemini Developer API key for the embedding worker |
+| `JOBIFY_AUTH_REQUIRE_EMAIL_VERIFIED`   | no | `false` | Reject unverified Google sign-ins |
+| `JOBIFY_CORS_ALLOW_ORIGINS` | no | `http://localhost:8080` | Comma-separated list of allowed CORS origins (web frontend). |
+| `JOBIFY_REDIS_URL`    | yes      | —       | Redis connection string. Required for Celery broker. |
+| `JOBIFY_CELERY_TASK_ALWAYS_EAGER` | no | `false` | Run tasks synchronously (tests only). |
+| `JOBIFY_GEMINI_API_KEY` | yes    | —       | Gemini Developer API key for embedding worker |
 | `JOBIFY_EMBEDDING_MODEL` | no   | `gemini-embedding-2` | Embedding model identifier |
-| `JOBIFY_EMBEDDING_DIM` | no     | `1536`  | Matryoshka output dim — must be in {128,256,512,768,1024,1536,3072} and match the migration's Vector(N) |
-| `JOBIFY_EMAIL_CHANNEL` | no     | `logging` | Email adapter: `logging` (stdout stub, default) or `ses` (deferred until deploy target picked) |
-| `JOBIFY_NOTIFY_BATCH_SIZE` | no | `50`   | Max notifications claimed per `sweep_notifications` task run |
+| `JOBIFY_EMBEDDING_DIM` | no     | `1536`  | Matryoshka output dim — must match migration's Vector(N) |
+| `JOBIFY_EMAIL_CHANNEL` | no     | `logging` | Email adapter: `logging` (stdout stub) or `ses` |
+| `JOBIFY_NOTIFY_BATCH_SIZE` | no | `50`   | Max notifications claimed per sweep run |
 
 The service refuses to boot if required variables are missing or invalid.
 
 ## Auth
-
-Three sign-in/session endpoints plus one identity endpoint:
 
 ```
 POST   /v1/auth/oauth/google          # Google ID token → access + refresh
@@ -341,146 +241,36 @@ POST   /v1/auth/logout                # revoke refresh (idempotent 204)
 GET    /v1/me                         # current user + applicant payload
 ```
 
-The Google flow is **client-driven** — the Flutter app obtains a Google ID
-token via the official SDK and POSTs it to `/v1/auth/oauth/google`. The
-backend verifies the token against Google's JWKS, upserts the user, and
-mints an HS256 access JWT (10 min) plus an opaque rotating refresh token
-(30 d, sha256-hashed at rest).
+The Flutter app obtains a Google ID token and POSTs it to `/v1/auth/oauth/google`. The backend verifies against Google's JWKS, upserts the user, and mints an HS256 access JWT (10 min) plus an opaque rotating refresh token (30 d, sha256-hashed at rest).
 
-There's no `/callback` redirect endpoint — the spec's prior `/oauth/{provider}/callback`
-naming was inaccurate for client-driven flows and was replaced.
+Refresh tokens rotate on every use. Reuse of a rotated token triggers full family revocation.
 
-Refresh tokens rotate on every successful refresh. Reuse of an
-already-rotated token triggers full revocation of the family. See
-`docs/superpowers/specs/2026-05-17-auth-google-oauth-applicant-design.md`
-for the design rationale.
+### Web Google sign-in (Flutter web)
 
-### Quick test from the shell
+The web client uses the GIS button flow (not the imperative `signIn()` call). The web OAuth client must list the dev origin in **Authorized JavaScript origins** (e.g. `http://localhost:8080`). Propagation check:
 
 ```bash
-# Mint a JWT secret if you don't have one yet:
-openssl rand -base64 48 | tr -d '\n' | tr -d '=' | head -c 64
-
-# Then start the server (with JOBIFY_JWT_SECRET and JOBIFY_GOOGLE_OAUTH_CLIENT_IDS set in .env)
-# and hit /v1/me with a valid Bearer access JWT:
-ACCESS=...   # from a real Google sign-in
-curl -s http://127.0.0.1:8000/v1/me -H "Authorization: Bearer $ACCESS" | python -m json.tool
+curl -s -o /dev/null -w '%{http_code}' \
+  -H 'Origin: http://localhost:8080' \
+  'https://accounts.google.com/gsi/button?client_id=<id>&is_fedcm_supported=true'
 ```
 
-## Endpoints
-
-### `GET /v1/feed`
-
-Returns the surfaced ranked matches for the current applicant.
-
-```
-GET /v1/feed?limit=20&cursor=<opaque base64>
-Authorization: Bearer <access_token>
-```
-
-Response: `{ items: FeedItemRead[], next_cursor: string | null }`. Each item carries
-the match score breakdown, the full job record, and the employer summary.
-ETag-cached (weak). Cursor pagination over `(total_score DESC, id DESC)`.
-Each match also carries an `explanation` field with `{fit, caveat, generator, generator_version}` strings — templated for now; LLM-generated when the provider lands.
-
-### `GET /v1/jobs/{id}`
-
-Returns a single open job plus the current applicant's match against it (if any).
-Uniform 404 across unknown / closed / soft-deleted ids (same rationale as
-`/v1/applicants/me/resumes/{id}`).
-
-### `POST /v1/jobs/{id}/apply`
-
-Apply to an open job. Idempotent — re-applying while already applied returns 200 with the
-existing row. Re-applying after withdrawing updates the same row back to `applied` (preserves
-cursor identity). Body: `{"source": "feed"}` (optional). Returns 201 on first apply, 200 on
-re-apply. 404 for unknown / closed / soft-deleted jobs.
-
-### `PATCH /v1/applications/{id}`
-
-Withdraw an application. Only `applied → withdrawn` is accepted; other transitions return
-`400 invalid_transition`. Re-withdrawing an already-withdrawn application is a 200 no-op.
-Uniform 404 across unknown and other-user application ids.
-
-### `GET /v1/applications`
-
-List the current applicant's applications (includes withdrawn — history is preserved).
-Cursor-paginated over `(created_at DESC, id DESC)`. ETag-cached. Each item carries the
-full application row, job summary, and employer summary.
-
-### `POST /v1/jobs/{id}/save`
-
-Save a job for later. Idempotent — re-saving returns the existing row (200). Returns 201 on
-first save. 404 for unknown / closed / soft-deleted jobs.
-
-### `DELETE /v1/jobs/{id}/save`
-
-Unsave a job. Soft-deletes the live saved-job row. 204 No Content regardless of whether the
-job was previously saved (idempotent).
-
-### `GET /v1/saved`
-
-List the current applicant's saved jobs (includes entries for closed jobs — no status filter
-applied to the job at list time). Cursor-paginated, ETag-cached. Same rich shape as
-`/v1/applications`.
-
-### `GET /v1/notifications`
-
-Returns the current applicant's in-app notification inbox, newest first. `FAILED` rows are
-excluded from this endpoint (admin-only visibility). Cursor-paginated over `(created_at DESC,
-id DESC)`.
-
-```
-GET /v1/notifications?limit=20&cursor=<opaque>
-Authorization: Bearer <access_token>
-```
-
-### `POST /v1/notifications/{id}/read`
-
-Mark a single notification as read. Idempotent — marking an already-read notification returns
-200 with the existing row unchanged. Uniform 404 across unknown and other-user notification ids.
+Returns 200 when the origin is live. Also add `http://localhost:8080` to `JOBIFY_CORS_ALLOW_ORIGINS`.
 
 ## Project layout
 
 ```
-api/
-├── alembic.ini
-├── src/jobify/
-│   ├── app_factory.py        # create_app() — middlewares + routes + engine + storage
-│   ├── main.py               # uvicorn entry point
-│   ├── settings.py
-│   ├── middleware/
-│   │   ├── request_id.py     # X-Request-Id propagation
-│   │   └── error_handler.py  # RFC 7807 problem+json
-│   ├── observability/
-│   │   └── logging.py        # structlog config
-│   ├── workers/
-│   │   ├── celery_app.py     # Celery instance + per-worker engine lifecycle
-│   │   └── tasks/
-│   │       └── parse.py       # parse_resume — 3-txn split, retry, idempotency
-│   ├── integrations/
-│   │   ├── storage/          # Storage protocol + LocalFileStorage
-│   │   └── parser/
-│   │       ├── base.py        # ResumeParser Protocol + ParsedResume schema
-│   │       ├── text.py        # PDF (pypdf+pdfminer) + DOCX extraction
-│   │       ├── library.py     # LibraryResumeParser — regex + keyword impl
-│   │       └── skills_dict.py # Curated skill keyword list
-│   ├── db/
-│   │   ├── session.py        # async engine, sessionmaker, get_session dep
-│   │   ├── models.py         # Base, User, Applicant, Resume
-│   │   └── migrations/       # alembic env + versions/
-│   ├── auth/
-│   │   ├── dependencies.py    # current_user, optional_current_user
-│   │   ├── google_verifier.py # JWKS-backed Google ID-token verifier
-│   │   ├── service.py         # AuthService — sign-in, refresh, logout
-│   │   └── tokens.py          # HS256 access JWT + opaque refresh primitives
-│   └── routes/
-│       ├── health.py         # GET /health (liveness)
-│       ├── ready.py          # GET /ready (readiness, DB ping)
-│       ├── resumes.py        # /v1/applicants/me/resumes …
-│       ├── auth.py           # /v1/auth/oauth/google, /refresh, /logout
-│       └── me.py             # GET /v1/me
-└── tests/
-    ├── unit/                 # no DB required
-    └── integration/          # require local Postgres (savepoint isolation)
+repo root/
+├── pyproject.toml        # uv workspace (members: core, api, worker)
+├── tests/                # all tests (unit + integration + eval)
+├── .env                  # JOBIFY_* vars (gitignored)
+├── core/
+│   ├── alembic.ini
+│   ├── emails/           # HTML email templates
+│   ├── data/             # sample_jobs.json, parse_eval/
+│   └── src/jobify/       # domain package: db, integrations, scoring, celery_app, …
+├── api/
+│   └── src/jobify_api/   # FastAPI service: app_factory, routes, auth, middleware, …
+└── worker/
+    └── src/jobify_worker/ # Celery tasks: parse, embed, score, sweep_notifications
 ```

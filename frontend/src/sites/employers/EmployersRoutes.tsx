@@ -4,8 +4,10 @@ import "./styles/site.css";
 import { Landing } from "./pages/Landing";
 import { Verify } from "./pages/Verify";
 
-/** The recruiter-facing console (dark ops app) lives here in dev. */
-export const CONSOLE_URL = "http://localhost:5173";
+/** The recruiter-facing console is the `/console` surface of this same app.
+ *  Hash route (not an absolute port) so it resolves to the console sign-in on
+ *  whatever origin the unified app is served from. */
+export const CONSOLE_URL = "#/console/signin";
 
 /** CSS-scope + title wrapper for the employers marketing surface (mounted at "/employers"). */
 function EmployersLayout() {
