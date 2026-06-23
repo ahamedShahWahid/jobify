@@ -1,11 +1,11 @@
-import { HashRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes } from "react-router-dom";
+import { WebRoutes } from "./sites/web/WebRoutes";
 
 export function App() {
   return (
     <HashRouter>
-      <Routes>
-        <Route path="*" element={<p style={{ padding: 24 }}>frontend scaffold OK</p>} />
-      </Routes>
+      {/* HashRouter: static bundle, no server rewrites, tokens stay out of paths. */}
+      <Routes>{WebRoutes()}</Routes>
     </HashRouter>
   );
 }
