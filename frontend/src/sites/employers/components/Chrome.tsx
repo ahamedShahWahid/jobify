@@ -77,7 +77,7 @@ export function Footer() {
           </div>
           <div className="col">
             <h4>For applicants</h4>
-            <a href="http://localhost:5273" target="_blank" rel="noreferrer">
+            <a href="#/" target="_blank" rel="noreferrer">
               Jobify for candidates
             </a>
             <span className="faint">Find roles that fit, explained</span>
