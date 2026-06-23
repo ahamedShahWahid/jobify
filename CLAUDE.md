@@ -11,12 +11,13 @@ Jobify (Jobify) — an early-stage placement platform.
 - `docs/prd/KPA_Enhanced_BRD_v1_1.pdf` — **what** we build (product BRD; scope source of truth).
 - `docs/superpowers/specs/` — per-slice design docs (the **why** behind each section below). Their spent step-by-step build plans were removed once shipped — recoverable from git history if ever needed.
 - `app/` — Flutter mobile + web client (last section). The spec overrides the BRD's React Native + Next.js stack.
+- `frontend/` — unified Vite + React + TS web app; three route-prefixed surfaces under one HashRouter: `/` (applicant/public, `src/sites/web`), `/employers` (recruiter marketing, `src/sites/employers`), `/console` (admin + recruiter ops, `src/sites/console`). Shared transport/session/auth/env in `src/shared`. `npm run build` = `tsc -b && vite build`. See `frontend/README.md`. Static `emails/` + `styleguide/` dirs at repo root have no build step.
 
 Scope vs "how" conflict: BRD wins on product behavior; spec wins on tech.
 
 ## Commands + setup
 
-Backend commands run from `api/` (the `uv` workspace, `alembic.ini`, `pyproject.toml` live there). **All operational reference lives in the READMEs** — `api/README.md` (run, tests, migrations, DB/Redis/pgvector setup, worker command, seeding, the full `JOBIFY_*` env-var table, endpoint docs) and `app/README.md` (Flutter run/test, web OAuth origins). This file is non-obvious bits only. Boot rules worth pinning here:
+Backend commands run from `api/` (the `uv` workspace, `alembic.ini`, `pyproject.toml` live there). **All operational reference lives in the READMEs** — `api/README.md` (run, tests, migrations, DB/Redis/pgvector setup, worker command, seeding, the full `JOBIFY_*` env-var table, endpoint docs), `app/README.md` (Flutter run/test, web OAuth origins), and `frontend/README.md` (Vite dev/build, env vars, surface→route map). This file is non-obvious bits only. Boot rules worth pinning here:
 
 - App refuses to boot if a required `JOBIFY_*` var is missing/invalid (`settings.py`); `JOBIFY_DB_URL` **must** use `postgresql+asyncpg://` (enforced in `Settings._enforce_async_driver`).
 - Integration fixtures inject `JOBIFY_JWT_SECRET="x"*32` + `JOBIFY_GOOGLE_OAUTH_CLIENT_IDS=test.apps.googleusercontent.com` — match these for new apps under test.

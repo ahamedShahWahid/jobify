@@ -1,4 +1,5 @@
 import { Outlet, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
 import type { ReactNode } from "react";
 import "./styles/site.css";
 import { Landing } from "./pages/Landing";
@@ -22,6 +23,9 @@ function RequireApplicant({ children }: { children: ReactNode }) {
 
 /** Session + CSS-scope wrapper for the applicant surface (mounted at "/"). */
 function WebLayout() {
+  useEffect(() => {
+    document.title = "Jobify — work that fits, explained";
+  }, []);
   return (
     <SessionProvider>
       <div className="surface-web">
