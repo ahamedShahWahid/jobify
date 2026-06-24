@@ -57,7 +57,7 @@
   color: var(--danger);
 }
 .ds-btn-danger:hover:not(:disabled) {
-  background: var(--accent-wash);
+  background: var(--danger-wash);
   border-color: var(--danger);
 }
 
@@ -146,7 +146,7 @@
 }
 .ds-badge-danger {
   color: var(--danger);
-  background: var(--accent-wash);
+  background: var(--danger-wash);
   border-color: var(--danger);
 }
 .ds-badge-accent {
