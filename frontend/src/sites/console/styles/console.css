@@ -1263,7 +1263,7 @@
   margin-bottom: 14px;
 }
 .surface-console .jc-status {
-  font-family: "Spline Sans Mono", monospace;
+  font-family: var(--mono);
   font-size: 10px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -1281,7 +1281,7 @@
   opacity: 0.7;
 }
 .surface-console .jc-badge {
-  font-family: "Spline Sans Mono", monospace;
+  font-family: var(--mono);
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1295,7 +1295,7 @@
   background: #cfdcd2;
 }
 .surface-console .jc-company {
-  font-family: "Spline Sans Mono", monospace;
+  font-family: var(--mono);
   font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1303,7 +1303,7 @@
   margin-bottom: 4px;
 }
 .surface-console .jc-title {
-  font-family: "Bricolage Grotesque", sans-serif;
+  font-family: var(--serif);
   font-weight: 800;
   font-size: 26px;
   line-height: 1.08;
@@ -1329,7 +1329,7 @@
   border-bottom: 0;
 }
 .surface-console .jc-fact .k {
-  font-family: "Spline Sans Mono", monospace;
+  font-family: var(--mono);
   font-size: 10px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -1348,7 +1348,7 @@
   margin-bottom: 16px;
 }
 .surface-console .jc-chip {
-  font-family: "Spline Sans Mono", monospace;
+  font-family: var(--mono);
   font-size: 10.5px;
   letter-spacing: 0.04em;
   padding: 3px 9px;

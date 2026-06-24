@@ -188,7 +188,7 @@ export function AuditExplorer() {
                 </tr>
                 {expanded === row.id && (
                   <tr>
-                    <td colSpan={5} style={{ background: "var(--bg0)" }}>
+                    <td colSpan={5} style={{ background: "var(--paper-2)" }}>
                       <JsonView value={row.context} />
                     </td>
                   </tr>

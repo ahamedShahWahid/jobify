@@ -216,7 +216,7 @@ export function Team() {
               <span className="k">invites</span>
             </div>
             {iAmOwner && (
-              <div className="panel-body" style={{ borderBottom: "1px solid var(--hairline)" }}>
+              <div className="panel-body" style={{ borderBottom: "1px solid var(--line)" }}>
                 <div className="field-row" style={{ gridTemplateColumns: "2fr 1fr auto" }}>
                   <Field label="Email">
                     <input
@@ -245,7 +245,7 @@ export function Team() {
                     </button>
                   </div>
                 </div>
-                <p className="hint" style={{ margin: 0, fontSize: 11, color: "var(--muted)" }}>
+                <p className="hint" style={{ margin: 0, fontSize: 11, color: "var(--ink-faint)" }}>
                   Existing users get an in-app notification; new people find it under "My invites"
                   after their first sign-in. Invites expire after 7 days.
                 </p>
