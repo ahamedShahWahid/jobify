@@ -7,43 +7,6 @@
    ========================================================================== */
 
 .surface-employers {
-  --paper: #f3f4f1; /* cool off-white */
-  --paper-2: #eceee9; /* recessed surface */
-  --paper-3: #e3e6df; /* deeper / hover */
-  --panel: #fbfcfa; /* raised card */
-
-  --ink: #0e1b2a; /* deep navy — dominant ink */
-  --ink-2: #213347; /* secondary ink */
-  --ink-soft: #4f6173;
-  --ink-faint: #8593a0;
-
-  --line: rgba(14, 27, 42, 0.12); /* hairline */
-  --line-strong: rgba(14, 27, 42, 0.22);
-  --line-faint: rgba(14, 27, 42, 0.06);
-
-  /* Jobify Blue — the cross-surface brand colour (the logo). Sits above this
-     property's amber accent; documented in the styleguide as --brand-blue. */
-  --brand-blue: #0048a8;
-  --brand-blue-deep: #003c8f;
-  --brand-blue-tint: #e1ecf8;
-
-  --amber: #f3a712; /* the one signal accent */
-  --amber-deep: #e8930c;
-  --amber-wash: rgba(243, 167, 18, 0.12);
-
-  --slate: #3a6ea5; /* cool data blue */
-  --slate-soft: rgba(58, 110, 165, 0.14);
-
-  --good: #2f7d5b; /* verified / pass */
-  --good-soft: rgba(47, 125, 91, 0.13);
-
-  --display: "Archivo", system-ui, sans-serif;
-  --sans: "IBM Plex Sans", system-ui, sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, monospace;
-
-  --maxw: 1200px;
-  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
-
   /* body base styles folded from body { } */
   margin: 0;
   background: var(--paper);
@@ -96,7 +59,7 @@ html {
 }
 
 .surface-employers :focus-visible {
-  outline: 2px solid var(--amber-deep);
+  outline: 2px solid var(--accent-deep);
   outline-offset: 3px;
   border-radius: 2px;
 }
@@ -116,7 +79,7 @@ html {
   color: var(--ink-faint);
 }
 .surface-employers .amber {
-  color: var(--amber-deep);
+  color: var(--accent-deep);
 }
 
 /* a stamped technical label */
@@ -129,7 +92,7 @@ html {
   font-weight: 500;
 }
 .surface-employers .label.amber {
-  color: var(--amber-deep);
+  color: var(--accent-deep);
 }
 
 /* tiny index marker, e.g. 01 / 02 */
@@ -137,14 +100,14 @@ html {
   font-family: var(--mono);
   font-size: 12px;
   letter-spacing: 0.1em;
-  color: var(--amber-deep);
+  color: var(--accent-deep);
   font-weight: 600;
 }
 
 .surface-employers h1,
 .surface-employers h2,
 .surface-employers h3 {
-  font-family: var(--display);
+  font-family: var(--serif);
   color: var(--ink);
   letter-spacing: -0.02em;
   line-height: 1.04;
@@ -281,14 +244,14 @@ html {
   background: #07131f;
 }
 .surface-employers .btn-amber {
-  background: var(--amber);
+  background: var(--accent);
   color: var(--ink);
   box-shadow:
-    0 1px 0 var(--amber-deep),
-    0 6px 16px -8px var(--amber-deep);
+    0 1px 0 var(--accent-deep),
+    0 6px 16px -8px var(--accent-deep);
 }
 .surface-employers .btn-amber:hover {
-  background: var(--amber-deep);
+  background: var(--accent-deep);
 }
 .surface-employers .btn-ghost {
   background: transparent;
@@ -317,12 +280,12 @@ html {
   gap: 7px;
   font-weight: 600;
   color: var(--ink);
-  border-bottom: 1.5px solid var(--amber);
+  border-bottom: 1.5px solid var(--accent);
   padding-bottom: 1px;
   transition: color 0.15s var(--ease);
 }
 .surface-employers .textlink:hover {
-  color: var(--amber-deep);
+  color: var(--accent-deep);
 }
 
 /* ---- hero --------------------------------------------------------------- */
@@ -355,7 +318,7 @@ html {
   right: 0;
   bottom: 0.06em;
   height: 0.16em;
-  background: var(--amber);
+  background: var(--accent);
   z-index: -1;
   opacity: 0.85;
 }
@@ -384,7 +347,7 @@ html {
   gap: 2px;
 }
 .surface-employers .hero-meta .big {
-  font-family: var(--display);
+  font-family: var(--serif);
   font-weight: 800;
   font-size: 26px;
   letter-spacing: -0.02em;
@@ -485,7 +448,7 @@ html {
   font-weight: 600;
   font-size: 13px;
   color: var(--paper);
-  background: var(--slate);
+  background: var(--brand-blue);
   flex: none;
 }
 .surface-employers .cand-id {
@@ -533,7 +496,7 @@ html {
   display: block;
   height: 100%;
   border-radius: 3px;
-  background: linear-gradient(90deg, var(--slate), var(--amber));
+  background: linear-gradient(90deg, var(--brand-blue), var(--accent));
 }
 .surface-employers .why {
   font-size: 12.5px;
@@ -574,11 +537,11 @@ html {
   font-size: 11px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--amber);
+  color: var(--accent);
   margin-bottom: 10px;
 }
 .surface-employers .band .stat .head {
-  font-family: var(--display);
+  font-family: var(--serif);
   font-weight: 800;
   font-size: clamp(20px, 2.4vw, 28px);
   letter-spacing: -0.02em;
@@ -619,7 +582,7 @@ html {
   font-family: var(--mono);
   font-weight: 600;
   font-size: 13px;
-  color: var(--amber-deep);
+  color: var(--accent-deep);
   letter-spacing: 0.06em;
 }
 .surface-employers .step .no::before {
@@ -631,7 +594,7 @@ html {
   border: 1px solid var(--line-strong);
   border-radius: 6px;
   background:
-    radial-gradient(circle at 50% 50%, var(--amber) 3px, transparent 3px);
+    radial-gradient(circle at 50% 50%, var(--accent) 3px, transparent 3px);
 }
 .surface-employers .step h3 {
   font-size: 19px;
@@ -675,7 +638,7 @@ html {
 .surface-employers .showcase li .tick {
   flex: none;
   font-family: var(--mono);
-  color: var(--good);
+  color: var(--forest);
   font-weight: 600;
   margin-top: 1px;
 }
@@ -748,18 +711,18 @@ html {
   margin-bottom: 6px;
 }
 .surface-employers .ar-cell.fit {
-  border-color: var(--good-soft);
-  background: var(--good-soft);
+  border-color: var(--forest-soft);
+  background: var(--forest-soft);
 }
 .surface-employers .ar-cell.fit .k {
-  color: var(--good);
+  color: var(--forest);
 }
 .surface-employers .ar-cell.caveat {
-  border-color: var(--amber-wash);
-  background: var(--amber-wash);
+  border-color: var(--accent-wash);
+  background: var(--accent-wash);
 }
 .surface-employers .ar-cell.caveat .k {
-  color: var(--amber-deep);
+  color: var(--accent-deep);
 }
 .surface-employers .ar-cell p {
   margin: 0;
@@ -781,7 +744,7 @@ html {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--good);
+  background: var(--forest);
 }
 
 /* ---- verified trust ----------------------------------------------------- */
@@ -816,9 +779,9 @@ html {
   letter-spacing: 0.06em;
   padding: 6px 12px;
   border-radius: 999px;
-  background: var(--good-soft);
-  color: var(--good);
-  border: 1px solid var(--good-soft);
+  background: var(--forest-soft);
+  color: var(--forest);
+  border: 1px solid var(--forest-soft);
 }
 .surface-employers .verified-badge .chk {
   display: grid;
@@ -826,7 +789,7 @@ html {
   width: 15px;
   height: 15px;
   border-radius: 50%;
-  background: var(--good);
+  background: var(--forest);
   color: #fff;
   font-size: 9px;
 }
@@ -864,7 +827,7 @@ html {
   border-top: none;
 }
 .surface-employers .audit-log .row .ts {
-  color: var(--amber);
+  color: var(--accent);
 }
 .surface-employers .audit-log .row .who {
   color: rgba(243, 244, 241, 0.6);
@@ -894,8 +857,8 @@ html {
   box-shadow: 0 30px 50px -40px rgba(14, 27, 42, 0.5);
 }
 .surface-employers .plan.featured {
-  border-color: var(--amber);
-  box-shadow: 0 0 0 1px var(--amber);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 .surface-employers .plan .tier {
   font-family: var(--mono);
@@ -908,19 +871,19 @@ html {
   gap: 10px;
 }
 .surface-employers .plan.featured .tier {
-  color: var(--amber-deep);
+  color: var(--accent-deep);
 }
 .surface-employers .plan .pill {
   font-size: 10px;
   letter-spacing: 0.1em;
-  background: var(--amber);
+  background: var(--accent);
   color: var(--ink);
   padding: 2px 8px;
   border-radius: 999px;
 }
 .surface-employers .plan .price {
   margin: 16px 0 4px;
-  font-family: var(--display);
+  font-family: var(--serif);
   font-weight: 800;
   font-size: 38px;
   letter-spacing: -0.03em;
@@ -957,7 +920,7 @@ html {
 }
 .surface-employers .plan ul li .mk {
   font-family: var(--mono);
-  color: var(--slate);
+  color: var(--brand-blue);
   font-weight: 600;
   flex: none;
 }
@@ -987,7 +950,7 @@ html {
   border-bottom: 1px solid var(--line);
 }
 .surface-employers .faq dt {
-  font-family: var(--display);
+  font-family: var(--serif);
   font-weight: 700;
   font-size: 19px;
   letter-spacing: -0.01em;
@@ -999,7 +962,7 @@ html {
 .surface-employers .faq dt .q {
   font-family: var(--mono);
   font-size: 12px;
-  color: var(--amber-deep);
+  color: var(--accent-deep);
   font-weight: 600;
 }
 .surface-employers .faq dd {
@@ -1149,8 +1112,8 @@ html {
   border-radius: 9px;
   display: grid;
   place-items: center;
-  background: var(--slate-soft);
-  color: var(--slate);
+  background: var(--brand-blue-tint);
+  color: var(--brand-blue);
   font-family: var(--mono);
   font-weight: 600;
   font-size: 14px;
@@ -1186,7 +1149,7 @@ html {
   font-family: var(--mono);
   font-weight: 600;
   font-size: 14px;
-  color: var(--amber-deep);
+  color: var(--accent-deep);
 }
 .surface-employers .vstep .vno::before {
   content: counter(vstep, decimal-leading-zero);

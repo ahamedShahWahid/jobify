@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { CONSOLE_URL } from "../EmployersRoutes";
+import { ThemeToggle } from "../../../shared/theme/ThemeToggle";
 
 // The brand lockup (mark + JOBIFY + "Job will find you") lives in the SVG asset;
 // alt text carries the wordmark + punchline for a11y. The Link's aria-label stays
@@ -36,6 +37,7 @@ export function Masthead({ onLanding = false }: { onLanding?: boolean }) {
           )}
         </nav>
         <div className="mast-cta">
+          <ThemeToggle />
           <a
             className="btn btn-primary btn-sm"
             href={CONSOLE_URL}
