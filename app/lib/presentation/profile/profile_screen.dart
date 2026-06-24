@@ -12,6 +12,7 @@ import 'package:jobify_app/presentation/profile/package_info_provider.dart';
 import 'package:jobify_app/presentation/profile/sign_out_controller.dart';
 import 'package:jobify_app/presentation/routing/routes.dart';
 import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/theme/theme_mode_controller.dart';
 import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -115,6 +116,10 @@ class ProfileScreen extends ConsumerWidget {
               subtitle: const Text('Preferences, export, delete'),
               onTap: () => context.go(Routes.privacy),
             ),
+            const SizedBox(height: JobifySpacing.xl),
+            Text('Appearance', style: theme.textTheme.titleMedium),
+            const SizedBox(height: JobifySpacing.sm),
+            _AppearanceSelector(),
             const SizedBox(height: JobifySpacing.xxl),
             OutlinedButton(
               onPressed: signOut.isLoading
@@ -164,6 +169,35 @@ class ProfileScreen extends ConsumerWidget {
     if (ok ?? false) {
       await ref.read(signOutControllerProvider.notifier).submit();
     }
+  }
+}
+
+class _AppearanceSelector extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentMode = ref.watch(themeModeControllerProvider);
+    return SegmentedButton<ThemeMode>(
+      segments: const [
+        ButtonSegment(
+          value: ThemeMode.system,
+          label: Text('System'),
+          icon: Icon(Icons.brightness_auto_outlined),
+        ),
+        ButtonSegment(
+          value: ThemeMode.light,
+          label: Text('Light'),
+          icon: Icon(Icons.light_mode_outlined),
+        ),
+        ButtonSegment(
+          value: ThemeMode.dark,
+          label: Text('Dark'),
+          icon: Icon(Icons.dark_mode_outlined),
+        ),
+      ],
+      selected: {currentMode},
+      onSelectionChanged: (selection) =>
+          ref.read(themeModeControllerProvider.notifier).set(selection.first),
+    );
   }
 }
 

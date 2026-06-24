@@ -30,7 +30,7 @@ class JobifyScoreBadge extends StatelessWidget {
       child: Text(
         '$percent%',
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: JobifyColors.neutral0,
+              color: Colors.white,
             ),
       ),
     );
