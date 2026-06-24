@@ -1,9 +1,9 @@
 /* ==========================================================================
    JOBIFY · FOR EMPLOYERS — recruiter acquisition surface
-   Aesthetic: "engineering prospectus / technical blueprint"
-   Cool structured paper · deep navy ink · one signal-amber accent ·
-   slate-blue for data · hairline drafting grid everywhere.
-   Archivo (heavy display) · IBM Plex Sans (body) · IBM Plex Mono (data/labels)
+   Aesthetic: "warm placement prospectus / considered craft"
+   Warm paper · warm ink · persimmon accent · forest "verified" ·
+   hairline grid everywhere.
+   Fraunces (display serif) · Hanken Grotesk (body) · JetBrains Mono (data/labels)
    ========================================================================== */
 
 .surface-employers {
@@ -241,7 +241,7 @@ html {
   box-shadow: 0 1px 0 rgba(14, 27, 42, 0.4);
 }
 .surface-employers .btn-primary:hover {
-  background: #07131f;
+  background: var(--ink-2);
 }
 .surface-employers .btn-amber {
   background: var(--accent);
@@ -526,7 +526,7 @@ html {
 }
 .surface-employers .band .stat {
   padding: 8px clamp(16px, 3vw, 36px);
-  border-left: 1px solid rgba(243, 244, 241, 0.14);
+  border-left: 1px solid var(--line-faint);
 }
 .surface-employers .band .stat:first-child {
   border-left: none;
@@ -551,7 +551,7 @@ html {
 .surface-employers .band .stat p {
   margin: 8px 0 0;
   font-size: 14px;
-  color: rgba(243, 244, 241, 0.66);
+  color: color-mix(in srgb, var(--paper) 66%, transparent);
   max-width: 30ch;
 }
 
@@ -790,7 +790,7 @@ html {
   height: 15px;
   border-radius: 50%;
   background: var(--forest);
-  color: #fff;
+  color: var(--paper);
   font-size: 9px;
 }
 .surface-employers .trust-card h3 {
@@ -804,11 +804,11 @@ html {
   color: var(--ink-soft);
 }
 .surface-employers .trust-card.dark p {
-  color: rgba(243, 244, 241, 0.72);
+  color: color-mix(in srgb, var(--paper) 72%, transparent);
 }
 .surface-employers .audit-log {
   margin-top: 20px;
-  border: 1px solid rgba(243, 244, 241, 0.16);
+  border: 1px solid var(--line);
   border-radius: 9px;
   overflow: hidden;
   font-family: var(--mono);
@@ -819,8 +819,8 @@ html {
   grid-template-columns: auto 1fr auto;
   gap: 12px;
   padding: 9px 13px;
-  border-top: 1px solid rgba(243, 244, 241, 0.1);
-  color: rgba(243, 244, 241, 0.82);
+  border-top: 1px solid var(--line-faint);
+  color: color-mix(in srgb, var(--paper) 82%, transparent);
   align-items: center;
 }
 .surface-employers .audit-log .row:first-child {
@@ -830,7 +830,7 @@ html {
   color: var(--accent);
 }
 .surface-employers .audit-log .row .who {
-  color: rgba(243, 244, 241, 0.6);
+  color: color-mix(in srgb, var(--paper) 60%, transparent);
   text-align: right;
 }
 
@@ -991,8 +991,8 @@ html {
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(243, 244, 241, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(243, 244, 241, 0.05) 1px, transparent 1px);
+    linear-gradient(var(--line-faint) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-faint) 1px, transparent 1px);
   background-size: 36px 36px;
   mask-image: radial-gradient(ellipse 70% 90% at 50% 0%, black, transparent);
 }
@@ -1006,7 +1006,7 @@ html {
   letter-spacing: -0.03em;
 }
 .surface-employers .cta .deck {
-  color: rgba(243, 244, 241, 0.74);
+  color: color-mix(in srgb, var(--paper) 74%, transparent);
   margin: 18px auto 30px;
   max-width: 48ch;
 }
@@ -1279,7 +1279,7 @@ html {
   .surface-employers .band .stat {
     border-left: none;
     padding-left: 0;
-    border-top: 1px solid rgba(243, 244, 241, 0.14);
+    border-top: 1px solid var(--line-faint);
     padding-top: 18px;
   }
   .surface-employers .band .stat:first-child {
