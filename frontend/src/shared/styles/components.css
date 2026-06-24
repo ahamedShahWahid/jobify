@@ -1,32 +1,85 @@
 /* frontend/src/shared/styles/components.css
-   Shared component primitives on semantic tokens — render correctly in both
-   themes. Surfaces converge onto these in Task 5. */
+   Shared component primitives — built 100% on semantic tokens so every
+   primitive renders correctly in BOTH themes without any per-surface
+   override. Surfaces may keep their own scoped variants; these are the
+   canonical baseline, not a forced migration. */
+
+/* ─── Button ─────────────────────────────────────────────────────────────── */
 
 .ds-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.5em;
   font-family: var(--sans);
+  font-size: 0.9rem;
   font-weight: 600;
+  line-height: 1;
   border: 1px solid var(--line-strong);
   background: var(--panel);
   color: var(--ink);
   border-radius: 2px;
   padding: 0.6em 1.1em;
   cursor: pointer;
-  transition: background-color 0.15s var(--ease), border-color 0.15s var(--ease);
+  transition:
+    background-color 0.15s var(--ease),
+    border-color 0.15s var(--ease),
+    color 0.15s var(--ease);
 }
 .ds-btn:hover {
   background: var(--paper-3);
 }
+.ds-btn:focus-visible {
+  outline: 2px solid var(--brand-blue);
+  outline-offset: 2px;
+}
+.ds-btn:disabled,
+.ds-btn[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Filled accent — the primary call-to-action */
 .ds-btn-primary {
   background: var(--accent);
   border-color: var(--accent-deep);
   color: var(--accent-ink);
 }
-.ds-btn-primary:hover {
+.ds-btn-primary:hover:not(:disabled) {
   background: var(--accent-deep);
+  border-color: var(--accent-deep);
 }
+
+/* Danger — destructive actions (delete, revoke) */
+.ds-btn-danger {
+  background: transparent;
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.ds-btn-danger:hover:not(:disabled) {
+  background: var(--accent-wash);
+  border-color: var(--danger);
+}
+
+/* Ghost — tertiary / icon-adjacent */
+.ds-btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ink-soft);
+}
+.ds-btn-ghost:hover:not(:disabled) {
+  background: var(--paper-2);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+/* Small size modifier */
+.ds-btn-sm {
+  font-size: 0.78rem;
+  padding: 0.45em 0.85em;
+}
+
+/* ─── Card ────────────────────────────────────────────────────────────────── */
 
 .ds-card {
   background: var(--panel);
@@ -35,28 +88,42 @@
   box-shadow: var(--shadow);
 }
 
+/* ─── Input / Textarea / Select ──────────────────────────────────────────── */
+
 .ds-input {
   font-family: var(--sans);
   font-size: 1rem;
+  line-height: 1.4;
   color: var(--ink);
   background: var(--paper);
   border: 1px solid var(--line-strong);
   border-radius: 2px;
   padding: 0.55em 0.75em;
+  transition: border-color 0.15s var(--ease);
 }
 .ds-input::placeholder {
   color: var(--ink-faint);
 }
+.ds-input:focus,
 .ds-input:focus-visible {
   outline: 2px solid var(--brand-blue);
   outline-offset: 1px;
+  border-color: var(--brand-blue);
 }
+.ds-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--paper-2);
+}
+
+/* ─── Badge / Status chip ────────────────────────────────────────────────── */
 
 .ds-badge {
   display: inline-flex;
   align-items: center;
   font-family: var(--mono);
   font-size: 0.72rem;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--ink-soft);
@@ -65,6 +132,30 @@
   border-radius: 2px;
   padding: 0.15em 0.5em;
 }
+
+/* Semantic badge tints */
+.ds-badge-ok {
+  color: var(--ok);
+  background: var(--forest-soft);
+  border-color: var(--ok);
+}
+.ds-badge-warn {
+  color: var(--gold);
+  background: transparent;
+  border-color: var(--gold);
+}
+.ds-badge-danger {
+  color: var(--danger);
+  background: var(--accent-wash);
+  border-color: var(--danger);
+}
+.ds-badge-accent {
+  color: var(--accent);
+  background: var(--accent-wash);
+  border-color: var(--accent);
+}
+
+/* ─── Theme toggle button ────────────────────────────────────────────────── */
 
 .ds-theme-toggle {
   display: inline-flex;
@@ -77,9 +168,15 @@
   border: 1px solid var(--line);
   border-radius: 2px;
   cursor: pointer;
-  transition: color 0.15s var(--ease), border-color 0.15s var(--ease);
+  transition:
+    color 0.15s var(--ease),
+    border-color 0.15s var(--ease);
 }
 .ds-theme-toggle:hover {
   color: var(--accent);
   border-color: var(--line-strong);
+}
+.ds-theme-toggle:focus-visible {
+  outline: 2px solid var(--brand-blue);
+  outline-offset: 2px;
 }
