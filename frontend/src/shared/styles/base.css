@@ -1,0 +1,28 @@
+/* frontend/src/shared/styles/base.css
+   Global reset + base typography. Body colour/background come from tokens so
+   they flip with the theme. Surfaces may override font-size/line-height on
+   their .surface-* wrapper (e.g. console runs denser). */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.6;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100dvh;
+  transition: background-color 0.2s var(--ease), color 0.2s var(--ease);
+}

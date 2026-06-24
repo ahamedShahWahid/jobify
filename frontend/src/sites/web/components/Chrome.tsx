@@ -1,5 +1,6 @@
 import { NavLink, Link } from "react-router-dom";
 import type { ReactNode } from "react";
+import { ThemeToggle } from "../../../shared/theme/ThemeToggle";
 
 // The brand lockup (mark + JOBIFY + "Job will find you") lives in the SVG asset;
 // alt text carries the wordmark + punchline for a11y.
@@ -35,6 +36,7 @@ export function Masthead() {
           <Link to="/explore" className="btn primary sm nav-cta">
             Open my feed →
           </Link>
+          <ThemeToggle />
         </nav>
       </div>
     </header>

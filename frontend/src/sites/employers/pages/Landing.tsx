@@ -230,7 +230,7 @@ export function Landing() {
               </p>
             </div>
             <div className="trust-card dark rise d2">
-              <span className="label" style={{ color: "var(--amber)" }}>
+              <span className="label" style={{ color: "var(--accent)" }}>
                 Append-only audit
               </span>
               <h3 style={{ color: "var(--paper)" }}>Every résumé view is logged.</h3>
@@ -409,7 +409,7 @@ export function Landing() {
       <section className="cta">
         <div className="wrap">
           <div className="panel">
-            <p className="label" style={{ color: "var(--amber)" }}>
+            <p className="label" style={{ color: "var(--accent)" }}>
               Start hiring on signal
             </p>
             <h2>Read reasons, not résumé piles.</h2>

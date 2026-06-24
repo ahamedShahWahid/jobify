@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import type { Area } from "../session";
 import { areasForRole, useSession, useSessionStore } from "../session";
+import { ThemeToggle } from "../../../shared/theme/ThemeToggle";
 import { UtcClock } from "./bits";
 
 const NAV: Array<{
@@ -55,6 +56,9 @@ export function Shell() {
           </div>
           <div className="k" style={{ marginTop: 4 }}>
             internal operations
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <ThemeToggle />
           </div>
         </div>
 

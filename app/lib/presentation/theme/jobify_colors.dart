@@ -1,46 +1,89 @@
 import 'package:flutter/material.dart';
 
-/// Jobify color tokens.
+/// Jobify warm-paper color tokens — light and dark variants.
 ///
-/// Placeholder values for v0 — replace when a designer enters the loop.
-/// Bands map to ColorScheme slots in buildTheme.
+/// Each semantic role has a `*Light` and `*Dark` constant. `buildTheme`
+/// picks the appropriate pair via its isDark branch.
 abstract final class JobifyColors {
-  // Brand
-  static const indigo50 = Color(0xFFEEF0FF);
-  static const indigo100 = Color(0xFFDDE2FF);
-  static const indigo200 = Color(0xFFBAC4FF);
-  static const indigo300 = Color(0xFF96A6FF);
-  static const indigo400 = Color(0xFF7388FA);
-  static const indigo500 = Color(0xFF5067E8);
-  static const indigo600 = Color(0xFF3D52C6);
-  static const indigo700 = Color(0xFF2E3EA0);
-  static const indigo800 = Color(0xFF1F2C7A);
-  static const indigo900 = Color(0xFF111A55);
+  // ── Paper surfaces ──────────────────────────────────────────────────────
+  static const paperLight = Color(0xFFF4EFE3);
+  static const paperDark = Color(0xFF0D110E);
 
-  // Neutrals
-  static const neutral0 = Color(0xFFFFFFFF);
-  static const neutral50 = Color(0xFFF7F8FA);
-  static const neutral100 = Color(0xFFEEEFF3);
-  static const neutral200 = Color(0xFFD9DCE3);
-  static const neutral300 = Color(0xFFB7BCC8);
-  static const neutral400 = Color(0xFF8A91A1);
-  static const neutral500 = Color(0xFF626878);
-  static const neutral600 = Color(0xFF464B58);
-  static const neutral700 = Color(0xFF2E323C);
-  static const neutral800 = Color(0xFF1B1E26);
-  static const neutral900 = Color(0xFF0E1015);
+  static const paper2Light = Color(0xFFECE4D3);
+  static const paper2Dark = Color(0xFF080B09);
 
-  // Score bands — product semantics, not chrome.
+  static const paper3Light = Color(0xFFE4DAC4);
+  static const paper3Dark = Color(0xFF1A201A);
+
+  static const panelLight = Color(0xFFFAF7EF);
+  static const panelDark = Color(0xFF121712);
+
+  // ── Ink (text / icon) ───────────────────────────────────────────────────
+  static const inkLight = Color(0xFF221C16);
+  static const inkDark = Color(0xFFE9E4D6);
+
+  static const inkSoftLight = Color(0xFF6C6354);
+  static const inkSoftDark = Color(0xFFB7B2A3);
+
+  static const inkFaintLight = Color(0xFF9B917E);
+  static const inkFaintDark = Color(0xFF6F7868);
+
+  // ── Lines / dividers ────────────────────────────────────────────────────
+  static const lineLight = Color(0xFFD9CFB9);
+  static const lineDark = Color(0xFF232B23);
+
+  static const lineStrongLight = Color(0xFFC4B89C);
+  static const lineStrongDark = Color(0xFF34402F);
+
+  // ── Brand blue ──────────────────────────────────────────────────────────
+  static const brandBlueLight = Color(0xFF0048A8);
+  static const brandBlueDark = Color(0xFF4F8CFF);
+
+  static const brandBlueDeepLight = Color(0xFF003C8F);
+  static const brandBlueDeepDark = Color(0xFF2F6FE0);
+
+  static const brandBlueTintLight = Color(0xFFE1ECF8);
+  static const brandBlueTintDark = Color(0xFF16243F);
+
+  // ── Accent (terracotta / coral) ─────────────────────────────────────────
+  static const accentLight = Color(0xFFD8472A);
+  static const accentDark = Color(0xFFFF6A48);
+
+  static const accentDeepLight = Color(0xFFB23A20);
+  static const accentDeepDark = Color(0xFFD8472A);
+
+  static const accentWashLight = Color(0xFFF3D9CF);
+  static const accentWashDark = Color(0xFF3A1C14);
+
+  static const accentInkLight = Color(0xFFFFFFFF);
+  static const accentInkDark = Color(0xFF1A0F0A);
+
+  // ── Forest (success / positive) ─────────────────────────────────────────
+  static const forestLight = Color(0xFF1F4034);
+  static const forestDark = Color(0xFF6FDC8C);
+
+  static const forestSoftLight = Color(0xFFCFDCD2);
+  static const forestSoftDark = Color(0xFF143020);
+
+  // ── Gold ────────────────────────────────────────────────────────────────
+  static const goldLight = Color(0xFFB8842F);
+  static const goldDark = Color(0xFFFFB000);
+
+  // ── Danger / error ──────────────────────────────────────────────────────
+  static const dangerLight = Color(0xFFB23A20);
+  static const dangerDark = Color(0xFFFF5D49);
+
+  // ── Semantic aliases (brightness-agnostic, used in build_theme) ─────────
+  static const error = dangerLight; // light fallback; build_theme overrides
+  static const onError = Color(0xFFFFFFFF);
+
+  // ── Score bands — product semantics, not chrome ─────────────────────────
   /// `total_score < 0.65`
   static const scoreLow = Color(0xFFCF8A1D);
 
   /// `0.65 <= total_score < 0.80`
-  static const scoreMid = Color(0xFF3D52C6);
+  static const scoreMid = Color(0xFF0048A8); // brand blue for consistency
 
   /// `total_score >= 0.80`
   static const scoreHigh = Color(0xFF1E8A4F);
-
-  // Semantic
-  static const error = Color(0xFFB3261E);
-  static const onError = Color(0xFFFFFFFF);
 }

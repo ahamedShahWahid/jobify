@@ -6,36 +6,6 @@
    ========================================================================== */
 
 .surface-web {
-  --paper: #f4efe3;
-  --paper-2: #ece4d3; /* recessed surface */
-  --paper-3: #e4dac4; /* deeper / hover */
-  --ink: #221c16;
-  --ink-soft: #6c6354;
-  --ink-faint: #9b917e;
-  --line: #d9cfb9;
-  --line-strong: #c4b89c;
-
-  /* Jobify Blue — the cross-surface brand colour (the logo). Sits above each
-     property's own accent; the styleguide documents it as --brand-blue. */
-  --brand-blue: #0048a8;
-  --brand-blue-deep: #003c8f;
-  --brand-blue-tint: #e1ecf8;
-
-  --accent: #d8472a; /* persimmon — the signature */
-  --accent-deep: #b23a20;
-  --accent-wash: #f3d9cf;
-  --forest: #1f4034; /* "verified" / trust */
-  --forest-soft: #cfdcd2;
-  --gold: #b8842f;
-
-  --shadow: 18px 22px 0 -8px rgba(34, 28, 22, 0.08);
-
-  --serif: "Fraunces", Georgia, serif;
-  --sans: "Hanken Grotesk", system-ui, sans-serif;
-  --mono: "JetBrains Mono", monospace;
-
-  --maxw: 1180px;
-
   margin: 0;
   background: var(--paper);
   color: var(--ink);

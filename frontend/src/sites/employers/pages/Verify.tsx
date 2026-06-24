@@ -159,7 +159,7 @@ export function Verify() {
               </p>
             </div>
             <div className="trust-card dark rise d2">
-              <span className="label" style={{ color: "var(--amber)" }}>
+              <span className="label" style={{ color: "var(--accent)" }}>
                 Disclosure you can stand behind
               </span>
               <h3 style={{ color: "var(--paper)" }}>Audited from the first view.</h3>
@@ -177,7 +177,7 @@ export function Verify() {
       <section className="cta">
         <div className="wrap">
           <div className="panel">
-            <p className="label" style={{ color: "var(--amber)" }}>
+            <p className="label" style={{ color: "var(--accent)" }}>
               Ready when you are
             </p>
             <h2>Get verified in the console.</h2>

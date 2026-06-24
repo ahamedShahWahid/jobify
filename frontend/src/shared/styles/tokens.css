@@ -1,0 +1,93 @@
+/* frontend/src/shared/styles/tokens.css
+   The single source of truth for Jobify's design tokens.
+   Canon = the web surface's warm-editorial palette. Light on :root,
+   dark under :root[data-theme="dark"]. Surfaces consume these names;
+   they must NOT redefine them on .surface-* anymore. */
+
+:root {
+  color-scheme: light;
+
+  /* surfaces / backgrounds */
+  --paper: #f4efe3;     /* page background */
+  --paper-2: #ece4d3;   /* recessed surface */
+  --paper-3: #e4dac4;   /* deeper / hover */
+  --panel: #faf7ef;     /* raised card */
+
+  /* ink / text */
+  --ink: #221c16;
+  --ink-2: #3b362c;     /* secondary ink */
+  --ink-soft: #6c6354;
+  --ink-faint: #9b917e;
+
+  /* lines */
+  --line: #d9cfb9;
+  --line-strong: #c4b89c;
+  --line-faint: rgba(34, 28, 22, 0.06);
+
+  /* brand blue (the logo) */
+  --brand-blue: #0048a8;
+  --brand-blue-deep: #003c8f;
+  --brand-blue-tint: #e1ecf8;
+  --brand-blue-bright: #0048a8;  /* on-dark-legible step; same as blue in light */
+
+  /* accent — persimmon, the signature */
+  --accent: #d8472a;
+  --accent-deep: #b23a20;
+  --accent-wash: #f3d9cf;
+  --accent-ink: #ffffff;         /* text on an --accent fill */
+
+  /* status */
+  --forest: #1f4034;             /* verified / trust */
+  --forest-soft: #cfdcd2;
+  --gold: #b8842f;               /* warn */
+  --danger: #b23a20;
+  --danger-wash: #f3dcd4;        /* destructive tint */
+  --ok: #1f4034;
+
+  --shadow: 18px 22px 0 -8px rgba(34, 28, 22, 0.08);
+
+  /* type */
+  --serif: "Fraunces", Georgia, serif;
+  --sans: "Hanken Grotesk", system-ui, sans-serif;
+  --mono: "JetBrains Mono", monospace;
+
+  --maxw: 1180px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --paper: #0d110e;
+  --paper-2: #080b09;
+  --paper-3: #1a201a;
+  --panel: #121712;
+
+  --ink: #e9e4d6;
+  --ink-2: #cdc7b8;
+  --ink-soft: #b7b2a3;
+  --ink-faint: #6f7868;
+
+  --line: #232b23;
+  --line-strong: #34402f;
+  --line-faint: rgba(233, 228, 214, 0.06);
+
+  --brand-blue: #4f8cff;
+  --brand-blue-deep: #2f6fe0;
+  --brand-blue-tint: rgba(79, 140, 255, 0.16);
+  --brand-blue-bright: #4f8cff;
+
+  --accent: #ff6a48;
+  --accent-deep: #d8472a;
+  --accent-wash: rgba(255, 106, 72, 0.14);
+  --accent-ink: #1a0f0a;
+
+  --forest: #6fdc8c;
+  --forest-soft: rgba(111, 220, 140, 0.16);
+  --gold: #ffb000;
+  --danger: #ff5d49;
+  --danger-wash: rgba(255, 93, 73, 0.14);
+  --ok: #6fdc8c;
+
+  --shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.6);
+}
