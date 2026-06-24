@@ -5,6 +5,7 @@ import { GoogleButton } from "../auth/GoogleButton";
 import { ErrorNotice, Field, UtcClock } from "../components/bits";
 import { API_BASE_URL, GOOGLE_CLIENT_ID } from "../env";
 import { landingFor, useSessionStore } from "../session";
+import { ThemeToggle } from "../../../shared/theme/ThemeToggle";
 
 export function SignIn() {
   const { connectLive, connectGoogle, connectDemo, expired } = useSessionStore();
@@ -59,7 +60,10 @@ export function SignIn() {
       <div className="gate-left">
         <div className="spread">
           <span className="k">jobify internal · restricted</span>
-          <UtcClock />
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <ThemeToggle />
+            <UtcClock />
+          </div>
         </div>
 
         <img src="/jobify-mark.svg" alt="Jobify" className="gate-mark rise" />

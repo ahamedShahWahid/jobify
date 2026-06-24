@@ -155,28 +155,36 @@
   border-color: var(--accent);
 }
 
-/* ─── Theme toggle button ────────────────────────────────────────────────── */
-
-.ds-theme-toggle {
+/* ─── Theme switch (3-way segmented: light / dark / system) ──────────────── */
+.ds-theme-switch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--paper-2);
+}
+.ds-theme-switch-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.1em;
-  height: 2.1em;
-  color: var(--ink-soft);
+  width: 1.9em;
+  height: 1.9em;
+  border: 0;
   background: transparent;
-  border: 1px solid var(--line);
+  color: var(--ink-faint);
   border-radius: 2px;
   cursor: pointer;
-  transition:
-    color 0.15s var(--ease),
-    border-color 0.15s var(--ease);
+  transition: color 0.15s var(--ease), background-color 0.15s var(--ease);
 }
-.ds-theme-toggle:hover {
+.ds-theme-switch-btn:hover {
+  color: var(--ink-soft);
+}
+.ds-theme-switch-btn.is-active {
+  background: var(--panel);
   color: var(--accent);
-  border-color: var(--line-strong);
 }
-.ds-theme-toggle:focus-visible {
+.ds-theme-switch-btn:focus-visible {
   outline: 2px solid var(--brand-blue);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
