@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { errorMessage } from "../api/client";
 import type { ConsentRead } from "../api/types";
+import { istDate } from "../../../shared/format";
 import { Masthead } from "../components/Chrome";
 import { ctcBand, ErrorNotice } from "../components/bits";
 import { useSession, useSessionStore } from "../session";
@@ -61,10 +62,7 @@ const RESERVED_SCOPES = [
 ];
 
 function fmtWhen(iso: string): string {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime())
-    ? "—"
-    : d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  return istDate(iso);
 }
 
 function num(s: string | null): number | null {

@@ -74,8 +74,8 @@ export function Landing() {
                 </div>
               </div>
               <div className="matchcard-score num">
-                {score.toFixed(2)}
                 <sub>FIT</sub>
+                {score.toFixed(2)}
               </div>
             </div>
             <div className="matchcard-body">
@@ -135,7 +135,7 @@ export function Landing() {
           </div>
           <div className="steps">
             <div className="step rise">
-              <div className="n">1</div>
+              <div className="n">Step 1 of 3</div>
               <h3>Upload your résumé</h3>
               <p>
                 PDF or DOCX, once. We extract your skills, experience, and the shape of what you've
@@ -143,7 +143,7 @@ export function Landing() {
               </p>
             </div>
             <div className="step rise d1">
-              <div className="n">2</div>
+              <div className="n">Step 2 of 3</div>
               <h3>We read &amp; embed it</h3>
               <p>
                 Your profile becomes a vector. Open roles are scored against it on skills,
@@ -151,7 +151,7 @@ export function Landing() {
               </p>
             </div>
             <div className="step rise d2">
-              <div className="n">3</div>
+              <div className="n">Step 3 of 3</div>
               <h3>Matches surface — with a reason</h3>
               <p>
                 Only roles above the bar appear in your feed, each with a one-line “why this fits”

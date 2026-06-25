@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { istClock } from "../../../shared/format";
 import { PublicLayout } from "../components/Chrome";
 
 interface Component {
@@ -24,7 +25,7 @@ function useClock(): string {
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
-  return now.toUTCString().replace("GMT", "UTC");
+  return istClock(now);
 }
 
 export function Trust() {

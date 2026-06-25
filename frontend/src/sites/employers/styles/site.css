@@ -108,11 +108,12 @@ html {
 .surface-employers h2,
 .surface-employers h3 {
   font-family: var(--serif);
+  font-optical-sizing: auto;
   color: var(--ink);
   letter-spacing: -0.02em;
-  line-height: 1.04;
+  line-height: 1.06;
   margin: 0;
-  font-weight: 800;
+  font-weight: 520;
 }
 
 .surface-employers .deck {
@@ -302,9 +303,9 @@ html {
   align-items: center;
 }
 .surface-employers .hero h1 {
-  font-size: clamp(40px, 7vw, 78px);
-  font-weight: 900;
-  letter-spacing: -0.035em;
+  font-size: clamp(40px, 6.6vw, 74px);
+  font-weight: 480;
+  letter-spacing: -0.025em;
 }
 .surface-employers .hero h1 .em {
   color: var(--ink);
@@ -348,9 +349,10 @@ html {
 }
 .surface-employers .hero-meta .big {
   font-family: var(--serif);
-  font-weight: 800;
+  font-optical-sizing: auto;
+  font-weight: 560;
   font-size: 26px;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
 }
 .surface-employers .hero-meta .lab {
   font-family: var(--mono);
@@ -496,7 +498,8 @@ html {
   display: block;
   height: 100%;
   border-radius: 3px;
-  background: linear-gradient(90deg, var(--brand-blue), var(--accent));
+  background: var(--ink);
+  opacity: 0.8;
 }
 .surface-employers .why {
   font-size: 12.5px;
@@ -537,16 +540,17 @@ html {
   font-size: 11px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: color-mix(in srgb, var(--paper) 58%, transparent);
   margin-bottom: 10px;
 }
 .surface-employers .band .stat .head {
   font-family: var(--serif);
-  font-weight: 800;
+  font-optical-sizing: auto;
+  font-weight: 540;
   font-size: clamp(20px, 2.4vw, 28px);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
   color: var(--paper);
-  line-height: 1.1;
+  line-height: 1.12;
 }
 .surface-employers .band .stat p {
   margin: 8px 0 0;
@@ -581,9 +585,10 @@ html {
 .surface-employers .step .no {
   font-family: var(--mono);
   font-weight: 600;
-  font-size: 13px;
-  color: var(--accent-deep);
-  letter-spacing: 0.06em;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
 }
 .surface-employers .step .no::before {
   content: "";
@@ -594,7 +599,7 @@ html {
   border: 1px solid var(--line-strong);
   border-radius: 6px;
   background:
-    radial-gradient(circle at 50% 50%, var(--accent) 3px, transparent 3px);
+    radial-gradient(circle at 50% 50%, var(--ink) 3px, transparent 3px);
 }
 .surface-employers .step h3 {
   font-size: 19px;
@@ -884,9 +889,10 @@ html {
 .surface-employers .plan .price {
   margin: 16px 0 4px;
   font-family: var(--serif);
-  font-weight: 800;
+  font-optical-sizing: auto;
+  font-weight: 540;
   font-size: 38px;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.025em;
   display: flex;
   align-items: baseline;
   gap: 6px;
@@ -1001,9 +1007,9 @@ html {
 }
 .surface-employers .cta h2 {
   color: var(--paper);
-  font-size: clamp(30px, 5vw, 52px);
-  font-weight: 900;
-  letter-spacing: -0.03em;
+  font-size: clamp(30px, 5vw, 50px);
+  font-weight: 480;
+  letter-spacing: -0.025em;
 }
 .surface-employers .cta .deck {
   color: color-mix(in srgb, var(--paper) 74%, transparent);
@@ -1073,9 +1079,9 @@ html {
   padding-bottom: clamp(36px, 5vw, 64px);
 }
 .surface-employers .verify-hero h1 {
-  font-size: clamp(34px, 6vw, 64px);
-  font-weight: 900;
-  letter-spacing: -0.03em;
+  font-size: clamp(34px, 5.6vw, 60px);
+  font-weight: 480;
+  letter-spacing: -0.025em;
   max-width: 16ch;
 }
 .surface-employers .back-link {

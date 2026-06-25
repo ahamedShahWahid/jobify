@@ -63,16 +63,32 @@ html {
   font-variant-numeric: tabular-nums;
 }
 
+/* Eyebrows are the machine's voice: mono, quiet. Default ink-soft — persimmon
+   is reserved for the caveat + the single thesis emphasis (the accent = meaning rule). */
 .surface-web .kicker {
   font-family: var(--mono);
   font-size: 11px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--accent-deep);
+  color: var(--ink-soft);
   font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+/* a short persimmon tick before the eyebrow — the one sanctioned hint of accent */
+.surface-web .kicker::before {
+  content: "";
+  width: 20px;
+  height: 1px;
+  background: var(--accent);
+  flex: none;
 }
 .surface-web .kicker.ink {
   color: var(--ink-soft);
+}
+.surface-web .kicker.bare::before {
+  display: none;
 }
 
 .surface-web .deck {
@@ -218,13 +234,15 @@ html {
   transform: translate(0, 0);
   box-shadow: 0 0 0 0 var(--ink);
 }
+/* primary action is ink, not accent — persimmon stays reserved for meaning
+   (the caveat + the one thesis emphasis). The arrow carries a hint of accent. */
 .surface-web .btn.primary {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--ink);
+  border-color: var(--ink);
   color: var(--paper);
 }
 .surface-web .btn.primary:hover {
-  box-shadow: 4px 4px 0 0 var(--accent-deep);
+  box-shadow: 4px 4px 0 0 var(--accent);
 }
 .surface-web .btn.ink {
   background: var(--ink);
@@ -288,10 +306,11 @@ html {
   color: var(--forest);
   background: var(--forest-soft);
 }
+/* a neutral emphasis tag (salary band etc.) — persimmon is NOT spent on non-caveats */
 .surface-web .tag.accent {
-  border-color: var(--accent);
-  color: var(--accent-deep);
-  background: var(--accent-wash);
+  border-color: var(--ink-soft);
+  color: var(--ink);
+  background: var(--paper-2);
 }
 .surface-web .tag.solid {
   background: var(--ink);
@@ -358,16 +377,18 @@ html {
 }
 .surface-web .hero h1 {
   font-family: var(--serif);
-  font-weight: 900;
-  font-size: clamp(46px, 8.5vw, 104px);
-  line-height: 0.92;
-  letter-spacing: -0.035em;
-  margin: 18px 0 22px;
+  font-optical-sizing: auto;
+  font-weight: 460;
+  font-size: clamp(46px, 7.6vw, 94px);
+  line-height: 0.98;
+  letter-spacing: -0.025em;
+  margin: 20px 0 22px;
 }
+/* the thesis word carries weight through the italic, not through colour */
 .surface-web .hero h1 em {
   font-style: italic;
-  font-weight: 400;
-  color: var(--accent);
+  font-weight: 500;
+  color: var(--ink);
 }
 .surface-web .hero h1 .line {
   display: block;
@@ -383,42 +404,52 @@ html {
   align-items: center;
 }
 
-/* the signature match card in the hero */
+/* ---- THE SIGNATURE: the Match Statement ----
+   Sentence dominant, score demoted to a mono receipt, persimmon only on the caveat. */
 .surface-web .matchcard {
-  border: 2px solid var(--ink);
-  background: var(--paper);
+  border: 1px solid var(--line);
+  background: var(--panel);
   box-shadow: var(--shadow);
   position: relative;
+  border-radius: 3px;
 }
 .surface-web .matchcard-top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
-  padding: 18px 20px 12px;
-  border-bottom: 1px solid var(--line);
+  padding: 20px 22px 14px;
 }
+/* the FIT number — deliberately a small mono stamp, the receipt not the headline */
 .surface-web .matchcard-score {
-  font-family: var(--serif);
-  font-weight: 900;
-  font-size: 62px;
-  line-height: 0.85;
-  letter-spacing: -0.04em;
-  color: var(--accent);
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  padding: 5px 9px;
+  text-align: right;
+  white-space: nowrap;
 }
 .surface-web .matchcard-score sub {
+  display: block;
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 500;
-  color: var(--ink-faint);
-  vertical-align: super;
-  letter-spacing: 0.1em;
+  color: var(--ink-soft);
+  vertical-align: baseline;
+  letter-spacing: 0.12em;
+  margin-bottom: 2px;
 }
 .surface-web .matchcard h3 {
   font-family: var(--serif);
-  font-weight: 600;
-  font-size: 22px;
-  line-height: 1.1;
+  font-weight: 560;
+  font-size: 21px;
+  line-height: 1.14;
+  letter-spacing: -0.01em;
   margin: 0 0 6px;
 }
 .surface-web .matchcard .where {
@@ -426,34 +457,45 @@ html {
   color: var(--ink-soft);
 }
 .surface-web .matchcard-body {
-  padding: 14px 20px 18px;
+  padding: 4px 22px 20px;
 }
+/* the reason — given the most weight: Fraunces italic, the human/editorial voice */
 .surface-web .explain {
-  border-left: 3px solid var(--accent);
-  padding: 2px 0 2px 14px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 .surface-web .explain .fit {
   font-family: var(--serif);
   font-style: italic;
-  font-size: 16px;
-  line-height: 1.4;
+  font-weight: 430;
+  font-size: 22px;
+  line-height: 1.32;
+  letter-spacing: -0.005em;
+  color: var(--ink);
 }
 .surface-web .explain .caveat {
-  font-size: 13px;
-  color: var(--ink-soft);
-  margin-top: 6px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--accent-deep);
+  margin-top: 12px;
 }
 .surface-web .explain .caveat::before {
-  content: "⌁ ";
-  color: var(--gold);
+  content: "↳ ";
+  color: var(--accent);
 }
 
-/* score breakdown bars */
+/* in dark, the deep persimmon goes muddy — use the brighter step */
+:root[data-theme="dark"] .surface-web .explain .caveat {
+  color: var(--accent);
+}
+
+/* score breakdown bars — the 4-dimension measure, divided off as the receipt */
 .surface-web .bars {
   display: grid;
   gap: 7px;
-  margin-top: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
 }
 .surface-web .bar-row {
   display: grid;
@@ -480,6 +522,13 @@ html {
 }
 .surface-web .bar-fill.acc {
   background: var(--accent);
+}
+/* the weakest dimension's label + value also pick up persimmon — accent = the caveat */
+.surface-web .bar-row:has(.bar-fill.acc) {
+  color: var(--accent-deep);
+}
+:root[data-theme="dark"] .surface-web .bar-row:has(.bar-fill.acc) {
+  color: var(--accent);
 }
 @keyframes grow {
   from {
@@ -547,15 +596,18 @@ html {
 }
 .surface-web .section-head h2 {
   font-family: var(--serif);
-  font-weight: 900;
-  font-size: clamp(28px, 4vw, 44px);
-  letter-spacing: -0.03em;
-  line-height: 1;
-  margin: 6px 0 0;
+  font-optical-sizing: auto;
+  font-weight: 500;
+  font-size: clamp(28px, 4vw, 42px);
+  letter-spacing: -0.022em;
+  line-height: 1.02;
+  margin: 8px 0 0;
 }
 .surface-web .section-head .no {
   font-family: var(--mono);
   font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--ink-faint);
 }
 
@@ -588,19 +640,32 @@ html {
     border-bottom: 0;
   }
 }
+/* a real sequence, so shown as a measured progression along a gauge — not a giant numeral */
 .surface-web .step .n {
-  font-family: var(--serif);
-  font-weight: 900;
-  font-size: 52px;
-  line-height: 1;
-  color: var(--accent);
-  letter-spacing: -0.04em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
 }
+.surface-web .step .n::before {
+  content: "";
+  height: 2px;
+  background: var(--ink);
+  display: inline-block;
+}
+.surface-web .step:nth-child(1) .n::before { width: 16px; }
+.surface-web .step:nth-child(2) .n::before { width: 38px; }
+.surface-web .step:nth-child(3) .n::before { width: 60px; }
 .surface-web .step h3 {
   font-family: var(--serif);
-  font-weight: 600;
-  font-size: 22px;
-  margin: 14px 0 8px;
+  font-weight: 560;
+  font-size: 20px;
+  margin: 16px 0 8px;
+  letter-spacing: -0.01em;
 }
 .surface-web .step p {
   margin: 0;
@@ -634,10 +699,11 @@ html {
 }
 .surface-web .split-col h3 {
   font-family: var(--serif);
-  font-weight: 900;
-  font-size: 30px;
-  margin: 8px 0 16px;
-  letter-spacing: -0.02em;
+  font-optical-sizing: auto;
+  font-weight: 540;
+  font-size: 28px;
+  margin: 10px 0 16px;
+  letter-spacing: -0.018em;
 }
 .surface-web .split-col ul {
   list-style: none;
@@ -653,9 +719,9 @@ html {
   font-size: 15px;
 }
 .surface-web .split-col li .mk {
-  font-family: var(--serif);
-  font-weight: 900;
-  color: var(--accent);
+  font-family: var(--mono);
+  font-weight: 500;
+  color: var(--ink-faint);
 }
 
 /* big quote / showcase */
@@ -685,13 +751,15 @@ html {
   letter-spacing: -0.01em;
   margin: 0;
 }
+/* the single sanctioned thesis emphasis — one accent moment on the climax line */
 .surface-web .showcase h2 b {
-  font-style: normal;
-  font-weight: 900;
+  font-style: italic;
+  font-weight: 560;
   color: var(--accent);
 }
 .surface-web .showcase .kicker {
-  color: var(--accent);
+  color: var(--paper);
+  opacity: 0.6;
 }
 
 /* ---- CTA band ----------------------------------------------------------- */
@@ -704,16 +772,17 @@ html {
 }
 .surface-web .cta-band h2 {
   font-family: var(--serif);
-  font-weight: 900;
-  font-size: clamp(32px, 6vw, 68px);
-  letter-spacing: -0.035em;
-  line-height: 0.96;
+  font-optical-sizing: auto;
+  font-weight: 480;
+  font-size: clamp(32px, 5.4vw, 60px);
+  letter-spacing: -0.025em;
+  line-height: 1;
   margin: 0 0 8px;
 }
 .surface-web .cta-band h2 em {
   font-style: italic;
-  font-weight: 400;
-  color: var(--accent);
+  font-weight: 520;
+  color: var(--ink);
 }
 
 /* ---- footer ------------------------------------------------------------- */
@@ -870,24 +939,31 @@ html {
   gap: 8px;
   flex-wrap: wrap;
 }
+/* the match score — a quiet mono receipt, not a billboard number (label sits on top) */
 .surface-web .score-stamp {
-  text-align: right;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  gap: 1px;
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  padding: 5px 9px;
 }
 .surface-web .score-stamp .v {
-  font-family: var(--serif);
-  font-weight: 900;
-  font-size: 34px;
-  line-height: 0.8;
-  letter-spacing: -0.04em;
-  color: var(--accent);
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--ink);
 }
 .surface-web .score-stamp .l {
   font-family: var(--mono);
   font-size: 9px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--ink-soft);
 }
 .surface-web .jobcard .meta {
   display: flex;
@@ -945,13 +1021,15 @@ html {
   align-items: baseline;
   gap: 12px;
 }
+/* the score anchors the aside but speaks in the machine's voice: mono, ink — not a persimmon billboard */
 .surface-web .aside-score .big {
-  font-family: var(--serif);
-  font-weight: 900;
-  font-size: 72px;
-  line-height: 0.8;
-  letter-spacing: -0.045em;
-  color: var(--accent);
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 40px;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
 }
 .surface-web .aside-section {
   padding: 18px 22px;

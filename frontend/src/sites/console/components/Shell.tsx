@@ -2,7 +2,7 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import type { Area } from "../session";
 import { areasForRole, useSession, useSessionStore } from "../session";
 import { ThemeToggle } from "../../../shared/theme/ThemeToggle";
-import { UtcClock } from "./bits";
+import { IstClock } from "./bits";
 
 const NAV: Array<{
   area: Area;
@@ -90,9 +90,18 @@ export function Shell() {
               {identity.role}
             </span>
           </div>
-          <button className="btn sm" onClick={signOut}>
-            Disconnect
-          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <NavLink
+              to="/console/settings"
+              className={({ isActive }) => `btn sm ghost${isActive ? " active" : ""}`}
+              style={{ flex: 1, justifyContent: "center" }}
+            >
+              Settings
+            </NavLink>
+            <button className="btn sm" onClick={signOut} style={{ flex: 1 }}>
+              Log out
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -101,7 +110,7 @@ export function Shell() {
           <span className="crumbs">
             console / <b>{crumb || "home"}</b>
           </span>
-          <UtcClock />
+          <IstClock />
         </header>
         <main className="content">
           <Outlet />
