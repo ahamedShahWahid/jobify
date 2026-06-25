@@ -12,6 +12,7 @@ import { Dashboard } from "./pages/recruiter/Dashboard";
 import { JobComposer } from "./pages/recruiter/JobComposer";
 import { Jobs } from "./pages/recruiter/Jobs";
 import { Team } from "./pages/recruiter/Team";
+import { Settings } from "./pages/Settings";
 import { SignIn } from "./pages/SignIn";
 import type { Area } from "./session";
 import { areasForRole, landingFor, SessionProvider, useSessionStore } from "./session";
@@ -82,6 +83,8 @@ export function ConsoleRoutes() {
           </RequireSession>
         }
       >
+        {/* Account & settings — any signed-in operator (admin or recruiter), not area-gated. */}
+        <Route path="/console/settings" element={<Settings />} />
         <Route
           path="/console/admin/analytics"
           element={

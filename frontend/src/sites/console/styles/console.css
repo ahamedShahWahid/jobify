@@ -139,11 +139,13 @@
 .surface-console .rail-brand .wordmark {
   font-family: var(--serif);
   font-weight: 600;
-  font-size: 19px;
-  letter-spacing: 0.01em;
+  font-size: 15px;
+  letter-spacing: 0;
   display: flex;
   align-items: baseline;
-  gap: 7px;
+  gap: 5px;
+  min-width: 0;
+  white-space: nowrap;
 }
 /* SignIn gate brand mark — solid J-person above the OPERATIONS CONSOLE title. */
 .surface-console .gate-mark {
