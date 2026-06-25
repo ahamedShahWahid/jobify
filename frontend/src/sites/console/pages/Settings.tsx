@@ -7,6 +7,7 @@ import { useSession, useSessionStore } from "../session";
 export function Settings() {
   const { identity, client } = useSession();
   const { signOut } = useSessionStore();
+  const isLive = client.mode === "live";
 
   return (
     <>
@@ -58,8 +59,8 @@ export function Settings() {
       <div className="panel" style={{ maxWidth: 620 }}>
         <div className="panel-head">
           <span className="k">Session</span>
-          <span className={`chip ${client.mode === "live" ? "ok" : ""}`}>
-            {client.mode === "live" ? "live api" : "demo data"}
+          <span className={`chip ${isLive ? "ok" : ""}`}>
+            {isLive ? "live api" : "demo data"}
           </span>
         </div>
         <div className="panel-body" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>

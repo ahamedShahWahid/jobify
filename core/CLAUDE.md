@@ -1,6 +1,6 @@
 # CLAUDE.md — core (`jobify` domain package)
 
-Load-bearing invariants for the FastAPI-free domain package (`core/src/jobify`): db models + Alembic migrations, settings, integrations (storage, parser, embeddings, email, scoring, explainer), consent/DSR/audit, eval, seeding CLI, the Celery bare app. Auto-loaded when working under `core/`. Repo overview + universal conventions are in the root `CLAUDE.md`.
+Load-bearing invariants for the FastAPI-free domain package (`core/src/jobify`): db models + Alembic migrations, settings, integrations (storage, parser, embeddings, email, scoring, explainer), consent/DSR/audit, eval, seeding CLI, the Celery bare app (`celery_app.py` only — task *implementations* live in the `worker` package's `tasks/`, NOT here). Auto-loaded when working under `core/`. Repo overview + universal conventions are in the root `CLAUDE.md`.
 
 > Each section names its paired design doc in `docs/superpowers/specs/` (the **why** + full reserved-slug tables). Below = rules that cause a bug if violated and aren't obvious from the code. Task-side invariants for the parse/embed/score Celery tasks live in `worker/CLAUDE.md`.
 
