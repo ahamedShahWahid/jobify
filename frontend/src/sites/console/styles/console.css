@@ -56,8 +56,9 @@
 
 .surface-console .display {
   font-family: var(--serif);
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-optical-sizing: auto;
+  font-weight: 540;
+  letter-spacing: -0.018em;
 }
 .surface-console .flavor {
   font-family: var(--serif);
@@ -137,7 +138,7 @@
 }
 .surface-console .rail-brand .wordmark {
   font-family: var(--serif);
-  font-weight: 800;
+  font-weight: 600;
   font-size: 19px;
   letter-spacing: 0.01em;
   display: flex;
@@ -251,10 +252,11 @@
 }
 .surface-console .headline h1 {
   font-family: var(--serif);
-  font-weight: 800;
-  font-size: clamp(30px, 4.4vw, 46px);
-  line-height: 1.02;
-  letter-spacing: -0.025em;
+  font-optical-sizing: auto;
+  font-weight: 540;
+  font-size: clamp(30px, 4.4vw, 44px);
+  line-height: 1.04;
+  letter-spacing: -0.02em;
   margin: 0 0 8px;
 }
 .surface-console .headline h1 .ghost {
@@ -453,12 +455,14 @@
 .surface-console .tile:hover {
   background: var(--panel);
 }
+/* dashboard stats speak in the machine's voice: mono, tabular */
 .surface-console .tile .value {
-  font-family: var(--serif);
-  font-weight: 800;
-  font-size: 40px;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 36px;
   line-height: 1;
   letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
   margin: 10px 0 2px;
 }
 .surface-console .tile .value.acc {
@@ -705,10 +709,11 @@
 }
 .surface-console .gate-title {
   font-family: var(--serif);
-  font-weight: 800;
-  font-size: clamp(54px, 9vw, 124px);
-  line-height: 0.92;
-  letter-spacing: -0.04em;
+  font-optical-sizing: auto;
+  font-weight: 480;
+  font-size: clamp(54px, 8.4vw, 112px);
+  line-height: 0.96;
+  letter-spacing: -0.03em;
   margin: 0;
 }
 .surface-console .gate-title .line2 {
@@ -991,11 +996,12 @@
   gap: 4px;
 }
 .surface-console .compliance-cell .num {
-  font-family: var(--serif);
-  font-weight: 800;
-  font-size: 26px;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 24px;
   line-height: 1;
   letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---- action histogram bar ------------------------------------- */
@@ -1304,10 +1310,11 @@
 }
 .surface-console .jc-title {
   font-family: var(--serif);
-  font-weight: 800;
-  font-size: 26px;
-  line-height: 1.08;
-  letter-spacing: -0.025em;
+  font-optical-sizing: auto;
+  font-weight: 560;
+  font-size: 25px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
   color: var(--c-ink);
   margin: 0 0 16px;
 }
