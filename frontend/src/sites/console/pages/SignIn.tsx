@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiError, errorMessage } from "../api/client";
 import { GoogleButton } from "../auth/GoogleButton";
-import { ErrorNotice, Field, UtcClock } from "../components/bits";
+import { ErrorNotice, Field, IstClock } from "../components/bits";
 import { API_BASE_URL, GOOGLE_CLIENT_ID } from "../env";
 import { landingFor, useSessionStore } from "../session";
 import { ThemeToggle } from "../../../shared/theme/ThemeToggle";
@@ -62,7 +62,7 @@ export function SignIn() {
           <span className="k">jobify internal · restricted</span>
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
             <ThemeToggle />
-            <UtcClock />
+            <IstClock />
           </div>
         </div>
 

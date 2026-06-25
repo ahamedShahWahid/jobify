@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import { istClock, istDateTime } from "../../../shared/format";
 
 /** ₹ lakh formatting for a single CTC figure (null → null). Single source for
  *  every recruiter surface — Postings list, composer preview, dashboard. */
@@ -15,20 +16,14 @@ export function ctcBandText(min: number | null, max: number | null): string {
   return [lo, hi].filter(Boolean).join(" – ");
 }
 
-/** Live UTC clock — the control-room heartbeat in the masthead. */
-export function UtcClock() {
+/** Live IST clock — the control-room heartbeat in the masthead (Asia/Kolkata). */
+export function IstClock() {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return (
-    <span className="clock num">
-      {now.getUTCFullYear()}-{pad(now.getUTCMonth() + 1)}-{pad(now.getUTCDate())} ·{" "}
-      {pad(now.getUTCHours())}:{pad(now.getUTCMinutes())}:{pad(now.getUTCSeconds())} UTC
-    </span>
-  );
+  return <span className="clock num">{istClock(now)}</span>;
 }
 
 export function Field({
@@ -62,10 +57,10 @@ export function Stamp({ iso }: { iso: string }) {
         : minutes < 60 * 48
           ? `${Math.round(minutes / 60)}h`
           : `${Math.round(minutes / 1440)}d`;
-  const sign = deltaMs >= 0 ? `${rel} ago` : `in ${rel}`;
+  const sign = rel === "now" ? "now" : deltaMs >= 0 ? `${rel} ago` : `in ${rel}`;
   return (
-    <span className="num" title={date.toISOString()}>
-      <span className="dim">{date.toISOString().slice(0, 16).replace("T", " ")}</span>{" "}
+    <span className="num" title={`${date.toISOString()} (UTC)`}>
+      <span className="dim">{istDateTime(iso)} IST</span>{" "}
       <span className="acc">· {sign}</span>
     </span>
   );

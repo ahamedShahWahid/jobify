@@ -2,7 +2,7 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import type { Area } from "../session";
 import { areasForRole, useSession, useSessionStore } from "../session";
 import { ThemeToggle } from "../../../shared/theme/ThemeToggle";
-import { UtcClock } from "./bits";
+import { IstClock } from "./bits";
 
 const NAV: Array<{
   area: Area;
@@ -110,7 +110,7 @@ export function Shell() {
           <span className="crumbs">
             console / <b>{crumb || "home"}</b>
           </span>
-          <UtcClock />
+          <IstClock />
         </header>
         <main className="content">
           <Outlet />
