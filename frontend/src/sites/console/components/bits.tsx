@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { istClock, istDateTime } from "../../../shared/format";
+import { inrLakh, istClock, istDateTime } from "../../../shared/format";
 
-/** ₹ lakh formatting for a single CTC figure (null → null). Single source for
- *  every recruiter surface — Postings list, composer preview, dashboard. */
-export function lakh(value: number | null): string | null {
-  return value === null ? null : `₹${(value / 100_000).toFixed(value % 100_000 === 0 ? 0 : 1)}L`;
-}
+/** ₹ lakh formatting for a single CTC figure (null → null). Thin re-export of
+ *  the shared `inrLakh` (single source in shared/format.ts) for the recruiter
+ *  surfaces — Postings list, composer preview, dashboard. */
+export const lakh = inrLakh;
 
 /** The "₹xL – ₹yL" / "Undisclosed" compensation band as a plain string. */
 export function ctcBandText(min: number | null, max: number | null): string {
