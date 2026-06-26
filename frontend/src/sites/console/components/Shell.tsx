@@ -86,7 +86,7 @@ export function Shell() {
           </div>
           <div className="dim" style={{ fontSize: 11, wordBreak: "break-all" }}>
             {identity.email ?? identity.id}
-            <span className="chip acc" style={{ marginLeft: 8 }}>
+            <span className="chip" style={{ marginLeft: 8 }}>
               {identity.role}
             </span>
           </div>

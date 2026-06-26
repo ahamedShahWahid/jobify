@@ -39,15 +39,18 @@
   pointer-events: none;
 }
 
-/* Filled accent — the primary call-to-action */
+/* Filled brand-blue — the primary call-to-action.
+   color:var(--paper) is the theme-safe pairing: near-white type on the
+   #0048A8 fill in light, near-black type on the #4f8cff fill in dark.
+   (Accent/persimmon is reserved for the caveat — never the primary CTA.) */
 .ds-btn-primary {
-  background: var(--accent);
-  border-color: var(--accent-deep);
-  color: var(--accent-ink);
+  background: var(--brand-blue);
+  border-color: var(--brand-blue-deep);
+  color: var(--paper);
 }
 .ds-btn-primary:hover:not(:disabled) {
-  background: var(--accent-deep);
-  border-color: var(--accent-deep);
+  background: var(--brand-blue-deep);
+  border-color: var(--brand-blue-deep);
 }
 
 /* Danger — destructive actions (delete, revoke) */
@@ -182,7 +185,7 @@
 }
 .ds-theme-switch-btn.is-active {
   background: var(--panel);
-  color: var(--accent);
+  color: var(--brand-blue);
 }
 .ds-theme-switch-btn:focus-visible {
   outline: 2px solid var(--brand-blue);

@@ -180,7 +180,7 @@ export function Verification() {
             onClick={() => setStatus(s)}
           >
             <span className="k">{STATUS_LABEL[s]}</span>
-            <div className={`value num${s === "pending" ? " acc" : ""}`}>
+            <div className="value num">
               {counts ? counts[s] : "·"}
             </div>
           </button>

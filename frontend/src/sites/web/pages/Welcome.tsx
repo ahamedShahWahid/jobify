@@ -327,7 +327,7 @@ export function Welcome() {
             <div className="wl-teasers">
               {TEASERS.map((t, i) => (
                 <div key={t.title} className={`wl-teaser rise d${i + 1}`}>
-                  <div className="wl-teaser-score serif num">{t.score.toFixed(2)}</div>
+                  <div className="wl-teaser-score mono num">{t.score.toFixed(2)}</div>
                   <div className="wl-teaser-body">
                     <div className="wl-teaser-title serif">{t.title}</div>
                     <div className="wl-teaser-org dim">{t.org}</div>

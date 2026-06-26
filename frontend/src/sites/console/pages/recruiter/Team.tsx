@@ -151,7 +151,7 @@ export function Team() {
                         <td>
                           {member.display_name ?? <span className="dim">—</span>}
                           {isSelf && (
-                            <span className="chip acc" style={{ marginLeft: 8 }}>
+                            <span className="chip" style={{ marginLeft: 8 }}>
                               you
                             </span>
                           )}
@@ -161,7 +161,7 @@ export function Team() {
                         </td>
                         <td>
                           {member.role === "owner" ? (
-                            <span className="chip acc">owner</span>
+                            <span className="chip">owner</span>
                           ) : (
                             <span className="chip">member</span>
                           )}

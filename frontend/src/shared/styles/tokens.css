@@ -40,6 +40,7 @@
   --forest: #1f4034;             /* verified / trust */
   --forest-soft: #cfdcd2;
   --gold: #b8842f;               /* warn */
+  --gold-soft: #efe2c4;          /* near-match / caution wash */
   --danger: #b23a20;
   --danger-wash: #f3dcd4;        /* destructive tint */
   --ok: #1f4034;
@@ -85,6 +86,7 @@
   --forest: #6fdc8c;
   --forest-soft: rgba(111, 220, 140, 0.16);
   --gold: #ffb000;
+  --gold-soft: rgba(255, 176, 0, 0.16);  /* near-match / caution wash */
   --danger: #ff5d49;
   --danger-wash: rgba(255, 93, 73, 0.14);
   --ok: #6fdc8c;

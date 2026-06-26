@@ -34,7 +34,7 @@ export function Applicants() {
 
       <div className="notice rise">
         Viewing this roster is a PII disclosure — the API writes a{" "}
-        <span className="acc">job.applicants_listed</span> audit row for every load.
+        <span>job.applicants_listed</span> audit row for every load.
       </div>
 
       <ErrorNotice error={error} />

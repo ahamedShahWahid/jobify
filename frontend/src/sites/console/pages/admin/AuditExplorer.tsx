@@ -56,7 +56,7 @@ export function AuditExplorer() {
         </h1>
         <div className="sub">
           <span className="flavor">Append-only. Every disclosure, every lever pulled.</span>
-          <span className="chip acc">
+          <span className="chip">
             <span className="led amber" /> {rows.length} loaded
           </span>
         </div>
@@ -158,9 +158,7 @@ export function AuditExplorer() {
                     <Stamp iso={row.created_at} />
                   </td>
                   <td>
-                    <span className={row.action.startsWith("admin.") ? "acc" : undefined}>
-                      {row.action}
-                    </span>
+                    <span>{row.action}</span>
                   </td>
                   <td className="mono-id">
                     <span className="chip" style={{ marginRight: 8 }}>

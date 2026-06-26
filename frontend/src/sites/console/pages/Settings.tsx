@@ -26,7 +26,7 @@ export function Settings() {
       <div className="panel" style={{ maxWidth: 620, marginBottom: 18 }}>
         <div className="panel-head">
           <span className="k">Operator</span>
-          <span className="chip acc">{identity.role}</span>
+          <span className="chip">{identity.role}</span>
         </div>
         <div className="panel-body">
           <div className="field-row">

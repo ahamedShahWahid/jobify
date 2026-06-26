@@ -63,7 +63,7 @@ export function Dashboard() {
       <div className="tiles rise mb">
         <div className="tile">
           <span className="k">open postings</span>
-          <div className="value acc num">{loading ? "·" : open.length}</div>
+          <div className="value num">{loading ? "·" : open.length}</div>
         </div>
         <div className="tile">
           <span className="k">closed</span>
@@ -113,7 +113,7 @@ export function Dashboard() {
                       <Stamp iso={job.posted_at} />
                     </td>
                     <td className="r num">{job.applicant_count}</td>
-                    <td className="r num acc">{job.surfaced_match_count}</td>
+                    <td className="r num">{job.surfaced_match_count}</td>
                   </tr>
                 ))}
             </tbody>

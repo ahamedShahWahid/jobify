@@ -215,7 +215,7 @@ export function JobComposer() {
           <div className="jc-form panel">
             <div className="panel-head">
               <span className="k">draft</span>
-              <span className="chip acc">{form.status}</span>
+              <span className="chip">{form.status}</span>
             </div>
             <div className="panel-body">
               <ErrorNotice error={formError} />
