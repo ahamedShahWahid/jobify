@@ -88,7 +88,7 @@
 }
 
 .surface-console a {
-  color: var(--accent);
+  color: var(--brand-blue);
   text-decoration: none;
 }
 .surface-console a:hover {
@@ -96,7 +96,7 @@
 }
 
 .surface-console ::selection {
-  background: var(--accent);
+  background: var(--brand-blue-tint);
   color: var(--accent-ink);
 }
 
@@ -138,7 +138,8 @@
 }
 .surface-console .rail-brand .wordmark {
   font-family: var(--serif);
-  font-weight: 600;
+  font-weight: 500;
+  font-optical-sizing: auto;
   font-size: 15px;
   letter-spacing: 0;
   display: flex;
@@ -156,7 +157,7 @@
 }
 .surface-console .rail-brand .wordmark em {
   font-style: normal;
-  color: var(--accent);
+  color: var(--brand-blue);
 }
 
 .surface-console .rail-section {
@@ -187,9 +188,9 @@
   background: var(--panel);
 }
 .surface-console .rail-link.active {
-  color: var(--accent);
-  border-left-color: var(--accent);
-  background: linear-gradient(90deg, var(--accent-wash), transparent 80%);
+  color: var(--brand-blue);
+  border-left-color: var(--brand-blue);
+  background: linear-gradient(90deg, var(--brand-blue-tint), transparent 80%);
 }
 .surface-console .rail-link .idx {
   font-size: 10px;
@@ -233,7 +234,7 @@
   color: var(--ink-faint);
 }
 .surface-console .masthead .crumbs b {
-  color: var(--accent);
+  color: var(--ink);
   font-weight: 500;
 }
 .surface-console .masthead .clock {
@@ -317,8 +318,8 @@
   animation: pulse 2.2s ease-in-out infinite;
 }
 .surface-console .led.amber {
-  background: var(--accent);
-  box-shadow: 0 0 6px var(--accent);
+  background: var(--gold);
+  box-shadow: 0 0 6px var(--gold);
 }
 .surface-console .led.off {
   background: var(--ink-faint);
@@ -385,21 +386,23 @@
     box-shadow 130ms;
 }
 .surface-console .btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--brand-blue);
+  color: var(--brand-blue);
 }
 .surface-console .btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
+/* Primary = brand-blue (the one interactive signal); re-skins every .btn.primary
+   in the TSX. Accent is freed for genuine caveat/attention states only. */
 .surface-console .btn.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-ink);
+  background: var(--brand-blue);
+  border-color: var(--brand-blue);
+  color: var(--paper);
 }
 .surface-console .btn.primary:hover:not(:disabled) {
-  box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 38%, transparent);
-  color: var(--accent-ink);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--brand-blue) 38%, transparent);
+  color: var(--paper);
 }
 .surface-console .btn.danger {
   border-color: color-mix(in srgb, var(--danger) 55%, transparent);
@@ -415,7 +418,7 @@
   color: var(--ink-soft);
 }
 .surface-console .btn.ghost:hover {
-  color: var(--accent);
+  color: var(--brand-blue);
 }
 .surface-console .btn.sm {
   padding: 5px 10px;
@@ -468,7 +471,7 @@
   margin: 10px 0 2px;
 }
 .surface-console .tile .value.acc {
-  color: var(--accent);
+  color: var(--brand-blue);
 }
 .surface-console .tile::after {
   content: "";
@@ -477,7 +480,7 @@
   right: 0;
   width: 56px;
   height: 56px;
-  background: radial-gradient(circle at top right, var(--accent-wash), transparent 70%);
+  background: radial-gradient(circle at top right, var(--brand-blue-tint), transparent 70%);
 }
 
 /* ---- tables --------------------------------------------------- */
@@ -512,7 +515,7 @@
   transition: background 120ms;
 }
 .surface-console table.console tbody tr:hover {
-  background: linear-gradient(90deg, var(--accent-wash), transparent 60%);
+  background: linear-gradient(90deg, var(--brand-blue-tint), transparent 60%);
 }
 .surface-console table.console tr.expandable {
   cursor: pointer;
@@ -540,8 +543,8 @@
 .surface-console .scorebar .fill {
   position: absolute;
   inset: 0 auto 0 0;
-  background: var(--accent);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 38%, transparent);
+  background: var(--brand-blue);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--brand-blue) 38%, transparent);
 }
 
 /* ---- forms ---------------------------------------------------- */
@@ -569,8 +572,8 @@
 .surface-console .field input:focus,
 .surface-console .field textarea:focus,
 .surface-console .field select:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 38%, transparent);
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand-blue) 38%, transparent);
 }
 .surface-console .field textarea {
   resize: vertical;
@@ -630,8 +633,9 @@
 }
 .surface-console .drawer-head h2 {
   font-family: var(--serif);
+  font-optical-sizing: auto;
   font-size: 21px;
-  font-weight: 700;
+  font-weight: 500;
   margin: 0;
   letter-spacing: -0.01em;
 }
@@ -654,7 +658,7 @@
   font-size: 11.5px;
   background: var(--paper-2);
   border: 1px solid var(--line);
-  border-left: 2px solid color-mix(in srgb, var(--accent) 38%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--brand-blue) 38%, transparent);
   padding: 12px 14px;
   margin: 0;
   overflow-x: auto;
@@ -663,15 +667,15 @@
   word-break: break-word;
 }
 .surface-console .json-view .jk {
-  color: var(--accent);
+  color: var(--ink-2);
 }
 
 /* ---- notices --------------------------------------------------- */
 
 .surface-console .notice {
   border: 1px solid var(--line-strong);
-  border-left: 2px solid var(--accent);
-  background: var(--accent-wash);
+  border-left: 2px solid var(--brand-blue);
+  background: var(--brand-blue-tint);
   padding: 12px 16px;
   font-size: 12px;
   color: var(--ink-soft);
@@ -759,7 +763,7 @@
   cursor: pointer;
 }
 .surface-console .mode-tabs button.on {
-  background: var(--accent);
+  background: var(--brand-blue);
   color: var(--accent-ink);
   font-weight: 600;
 }
@@ -796,8 +800,8 @@
   border-bottom: 1px dashed var(--line-strong);
 }
 .surface-console .clickable-id:hover {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
+  color: var(--brand-blue);
+  border-bottom-color: var(--brand-blue);
 }
 
 .surface-console .filters {
@@ -878,25 +882,25 @@
   stroke-width: 1;
 }
 .surface-console .chart-line {
-  stroke: var(--accent);
+  stroke: var(--brand-blue);
   stroke-width: 1.6;
   stroke-linejoin: round;
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
-  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 38%, transparent));
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--brand-blue) 38%, transparent));
 }
 .surface-console .chart-area {
-  fill: var(--accent-wash);
+  fill: var(--brand-blue-tint);
   stroke: none;
 }
 .surface-console .chart-dot {
-  fill: var(--accent);
+  fill: var(--brand-blue);
 }
 .surface-console .chart-dot.peak {
-  fill: var(--accent);
+  fill: var(--brand-blue);
   stroke: var(--accent-ink);
   stroke-width: 1;
-  filter: drop-shadow(0 0 6px var(--accent));
+  filter: drop-shadow(0 0 6px var(--brand-blue));
 }
 .surface-console .chart-axislabels {
   display: flex;
@@ -937,8 +941,8 @@
 }
 .surface-console .funnel-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 55%, transparent));
-  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 38%, transparent);
+  background: linear-gradient(90deg, var(--brand-blue), color-mix(in srgb, var(--brand-blue) 55%, transparent));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--brand-blue) 38%, transparent);
   transition: width 620ms cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
@@ -975,7 +979,7 @@
   background: var(--ok);
 }
 .surface-console .role-admin {
-  background: var(--accent);
+  background: var(--gold);
 }
 .surface-console .role-system {
   background: var(--ink-faint);
@@ -1020,8 +1024,8 @@
 .surface-console .hist-fill {
   position: absolute;
   inset: 0 auto 0 0;
-  background: var(--accent);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 38%, transparent);
+  background: var(--brand-blue);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--brand-blue) 38%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1047,10 +1051,10 @@
 }
 .surface-console .tile-button.on {
   background: var(--panel);
-  box-shadow: inset 2px 0 0 var(--accent);
+  box-shadow: inset 2px 0 0 var(--brand-blue);
 }
 .surface-console .tile-button.on .value {
-  color: var(--accent);
+  color: var(--brand-blue);
 }
 
 /* Review-drawer verification checklist. */
@@ -1123,7 +1127,7 @@
 .surface-console .google-note code {
   font-family: var(--mono);
   font-size: 12px;
-  color: var(--accent);
+  color: var(--ink-soft);
 }
 .surface-console .google-note {
   line-height: 1.5;
@@ -1166,7 +1170,7 @@
   transition: color 120ms;
 }
 .surface-console .jc-back:hover {
-  color: var(--accent);
+  color: var(--brand-blue);
 }
 .surface-console .jc-resolving {
   font-family: var(--mono);

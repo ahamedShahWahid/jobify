@@ -132,7 +132,7 @@ export function Jobs() {
                 <td className="r num">
                   <Link to={`/console/recruiter/jobs/${job.id}/applicants`}>{job.applicant_count}</Link>
                 </td>
-                <td className="r num acc">{job.surfaced_match_count}</td>
+                <td className="r num">{job.surfaced_match_count}</td>
                 <td className="r" style={{ whiteSpace: "nowrap" }}>
                   <button
                     className="btn ghost sm"

@@ -81,7 +81,7 @@ html {
   content: "";
   width: 20px;
   height: 1px;
-  background: var(--accent);
+  background: var(--line-strong);
   flex: none;
 }
 .surface-web .kicker.ink {
@@ -195,7 +195,7 @@ html {
   right: 12px;
   bottom: 2px;
   height: 2px;
-  background: var(--accent);
+  background: var(--brand-blue);
 }
 .surface-web .nav .nav-cta {
   margin-left: 6px;
@@ -234,15 +234,16 @@ html {
   transform: translate(0, 0);
   box-shadow: 0 0 0 0 var(--ink);
 }
-/* primary action is ink, not accent — persimmon stays reserved for meaning
-   (the caveat + the one thesis emphasis). The arrow carries a hint of accent. */
+/* primary action is brand-blue — color:var(--paper) flips correctly (near-white
+   type on blue in light, near-black on bright-blue in dark). Persimmon stays
+   reserved for meaning: the caveat + the one thesis emphasis. */
 .surface-web .btn.primary {
-  background: var(--ink);
-  border-color: var(--ink);
+  background: var(--brand-blue);
+  border-color: var(--brand-blue-deep);
   color: var(--paper);
 }
 .surface-web .btn.primary:hover {
-  box-shadow: 4px 4px 0 0 var(--accent);
+  box-shadow: 4px 4px 0 0 var(--brand-blue-deep);
 }
 .surface-web .btn.ink {
   background: var(--ink);
@@ -273,7 +274,7 @@ html {
 
 .surface-web .link-arrow {
   font-weight: 600;
-  color: var(--accent-deep);
+  color: var(--brand-blue);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -566,7 +567,7 @@ html {
   letter-spacing: 0.05em;
 }
 .surface-web .ticker-item .s {
-  color: var(--accent);
+  color: var(--ink);
   font-weight: 700;
 }
 .surface-web .ticker-item::after {
@@ -817,7 +818,7 @@ html {
   color: var(--ink-soft);
 }
 .surface-web .footer a:hover {
-  color: var(--accent-deep);
+  color: var(--brand-blue-deep);
 }
 .surface-web .colophon {
   font-family: var(--serif);
@@ -849,7 +850,8 @@ html {
 }
 .surface-web .app-head h1 {
   font-family: var(--serif);
-  font-weight: 900;
+  font-weight: 500;
+  font-optical-sizing: auto;
   font-size: clamp(34px, 5vw, 56px);
   letter-spacing: -0.03em;
   line-height: 1;
@@ -880,7 +882,7 @@ html {
 }
 .surface-web .tabs button.on {
   color: var(--ink);
-  border-bottom-color: var(--accent);
+  border-bottom-color: var(--brand-blue);
 }
 .surface-web .tabs button .count {
   font-family: var(--mono);
@@ -994,7 +996,8 @@ html {
 }
 .surface-web .detail h1 {
   font-family: var(--serif);
-  font-weight: 900;
+  font-weight: 500;
+  font-optical-sizing: auto;
   font-size: clamp(30px, 4.4vw, 50px);
   line-height: 1;
   letter-spacing: -0.03em;
@@ -1078,7 +1081,8 @@ html {
 }
 .surface-web .gate-head h1 {
   font-family: var(--serif);
-  font-weight: 900;
+  font-weight: 500;
+  font-optical-sizing: auto;
   font-size: 38px;
   letter-spacing: -0.03em;
   margin: 8px 0 4px;
@@ -1135,8 +1139,8 @@ html {
 }
 .surface-web .field input:focus,
 .surface-web .field textarea:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-wash);
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 0 2px var(--brand-blue-tint);
 }
 .surface-web .field textarea {
   resize: vertical;
@@ -1152,8 +1156,8 @@ html {
 
 .surface-web .notice {
   border: 1px solid var(--line-strong);
-  border-left: 3px solid var(--accent);
-  background: var(--accent-wash);
+  border-left: 3px solid var(--brand-blue);
+  background: var(--brand-blue-tint);
   padding: 12px 16px;
   font-size: 14px;
   color: var(--ink);
@@ -1189,7 +1193,8 @@ html {
 }
 .surface-web .trust-hero h1 {
   font-family: var(--serif);
-  font-weight: 900;
+  font-weight: 500;
+  font-optical-sizing: auto;
   font-size: clamp(40px, 7vw, 88px);
   line-height: 0.94;
   letter-spacing: -0.035em;
@@ -1236,7 +1241,7 @@ html {
 }
 .surface-web .dot.warn {
   background: var(--gold);
-  box-shadow: 0 0 0 3px #efe2c4;
+  box-shadow: 0 0 0 3px var(--gold-soft);
 }
 .surface-web .dot.down {
   background: var(--accent);
@@ -1281,9 +1286,10 @@ html {
 }
 .surface-web .trust-card .ico {
   font-family: var(--serif);
-  font-weight: 900;
+  font-weight: 500;
+  font-optical-sizing: auto;
   font-size: 30px;
-  color: var(--accent);
+  color: var(--ink);
 }
 .surface-web .trust-card h3 {
   font-family: var(--serif);
@@ -1416,7 +1422,7 @@ html {
   right: 0;
   bottom: -1px;
   height: 3px;
-  background: var(--accent);
+  background: var(--brand-blue);
 }
 @media (max-width: 640px) {
   .surface-web .wl-rail-seg .wl-rail-label {
@@ -1430,7 +1436,8 @@ html {
 }
 .surface-web .wl-h {
   font-family: var(--serif);
-  font-weight: 900;
+  font-weight: 500;
+  font-optical-sizing: auto;
   font-size: clamp(36px, 6vw, 64px);
   line-height: 0.96;
   letter-spacing: -0.035em;
@@ -1442,9 +1449,9 @@ html {
   color: var(--accent);
 }
 .surface-web .wl-h .num {
-  color: var(--accent);
-  font-style: italic;
-  font-weight: 400;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-weight: 500;
 }
 .surface-web .wl-deck {
   max-width: 52ch;
@@ -1495,14 +1502,14 @@ html {
   outline: none;
 }
 .surface-web .wl-drop.over {
-  border-color: var(--accent);
+  border-color: var(--brand-blue);
   border-style: solid;
-  background: var(--accent-wash);
+  background: var(--brand-blue-tint);
   transform: translateY(-2px);
 }
 .surface-web .wl-drop-ico {
   font-size: 34px;
-  color: var(--accent);
+  color: var(--ink-soft);
   line-height: 1;
 }
 .surface-web .wl-drop-title {
@@ -1555,7 +1562,7 @@ html {
   background: var(--paper-2);
 }
 .surface-web .wl-check.active .wl-check-mark {
-  color: var(--accent);
+  color: var(--brand-blue);
   animation: wl-spin 1s linear infinite;
 }
 .surface-web .wl-check.done {
@@ -1591,7 +1598,8 @@ html {
   border-bottom: 1px solid var(--line);
 }
 .surface-web .wl-profile-name {
-  font-weight: 900;
+  font-weight: 500;
+  font-optical-sizing: auto;
   font-size: 30px;
   letter-spacing: -0.02em;
   line-height: 1.1;
@@ -1625,11 +1633,11 @@ html {
   padding: 18px 20px;
 }
 .surface-web .wl-teaser-score {
-  font-weight: 900;
-  font-size: 38px;
+  font-weight: 700;
+  font-size: 36px;
   line-height: 0.8;
-  letter-spacing: -0.04em;
-  color: var(--accent);
+  letter-spacing: -0.01em;
+  color: var(--ink);
   flex-shrink: 0;
 }
 .surface-web .wl-teaser-title {
@@ -1671,7 +1679,8 @@ html {
 }
 .surface-web .why-title {
   font-family: var(--serif);
-  font-weight: 900;
+  font-weight: 500;
+  font-optical-sizing: auto;
   font-size: clamp(32px, 5vw, 56px);
   line-height: 0.98;
   letter-spacing: -0.035em;
@@ -1690,11 +1699,11 @@ html {
   }
 }
 .surface-web .why-stat-num {
-  font-weight: 900;
-  font-size: clamp(72px, 12vw, 120px);
+  font-weight: 600;
+  font-size: clamp(64px, 10vw, 104px);
   line-height: 0.78;
-  letter-spacing: -0.05em;
-  color: var(--accent);
+  letter-spacing: -0.03em;
+  color: var(--ink);
 }
 .surface-web .why-stat-label {
   font-family: var(--mono);
@@ -1715,7 +1724,7 @@ html {
   line-height: 1.28;
   letter-spacing: -0.01em;
   margin: 0;
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--ink);
   padding-left: 22px;
 }
 .surface-web .why-caveat {
@@ -1726,7 +1735,7 @@ html {
 }
 .surface-web .why-caveat::before {
   content: "⌁ ";
-  color: var(--gold);
+  color: var(--accent);
 }
 
 .surface-web .why-compose {
@@ -1752,10 +1761,10 @@ html {
   flex: 1;
 }
 .surface-web .why-half-num {
-  font-weight: 900;
-  font-size: 48px;
+  font-weight: 600;
+  font-size: 46px;
   line-height: 0.85;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.02em;
   color: var(--ink);
   margin: 8px 0 6px;
 }
@@ -1764,7 +1773,7 @@ html {
   max-width: 28ch;
 }
 .surface-web .why-half-op {
-  font-weight: 900;
+  font-weight: 500;
   font-size: 18px;
   color: var(--ink-faint);
   letter-spacing: -0.02em;
@@ -1856,7 +1865,8 @@ html {
 }
 .surface-web .why-mark {
   font-family: var(--serif);
-  font-weight: 900;
+  font-weight: 600;
+  font-optical-sizing: auto;
   font-size: 20px;
   width: 30px;
   height: 30px;
@@ -1871,7 +1881,7 @@ html {
 }
 .surface-web .why-mark.near {
   color: var(--gold);
-  background: #efe2c4;
+  background: var(--gold-soft);
 }
 
 .surface-web .why-trust {
@@ -1936,7 +1946,8 @@ html {
 }
 .surface-web .pf-h1 {
   font-family: var(--serif);
-  font-weight: 900;
+  font-weight: 500;
+  font-optical-sizing: auto;
   font-size: clamp(34px, 5.4vw, 60px);
   line-height: 0.96;
   letter-spacing: -0.03em;
@@ -1950,7 +1961,7 @@ html {
   font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--accent-deep);
+  color: var(--ink-soft);
 }
 
 .surface-web .pf-sec {
@@ -2025,9 +2036,9 @@ html {
   max-width: 60ch;
 }
 .surface-web .pf-toggle-label {
-  font-family: var(--serif);
-  font-weight: 700;
-  font-size: 17px;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 16px;
   color: var(--ink);
 }
 .surface-web .pf-toggle-desc {
@@ -2102,15 +2113,15 @@ html {
     background 140ms;
 }
 .surface-web .switch input:checked + .switch-track {
-  background: var(--accent-wash);
-  border-color: var(--accent);
+  background: var(--brand-blue-tint);
+  border-color: var(--brand-blue);
 }
 .surface-web .switch input:checked + .switch-track .switch-thumb {
   transform: translateX(22px);
-  background: var(--accent);
+  background: var(--brand-blue);
 }
 .surface-web .switch input:focus-visible + .switch-track {
-  box-shadow: 0 0 0 3px var(--accent-wash);
+  box-shadow: 0 0 0 3px var(--brand-blue-tint);
 }
 .surface-web .switch input:disabled + .switch-track {
   opacity: 0.6;
@@ -2145,7 +2156,7 @@ html {
   color: var(--ink-soft);
 }
 .surface-web .pf-count-chip .num {
-  color: var(--accent-deep);
+  color: var(--ink);
   font-weight: 700;
 }
 .surface-web .pf-export-preview {
@@ -2166,8 +2177,8 @@ html {
 .surface-web .pf-danger {
   padding: 32px 24px;
   margin: 36px 0 0;
-  border: 2px solid var(--accent);
-  background: color-mix(in srgb, var(--accent-wash) 55%, var(--paper));
+  border: 2px solid var(--danger);
+  background: color-mix(in srgb, var(--danger-wash) 55%, var(--paper));
 }
 .surface-web .pf-danger .pf-sec-head {
   margin-bottom: 16px;
@@ -2307,7 +2318,8 @@ html {
 .surface-web .cb-h1,
 .surface-web .nx-h1 {
   font-family: var(--serif);
-  font-weight: 900;
+  font-weight: 500;
+  font-optical-sizing: auto;
   font-size: clamp(34px, 5.4vw, 60px);
   line-height: 0.96;
   letter-spacing: -0.03em;
@@ -2341,9 +2353,10 @@ html {
 }
 .surface-web .cb-count .n {
   display: block;
-  font-family: var(--serif);
-  font-weight: 900;
-  font-size: 30px;
+  font-family: var(--mono);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-size: 28px;
   line-height: 1;
 }
 .surface-web .cb-count .l {
@@ -2402,7 +2415,7 @@ html {
 }
 .surface-web .cb-rail {
   align-self: stretch;
-  background: var(--accent);
+  background: var(--brand-blue);
 }
 .surface-web .cb-rail.saved {
   background: var(--gold);
@@ -2459,7 +2472,7 @@ html {
   margin: 0 0 8px;
 }
 .surface-web .cb-title a:hover {
-  color: var(--accent-deep);
+  color: var(--brand-blue-deep);
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
@@ -2514,7 +2527,7 @@ html {
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0;
-  background: var(--accent);
+  background: var(--brand-blue);
   color: var(--paper);
   padding: 2px 10px;
   border-radius: 999px;
@@ -2547,11 +2560,11 @@ html {
   border-color: var(--line-strong);
 }
 .surface-web .nx-row.is-unread {
-  border-left-color: var(--accent);
-  background: color-mix(in srgb, var(--accent-wash) 38%, var(--paper));
+  border-left-color: var(--brand-blue);
+  background: color-mix(in srgb, var(--brand-blue-tint) 60%, var(--paper));
 }
 .surface-web .nx-row.is-unread:hover {
-  border-left-color: var(--accent-deep);
+  border-left-color: var(--brand-blue-deep);
 }
 .surface-web .nx-glyph {
   width: 40px;
@@ -2566,8 +2579,8 @@ html {
   background: var(--paper);
 }
 .surface-web .nx-glyph.unread {
-  border-color: var(--accent);
-  color: var(--accent-deep);
+  border-color: var(--brand-blue);
+  color: var(--brand-blue);
   background: var(--paper);
 }
 .surface-web .nx-body {
@@ -2585,7 +2598,7 @@ html {
   font-size: 10px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--accent-deep);
+  color: var(--ink-soft);
 }
 .surface-web .nx-meta {
   display: inline-flex;
@@ -2639,9 +2652,9 @@ html {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--brand-blue);
   margin-top: 6px;
-  box-shadow: 0 0 0 3px var(--accent-wash);
+  box-shadow: 0 0 0 3px var(--brand-blue-tint);
 }
 .surface-web .nx-more {
   display: flex;
@@ -2656,7 +2669,8 @@ html {
 }
 .surface-web .iv-h1 {
   font-family: var(--serif);
-  font-weight: 900;
+  font-weight: 500;
+  font-optical-sizing: auto;
   font-size: clamp(30px, 4.8vw, 52px);
   line-height: 0.98;
   letter-spacing: -0.03em;
@@ -2726,7 +2740,8 @@ html {
   margin: 6px 0 6px;
 }
 .surface-web .iv-emp-name {
-  font-weight: 900;
+  font-weight: 500;
+  font-optical-sizing: auto;
   font-size: clamp(30px, 5vw, 46px);
   line-height: 1.02;
   letter-spacing: -0.03em;
@@ -2742,7 +2757,7 @@ html {
   font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--accent-deep);
+  color: var(--ink-soft);
   font-weight: 500;
 }
 .surface-web .iv-rule {

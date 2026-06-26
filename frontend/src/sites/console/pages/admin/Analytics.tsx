@@ -305,7 +305,7 @@ export function Analytics() {
             no second source.
           </span>
           {!loading && rows.length > 0 && (
-            <span className="chip acc">
+            <span className="chip">
               <span className="led amber" /> {stats.total} events · {stats.spanDays}d
             </span>
           )}
@@ -326,7 +326,7 @@ export function Analytics() {
           <div className="tiles rise mb">
             <div className="tile">
               <span className="k">events analyzed</span>
-              <div className="value acc num">{loading ? "·" : stats.total}</div>
+              <div className="value num">{loading ? "·" : stats.total}</div>
             </div>
             <div className="tile">
               <span className="k">distinct actors</span>
@@ -377,7 +377,7 @@ export function Analytics() {
                         <span className="num">
                           {loading ? "·" : step.count}
                           {step.stepPct !== null && (
-                            <span className="acc funnel-pct"> · {fmtPct(step.stepPct)}</span>
+                            <span className="funnel-pct"> · {fmtPct(step.stepPct)}</span>
                           )}
                         </span>
                       </div>
@@ -440,7 +440,7 @@ export function Analytics() {
                 <div className="compliance-cell">
                   <span className="k">dsr exports</span>
                   <div className="num">
-                    <span className="acc">{loading ? "·" : compliance.dsrCompleted}</span>
+                    <span>{loading ? "·" : compliance.dsrCompleted}</span>
                     <span className="dim"> / {loading ? "·" : compliance.dsrRequested}</span>
                   </div>
                   <span className="k dim">completed / requested</span>
@@ -482,9 +482,7 @@ export function Analytics() {
                   {actions.map((row) => (
                     <tr key={row.label}>
                       <td>
-                        <span className={row.label.startsWith("admin.") ? "acc" : undefined}>
-                          {row.label}
-                        </span>
+                        <span>{row.label}</span>
                       </td>
                       <td>
                         <span className="hist-track">

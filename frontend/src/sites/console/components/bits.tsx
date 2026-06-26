@@ -60,7 +60,7 @@ export function Stamp({ iso }: { iso: string }) {
   return (
     <span className="num" title={`${date.toISOString()} (UTC)`}>
       <span className="dim">{istDateTime(iso)} IST</span>{" "}
-      <span className="acc">· {sign}</span>
+      <span>· {sign}</span>
     </span>
   );
 }

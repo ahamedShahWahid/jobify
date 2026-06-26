@@ -206,7 +206,7 @@ export function WhyMatch() {
             <p className="deck why-deck">Why this surfaced.</p>
           </div>
           <div className="why-hero-stat">
-            <div className="why-stat-num serif num">{match.total_score.toFixed(2)}</div>
+            <div className="why-stat-num mono num">{match.total_score.toFixed(2)}</div>
             <div className="why-stat-label">total match</div>
           </div>
         </header>
@@ -224,15 +224,15 @@ export function WhyMatch() {
           <div className="why-compose-row">
             <div className="why-half">
               <div className="kicker ink">Semantic fit</div>
-              <div className="why-half-num serif num">{match.vector_score.toFixed(2)}</div>
+              <div className="why-half-num mono num">{match.vector_score.toFixed(2)}</div>
               <div className="dim why-half-sub">
                 Your résumé's meaning against the role, via embeddings.
               </div>
             </div>
-            <div className="why-half-op serif">×0.6&nbsp;&nbsp;+&nbsp;&nbsp;×0.4</div>
+            <div className="why-half-op mono">×0.6&nbsp;&nbsp;+&nbsp;&nbsp;×0.4</div>
             <div className="why-half">
               <div className="kicker ink">Structured fit</div>
-              <div className="why-half-num serif num">{match.structured_score.toFixed(2)}</div>
+              <div className="why-half-num mono num">{match.structured_score.toFixed(2)}</div>
               <div className="dim why-half-sub">
                 Hard signals — title, experience band, location.
               </div>
