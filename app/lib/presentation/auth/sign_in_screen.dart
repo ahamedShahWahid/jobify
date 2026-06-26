@@ -6,7 +6,9 @@ import 'package:jobify_app/core/error/exceptions.dart';
 import 'package:jobify_app/data/auth/google_web_sign_in.dart';
 import 'package:jobify_app/presentation/auth/delete_success_snackbar_provider.dart';
 import 'package:jobify_app/presentation/auth/sign_in_controller.dart';
+import 'package:jobify_app/presentation/theme/jobify_colors.dart';
 import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/widgets/arrive.dart';
 
 class SignInScreen extends ConsumerWidget {
   const SignInScreen({super.key});
@@ -55,36 +57,55 @@ class SignInScreen extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: JobifySpacing.xl),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Jobify', style: theme.textTheme.displayMedium),
+              Arrive(
+                index: 0,
+                child: Text(
+                  'Jobify',
+                  style: theme.textTheme.displayLarge?.copyWith(
+                    color: theme.brightness == Brightness.dark
+                        ? JobifyColors.brandBlueDark
+                        : JobifyColors.brandBlueLight,
+                  ),
+                ),
+              ),
               const SizedBox(height: JobifySpacing.sm),
-              Text(
-                'Roles that match you, not the other way around.',
-                style: theme.textTheme.bodyMedium,
-                textAlign: TextAlign.center,
+              Arrive(
+                index: 1,
+                child: Text(
+                  'Roles that match you, not the other way around.',
+                  style: theme.textTheme.bodyLarge
+                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                ),
               ),
               const SizedBox(height: JobifySpacing.xxl),
               // Web authenticates via Google's rendered button (the only web
               // path that yields an ID token); mobile uses the imperative flow.
-              if (kIsWeb)
-                _WebSignInButton(isLoading: isLoading)
-              else
-                FilledButton.icon(
-                  icon: isLoading
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.login),
-                  label:
-                      Text(isLoading ? 'Signing in…' : 'Continue with Google'),
-                  onPressed: isLoading
-                      ? null
-                      : () => ref
-                          .read(signInControllerProvider.notifier)
-                          .signInWithGoogle(),
-                ),
+              Arrive(
+                index: 2,
+                child: kIsWeb
+                    ? _WebSignInButton(isLoading: isLoading)
+                    : OutlinedButton.icon(
+                        icon: isLoading
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.login),
+                        label: Text(
+                          isLoading ? 'Signing in…' : 'Continue with Google',
+                        ),
+                        onPressed: isLoading
+                            ? null
+                            : () => ref
+                                .read(signInControllerProvider.notifier)
+                                .signInWithGoogle(),
+                      ),
+              ),
             ],
           ),
         ),

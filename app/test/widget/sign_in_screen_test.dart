@@ -7,12 +7,20 @@ import 'package:jobify_app/presentation/auth/sign_in_controller.dart';
 import 'package:jobify_app/presentation/auth/sign_in_screen.dart';
 import 'package:riverpod/src/framework.dart' show Override;
 
+// Disable animations so Arrive jumps to settled state immediately — without
+// this, Arrive defers rendering via Future.delayed and the widgets are
+// invisible (opacity 0) when the test asserts.
 Widget _wrap(Widget child, {List<Override> overrides = const []}) {
   return ProviderScope(
     overrides: overrides,
     child: MaterialApp(
       theme: ThemeData.light(useMaterial3: true),
-      home: child,
+      home: Builder(
+        builder: (context) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(disableAnimations: true),
+          child: child,
+        ),
+      ),
     ),
   );
 }
@@ -41,7 +49,7 @@ void main() {
     );
     await tester.pump();
     expect(find.text('Signing in…'), findsOneWidget);
-    // FilledButton.icon onPressed: null when isLoading; presence of the
+    // OutlinedButton.icon onPressed: null when isLoading; presence of the
     // 'Signing in…' label is sufficient signal.
   });
 }
