@@ -1,58 +1,36 @@
 import { Link } from "react-router-dom";
 import { CONSOLE_URL } from "../EmployersRoutes";
 import { Footer, Masthead } from "../components/Chrome";
-import { RankedStack } from "../components/RankedStack";
+import { Ledger } from "../components/Ledger";
 
 export function Landing() {
   return (
     <>
       <Masthead onLanding />
 
-      {/* ---- hero -------------------------------------------------------- */}
+      {/* ---- hero: the ledger is the thesis ------------------------------ */}
       <section className="hero">
-        <div className="wrap hero-grid">
-          <div>
-            <p className="label amber rise d1">For hiring teams &amp; engineering leaders</p>
-            <h1 className="rise d2">
-              Ranked applicants.
-              <br />
-              Not a <span className="em">résumé pile.</span>
-            </h1>
-            <p className="deck rise d3">
-              Post a role and Jobify surfaces it to the candidates it actually fits —
-              then hands you each applicant with a match score and a one-line reason.
-              You read signal, not stacks of PDFs.
-            </p>
-            <div className="hero-cta rise d4">
-              <a
-                className="btn btn-amber"
-                href={CONSOLE_URL}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Open the console <span className="arrow" aria-hidden="true">→</span>
-              </a>
-              <a className="textlink" href="#how">
-                See how it works
-              </a>
-            </div>
-            <div className="hero-meta rise d5">
-              <div>
-                <span className="big num">0.94</span>
-                <span className="lab">top match score</span>
-              </div>
-              <div>
-                <span className="big num">1</span>
-                <span className="lab">reason per applicant</span>
-              </div>
-              <div>
-                <span className="big num">100%</span>
-                <span className="lab">résumé views audited</span>
-              </div>
-            </div>
+        <div className="wrap">
+          <p className="label rise d1">For hiring teams &amp; engineering leaders</p>
+          <h1 className="rise d2">
+            Read the reasons,
+            <br />
+            not the résumé pile.
+          </h1>
+          <p className="deck rise d3">
+            Post a role. Jobify surfaces it to the candidates it fits, then hands you
+            each applicant ranked — with a one-line reason and an honest caveat.
+          </p>
+          <div className="hero-cta rise d3">
+            <a className="btn btn-primary" href={CONSOLE_URL} target="_blank" rel="noreferrer">
+              Open the console <span className="arrow" aria-hidden="true">→</span>
+            </a>
+            <a className="textlink" href="#how">
+              See how it works
+            </a>
           </div>
-          <div className="rise d4" aria-hidden="true">
-            <RankedStack />
+          <div className="ledger-wrap rise d4">
+            <Ledger />
           </div>
         </div>
       </section>
@@ -84,7 +62,7 @@ export function Landing() {
       <section id="how">
         <div className="wrap">
           <div className="section-head">
-            <p className="label amber">Procedure · for employers</p>
+            <p className="label">Procedure · for employers</p>
             <h2>Four steps from role to hire.</h2>
             <p className="deck">
               A drafting-table workflow: post once, let the matching engine do the
@@ -136,7 +114,7 @@ export function Landing() {
       <section id="showcase">
         <div className="wrap showcase">
           <div className="copy">
-            <p className="label amber">The applicant row</p>
+            <p className="label">The applicant row</p>
             <h2>You see why — not a keyword match.</h2>
             <p>
               Every applicant comes scored against the role, with the model&apos;s reasoning
@@ -206,7 +184,7 @@ export function Landing() {
       <section id="verified">
         <div className="wrap">
           <div className="section-head">
-            <p className="label amber">Trust &amp; disclosure</p>
+            <p className="label">Trust &amp; disclosure</p>
             <h2>Verified employers. Audited access.</h2>
             <p className="deck">
               Two mechanisms that make candidates trust you — and make your data
@@ -230,10 +208,8 @@ export function Landing() {
               </p>
             </div>
             <div className="trust-card dark rise d2">
-              <span className="label" style={{ color: "var(--accent)" }}>
-                Append-only audit
-              </span>
-              <h3 style={{ color: "var(--paper)" }}>Every résumé view is logged.</h3>
+              <span className="label on-dark">Append-only audit</span>
+              <h3>Every résumé view is logged.</h3>
               <p>
                 Each disclosure of an applicant&apos;s résumé writes an immutable audit row.
                 It&apos;s disclosure you can stand behind — and DPDP-aligned by construction.
@@ -264,7 +240,7 @@ export function Landing() {
       <section id="pricing">
         <div className="wrap">
           <div className="section-head">
-            <p className="label amber">Plans</p>
+            <p className="label">Plans</p>
             <h2>Pricing that scales with hiring.</h2>
             <p className="deck">
               Illustrative tiers. Every plan includes match scores, reasons, and audited
@@ -304,7 +280,7 @@ export function Landing() {
                 <li><span className="mk">+</span> Full audit trail export</li>
                 <li><span className="mk">+</span> Team &amp; invite management</li>
               </ul>
-              <a className="btn btn-amber" href={CONSOLE_URL} target="_blank" rel="noreferrer">
+              <a className="btn btn-primary" href={CONSOLE_URL} target="_blank" rel="noreferrer">
                 Choose Team <span className="arrow" aria-hidden="true">→</span>
               </a>
             </article>
@@ -333,7 +309,7 @@ export function Landing() {
       <section id="faq">
         <div className="wrap">
           <div className="section-head">
-            <p className="label amber">Questions</p>
+            <p className="label">Questions</p>
             <h2>Frequently asked.</h2>
           </div>
           <dl className="faq">
@@ -409,19 +385,17 @@ export function Landing() {
       <section className="cta">
         <div className="wrap">
           <div className="panel">
-            <p className="label" style={{ color: "var(--accent)" }}>
-              Start hiring on signal
-            </p>
+            <p className="label on-dark">Start hiring on signal</p>
             <h2>Read reasons, not résumé piles.</h2>
             <p className="deck">
               Post your first role free and see ranked applicants with a score and a
               reason on each. The console is one click away.
             </p>
             <div className="hero-cta">
-              <a className="btn btn-amber" href={CONSOLE_URL} target="_blank" rel="noreferrer">
+              <a className="btn btn-invert" href={CONSOLE_URL} target="_blank" rel="noreferrer">
                 Open the console <span className="arrow" aria-hidden="true">→</span>
               </a>
-              <Link to="/employers/verify" className="btn btn-ghost" style={{ color: "var(--paper)", borderColor: "rgba(243,244,241,0.3)" }}>
+              <Link to="/employers/verify" className="btn btn-ghost on-dark-ghost">
                 Get verified first
               </Link>
             </div>

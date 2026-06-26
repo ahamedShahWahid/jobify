@@ -18,7 +18,7 @@ export function Verify() {
           <Link to="/employers" className="back-link">
             <span aria-hidden="true">←</span> Back to overview
           </Link>
-          <p className="label amber rise d1">Trust &amp; verification</p>
+          <p className="label rise d1">Trust &amp; verification</p>
           <h1 className="rise d2">
             Get the badge applicants trust.
           </h1>
@@ -38,7 +38,7 @@ export function Verify() {
       <section>
         <div className="wrap">
           <div className="section-head">
-            <p className="label amber">What we check</p>
+            <p className="label">What we check</p>
             <h2>A real organisation, confirmed.</h2>
             <p className="deck">
               Lightweight and document-based. We&apos;re confirming legitimacy, not auditing
@@ -94,7 +94,7 @@ export function Verify() {
       <section>
         <div className="wrap">
           <div className="section-head">
-            <p className="label amber">The procedure</p>
+            <p className="label">The procedure</p>
             <h2>Four steps to verified.</h2>
           </div>
           <div className="vsteps">
@@ -159,10 +159,8 @@ export function Verify() {
               </p>
             </div>
             <div className="trust-card dark rise d2">
-              <span className="label" style={{ color: "var(--accent)" }}>
-                Disclosure you can stand behind
-              </span>
-              <h3 style={{ color: "var(--paper)" }}>Audited from the first view.</h3>
+              <span className="label on-dark">Disclosure you can stand behind</span>
+              <h3>Audited from the first view.</h3>
               <p>
                 Verification pairs with our append-only audit trail: every résumé you open
                 is logged. Trust runs both ways — candidates trust verified employers, and
@@ -177,23 +175,17 @@ export function Verify() {
       <section className="cta">
         <div className="wrap">
           <div className="panel">
-            <p className="label" style={{ color: "var(--accent)" }}>
-              Ready when you are
-            </p>
+            <p className="label on-dark">Ready when you are</p>
             <h2>Get verified in the console.</h2>
             <p className="deck">
               Set up your workspace, submit your details, and post your first role free —
               verification runs alongside.
             </p>
             <div className="hero-cta">
-              <a className="btn btn-amber" href={CONSOLE_URL} target="_blank" rel="noreferrer">
+              <a className="btn btn-invert" href={CONSOLE_URL} target="_blank" rel="noreferrer">
                 Open the console <span className="arrow" aria-hidden="true">→</span>
               </a>
-              <Link
-                to="/employers"
-                className="btn btn-ghost"
-                style={{ color: "var(--paper)", borderColor: "rgba(243,244,241,0.3)" }}
-              >
+              <Link to="/employers" className="btn btn-ghost on-dark-ghost">
                 Back to overview
               </Link>
             </div>
