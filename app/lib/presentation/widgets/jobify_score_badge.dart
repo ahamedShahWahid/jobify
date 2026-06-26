@@ -9,11 +9,9 @@ class JobifyScoreBadge extends StatelessWidget {
 
   final double score;
 
-  Color get _bandColor {
-    if (score >= 0.80) return JobifyColors.scoreHigh;
-    if (score >= 0.65) return JobifyColors.scoreMid;
-    return JobifyColors.scoreLow;
-  }
+  // TODO(task-3): replace with score-band colours from Clear Sky palette.
+  Color _bandColor(bool isDark) =>
+      isDark ? JobifyColors.brandBlueDark : JobifyColors.brandBlueLight;
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +22,7 @@ class JobifyScoreBadge extends StatelessWidget {
         vertical: JobifySpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: _bandColor,
+        color: _bandColor(Theme.of(context).brightness == Brightness.dark),
         borderRadius: JobifyRadii.borderRadiusPill,
       ),
       child: Text(
