@@ -65,7 +65,7 @@ class FeedItemCard extends StatelessWidget {
                   ),
                   const SizedBox(width: JobifySpacing.sm),
                   if (isClosed)
-                    _ClosedPill(theme: theme)
+                    const _ClosedPill()
                   else if (showScore && match != null)
                     JobifyScoreBadge(score: match!.totalScore),
                 ],
@@ -131,24 +131,26 @@ class _CaveatLine extends StatelessWidget {
 }
 
 class _ClosedPill extends StatelessWidget {
-  const _ClosedPill({required this.theme});
-  final ThemeData theme;
+  const _ClosedPill();
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: JobifySpacing.sm,
-          vertical: JobifySpacing.xs,
-        ),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest,
-          border: Border.all(color: theme.colorScheme.outlineVariant),
-          borderRadius: JobifyRadii.borderRadiusPill,
-        ),
-        child: Text(
-          'Closed',
-          style: theme.textTheme.labelSmall
-              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: JobifySpacing.sm,
+        vertical: JobifySpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+        borderRadius: JobifyRadii.borderRadiusPill,
+      ),
+      child: Text(
+        'Closed',
+        style: theme.textTheme.labelSmall
+            ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+      ),
+    );
+  }
 }

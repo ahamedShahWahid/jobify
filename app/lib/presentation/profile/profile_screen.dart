@@ -12,6 +12,7 @@ import 'package:jobify_app/presentation/profile/package_info_provider.dart';
 import 'package:jobify_app/presentation/profile/sign_out_controller.dart';
 import 'package:jobify_app/presentation/routing/routes.dart';
 import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/theme/jobify_typography.dart';
 import 'package:jobify_app/presentation/theme/theme_mode_controller.dart';
 import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
 
@@ -132,7 +133,8 @@ class ProfileScreen extends ConsumerWidget {
                   data: (info) => Center(
                     child: Text(
                       'v${info.version} (${info.buildNumber})',
-                      style: theme.textTheme.labelSmall?.copyWith(
+                      style: JobifyTypography.mono(
+                        fontSize: 11,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
@@ -223,7 +225,15 @@ class _DetailRow extends StatelessWidget {
               ),
             ),
           ),
-          Expanded(child: Text(value, style: theme.textTheme.bodyMedium)),
+          Expanded(
+            child: Text(
+              value,
+              style: JobifyTypography.mono(
+                fontSize: 14,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          ),
         ],
       ),
     );

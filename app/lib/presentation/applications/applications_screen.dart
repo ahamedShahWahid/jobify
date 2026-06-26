@@ -7,6 +7,7 @@ import 'package:jobify_app/data/jobs/application_status.dart';
 import 'package:jobify_app/presentation/applications/applications_controller.dart';
 import 'package:jobify_app/presentation/routing/routes.dart';
 import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/theme/jobify_typography.dart';
 import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
 import 'package:jobify_app/presentation/widgets/jobify_empty_state.dart';
 import 'package:jobify_app/presentation/widgets/jobify_loading_view.dart';
@@ -116,12 +117,11 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                                 : 'Applied ${_dateFormat.format(whenDate)}';
                             return whenLabel;
                           }(),
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
+                          style: JobifyTypography.mono(
+                            fontSize: 12,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ],
                     ),

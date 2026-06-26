@@ -39,6 +39,7 @@ class JobifyRecruiterShellScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
       body: shell,
       bottomNavigationBar: NavigationBar(
@@ -46,6 +47,8 @@ class JobifyRecruiterShellScaffold extends StatelessWidget {
         destinations: _items,
         onDestinationSelected: _onTap,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        backgroundColor: cs.surfaceContainerHighest,
+        indicatorColor: cs.primaryContainer,
       ),
     );
   }
