@@ -188,3 +188,14 @@
   outline: 2px solid var(--brand-blue);
   outline-offset: 1px;
 }
+
+/* Brand logo on dark surfaces.
+   jobify-logo.svg is a monochrome trace in the brand blue (#0048A8) — legible
+   on the light paper, but dark-blue on near-black loses the wordmark + tagline.
+   Brighten it in dark mode, mirroring exactly what the --brand-blue token does
+   (#0048A8 → #4f8cff). One shared rule covers every surface's .brand-logo;
+   light mode is untouched. data-theme is always a concrete light|dark value
+   (ThemeProvider resolves "system"), so this is reliable for system-dark too. */
+:root[data-theme="dark"] .brand-logo {
+  filter: brightness(1.8) saturate(0.9);
+}
