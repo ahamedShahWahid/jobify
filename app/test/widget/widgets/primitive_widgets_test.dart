@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jobify_app/core/error/exceptions.dart';
+import 'package:jobify_app/presentation/theme/jobify_colors.dart';
 import 'package:jobify_app/presentation/widgets/jobify_empty_state.dart';
 import 'package:jobify_app/presentation/widgets/jobify_error_view.dart';
 import 'package:jobify_app/presentation/widgets/jobify_loading_view.dart';
@@ -66,17 +67,26 @@ void main() {
     expect(find.text('Go'), findsOneWidget);
   });
 
-  testWidgets('JobifyScoreBadge renders rounded percent', (tester) async {
+  testWidgets('JobifyScoreBadge renders rounded percent in mono',
+      (tester) async {
     await tester.pumpWidget(_wrap(const JobifyScoreBadge(score: 0.857)));
     expect(find.text('86%'), findsOneWidget);
   });
 
-  testWidgets('JobifyScoreBadge bands by score', (tester) async {
-    await tester.pumpWidget(_wrap(const JobifyScoreBadge(score: 0.5)));
-    expect(find.text('50%'), findsOneWidget);
-    await tester.pumpWidget(_wrap(const JobifyScoreBadge(score: 0.7)));
-    expect(find.text('70%'), findsOneWidget);
+  test('JobifyScoreBadge.isStrong gates on 0.80', () {
+    expect(JobifyScoreBadge.isStrong(0.79), isFalse);
+    expect(JobifyScoreBadge.isStrong(0.80), isTrue);
+    expect(JobifyScoreBadge.isStrong(0.95), isTrue);
+  });
+
+  testWidgets('strong match uses brand blue, weak uses inkSoft',
+      (tester) async {
     await tester.pumpWidget(_wrap(const JobifyScoreBadge(score: 0.95)));
-    expect(find.text('95%'), findsOneWidget);
+    final strong = tester.widget<Text>(find.text('95%'));
+    expect(strong.style?.color, JobifyColors.brandBlueLight);
+
+    await tester.pumpWidget(_wrap(const JobifyScoreBadge(score: 0.5)));
+    final weak = tester.widget<Text>(find.text('50%'));
+    expect(weak.style?.color, JobifyColors.inkSoftLight);
   });
 }
