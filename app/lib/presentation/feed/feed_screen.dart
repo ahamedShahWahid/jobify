@@ -6,6 +6,7 @@ import 'package:jobify_app/presentation/feed/feed_controller.dart';
 import 'package:jobify_app/presentation/feed/feed_item_card.dart';
 import 'package:jobify_app/presentation/routing/routes.dart';
 import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/widgets/arrive.dart';
 import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
 import 'package:jobify_app/presentation/widgets/jobify_empty_state.dart';
 import 'package:jobify_app/presentation/widgets/jobify_loading_view.dart';
@@ -92,12 +93,15 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                 return const SizedBox.shrink();
               }
               final item = s.items[i];
-              return FeedItemCard(
-                job: item.job,
-                employer: item.employer,
-                onTap: () => context.go('${Routes.feed}/jobs/${item.job.id}'),
-                match: item.match,
-                explanation: item.match.explanation,
+              return Arrive(
+                index: i,
+                child: FeedItemCard(
+                  job: item.job,
+                  employer: item.employer,
+                  onTap: () => context.go('${Routes.feed}/jobs/${item.job.id}'),
+                  match: item.match,
+                  explanation: item.match.explanation,
+                ),
               );
             },
           ),

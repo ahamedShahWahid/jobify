@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import 'package:jobify_app/data/feed/feed_dto.dart';
 import 'package:jobify_app/data/jobs/job_status.dart';
+import 'package:jobify_app/presentation/theme/jobify_colors.dart';
+import 'package:jobify_app/presentation/theme/jobify_radii.dart';
 import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/theme/jobify_typography.dart';
 import 'package:jobify_app/presentation/widgets/jobify_score_badge.dart';
 
 class FeedItemCard extends StatelessWidget {
@@ -51,62 +54,101 @@ class FeedItemCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      employer.name,
-                      style: theme.textTheme.labelLarge,
+                      employer.name.toUpperCase(),
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        letterSpacing: 0.4,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  const SizedBox(width: JobifySpacing.sm),
                   if (isClosed)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: JobifySpacing.sm,
-                        vertical: JobifySpacing.xs,
-                      ),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.outlineVariant,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        'Closed',
-                        style: theme.textTheme.labelSmall,
-                      ),
-                    )
+                    _ClosedPill(theme: theme)
                   else if (showScore && match != null)
                     JobifyScoreBadge(score: match!.totalScore),
                 ],
               ),
-              const SizedBox(height: JobifySpacing.sm),
-              Text(job.title, style: theme.textTheme.titleMedium),
               const SizedBox(height: JobifySpacing.xs),
-              Text(
-                meta,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
+              Text(job.title, style: theme.textTheme.titleMedium),
               if (explanation != null) ...[
-                const SizedBox(height: JobifySpacing.md),
+                const SizedBox(height: JobifySpacing.sm),
                 Text(
                   explanation!.fit,
-                  style: theme.textTheme.bodyMedium,
-                  maxLines: 2,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w500,
+                    height: 1.4,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (explanation!.caveat != null) ...[
-                  const SizedBox(height: JobifySpacing.xs),
-                  Text(
-                    explanation!.caveat!,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  const SizedBox(height: JobifySpacing.sm),
+                  _CaveatLine(text: explanation!.caveat!),
                 ],
               ],
+              const SizedBox(height: JobifySpacing.md),
+              Text(
+                meta,
+                style: JobifyTypography.mono(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
             ],
           ),
         ),
       ),
     );
   }
+}
+
+class _CaveatLine extends StatelessWidget {
+  const _CaveatLine({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final amber = isDark ? JobifyColors.caveatDark : JobifyColors.caveatLight;
+    return Container(
+      padding: const EdgeInsets.only(left: JobifySpacing.sm),
+      decoration: BoxDecoration(
+        border: Border(left: BorderSide(color: amber, width: 2.5)),
+      ),
+      child: Text(
+        'Counts against: $text',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: amber),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+}
+
+class _ClosedPill extends StatelessWidget {
+  const _ClosedPill({required this.theme});
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: JobifySpacing.sm,
+          vertical: JobifySpacing.xs,
+        ),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest,
+          border: Border.all(color: theme.colorScheme.outlineVariant),
+          borderRadius: JobifyRadii.borderRadiusPill,
+        ),
+        child: Text(
+          'Closed',
+          style: theme.textTheme.labelSmall
+              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+      );
 }

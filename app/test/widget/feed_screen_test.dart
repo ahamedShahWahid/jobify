@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jobify_app/data/feed/feed_dto.dart';
 import 'package:jobify_app/data/feed/feed_repository.dart';
 import 'package:jobify_app/data/feed/feed_repository_impl.dart';
+import 'package:jobify_app/data/feed/match_generator.dart';
 import 'package:jobify_app/data/jobs/job_status.dart';
+import 'package:jobify_app/presentation/feed/feed_item_card.dart';
 import 'package:jobify_app/presentation/feed/feed_screen.dart';
 
 class _FakeFeedRepo implements FeedRepository {
@@ -23,6 +25,44 @@ Widget _wrap(Widget child, {required FeedRepository repo}) {
     ),
   );
 }
+
+FeedItemDto _cardItem({String? caveat}) => FeedItemDto(
+      match: MatchSummaryDto(
+        id: 'm1',
+        totalScore: 0.85,
+        scoreComponents: const {},
+        explanation: ExplanationDto(
+          fit: 'Your Django work lines up.',
+          generator: MatchGenerator.templated,
+          generatorVersion: '1',
+          caveat: caveat,
+        ),
+      ),
+      job: JobSummaryDto(
+        id: 'j1',
+        title: 'Backend Engineer',
+        locations: const ['BLR'],
+        status: JobStatus.open,
+        postedAt: DateTime.parse('2026-05-18T00:00:00Z'),
+      ),
+      employer: const EmployerSummaryDto(id: 'e1', name: 'Acme Co'),
+    );
+
+Widget _wrapCard(FeedItemDto item) => MediaQuery(
+      data: const MediaQueryData(disableAnimations: true),
+      child: MaterialApp(
+        theme: ThemeData.light(useMaterial3: true),
+        home: Scaffold(
+          body: FeedItemCard(
+            job: item.job,
+            employer: item.employer,
+            match: item.match,
+            explanation: item.match.explanation,
+            onTap: () {},
+          ),
+        ),
+      ),
+    );
 
 void main() {
   testWidgets('renders empty state when no items', (tester) async {
@@ -64,7 +104,24 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Engineer'), findsOneWidget);
-    expect(find.text('Acme Co'), findsOneWidget);
+    expect(find.text('ACME CO'), findsOneWidget);
     expect(find.text("You're all caught up"), findsOneWidget);
+  });
+
+  testWidgets('card leads with the match sentence and shows the caveat',
+      (tester) async {
+    await tester.pumpWidget(
+      _wrapCard(_cardItem(caveat: '3 yrs vs 5 required')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Your Django work lines up.'), findsOneWidget);
+    expect(find.textContaining('3 yrs vs 5 required'), findsOneWidget);
+  });
+
+  testWidgets('no caveat line when caveat is null', (tester) async {
+    await tester.pumpWidget(_wrapCard(_cardItem()));
+    await tester.pumpAndSettle();
+    expect(find.text('Your Django work lines up.'), findsOneWidget);
+    expect(find.textContaining('vs'), findsNothing);
   });
 }
