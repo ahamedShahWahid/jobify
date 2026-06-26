@@ -9,7 +9,7 @@
 .surface-console {
   /* body base styles folded from body { } */
   margin: 0;
-  background: var(--paper-2);
+  background: var(--paper);
   color: var(--ink);
   font-family: var(--mono);
   font-size: 13px;
@@ -116,7 +116,7 @@
   display: flex;
   flex-direction: column;
   gap: 26px;
-  background: linear-gradient(180deg, var(--paper), transparent 70%);
+  background: linear-gradient(180deg, var(--panel), transparent 70%);
   position: sticky;
   top: 0;
   height: 100vh;
@@ -221,7 +221,7 @@
   gap: 18px;
   padding: 14px 30px;
   border-bottom: 1px solid var(--line);
-  background: color-mix(in srgb, var(--paper-2) 75%, transparent);
+  background: color-mix(in srgb, var(--paper) 75%, transparent);
   backdrop-filter: blur(6px);
   position: sticky;
   top: 0;
@@ -429,7 +429,7 @@
 
 .surface-console .panel {
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--paper) 85%, transparent);
+  background: color-mix(in srgb, var(--panel) 85%, transparent);
 }
 .surface-console .panel-head {
   display: flex;
@@ -452,7 +452,7 @@
   border: 1px solid var(--line);
 }
 .surface-console .tile {
-  background: var(--paper);
+  background: var(--panel);
   padding: 18px 18px 14px;
   position: relative;
   overflow: hidden;
@@ -488,7 +488,7 @@
 .surface-console .table-wrap {
   border: 1px solid var(--line);
   overflow-x: auto;
-  background: color-mix(in srgb, var(--paper) 80%, transparent);
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
 }
 .surface-console table.console {
   width: 100%;
@@ -610,7 +610,7 @@
   right: 0;
   bottom: 0;
   width: min(520px, 94vw);
-  background: var(--paper);
+  background: var(--panel);
   border-left: 1px solid var(--line-strong);
   z-index: 41;
   display: flex;
@@ -732,7 +732,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  background: var(--paper);
+  background: var(--panel);
 }
 .surface-console .gate-meta {
   display: flex;
@@ -810,7 +810,7 @@
   gap: 12px;
   padding: 16px;
   border: 1px solid var(--line);
-  background: var(--paper);
+  background: var(--panel);
   margin-bottom: 18px;
 }
 .surface-console .filters .field {
@@ -995,7 +995,7 @@
   border: 1px solid var(--line);
 }
 .surface-console .compliance-cell {
-  background: var(--paper);
+  background: var(--panel);
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
