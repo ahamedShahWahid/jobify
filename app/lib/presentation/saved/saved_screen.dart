@@ -8,6 +8,7 @@ import 'package:jobify_app/presentation/routing/routes.dart';
 import 'package:jobify_app/presentation/saved/saved_controller.dart';
 import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
 import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
+import 'package:jobify_app/presentation/widgets/bold_header.dart';
 import 'package:jobify_app/presentation/widgets/jobify_empty_state.dart';
 import 'package:jobify_app/presentation/widgets/jobify_loading_view.dart';
 
@@ -39,9 +40,12 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
   @override
   Widget build(BuildContext context) {
     final value = ref.watch(savedControllerProvider);
-    return Scaffold(
-      appBar: AppBar(title: const Text('Saved')),
-      body: AsyncValueWidget<SavedState>(
+    return BoldScaffold(
+      header: const BoldHeader(
+        title: 'Saved',
+        subtitle: 'Jobs you kept for later',
+      ),
+      child: AsyncValueWidget<SavedState>(
         value: value,
         onRetry: () => ref.read(savedControllerProvider.notifier).refresh(),
         isEmpty: (s) => s.items.isEmpty,

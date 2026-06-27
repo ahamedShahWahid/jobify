@@ -38,6 +38,20 @@ void main() {
     expect(find.text('Continue with Google'), findsOneWidget);
   });
 
+  testWidgets('wide two-pane layout renders scene + sign-in without overflow',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_wrap(const SignInScreen()));
+    await tester.pumpAndSettle();
+    expect(find.text('Jobify'), findsOneWidget);
+    expect(find.text('Continue with Google'), findsOneWidget);
+    // The arrival scene renders its person + role chips.
+    expect(find.byIcon(Icons.person), findsOneWidget);
+    expect(find.text('92% match'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('button is disabled while loading', (tester) async {
     await tester.pumpWidget(
       _wrap(
@@ -49,7 +63,7 @@ void main() {
     );
     await tester.pump();
     expect(find.text('Signing in…'), findsOneWidget);
-    // OutlinedButton.icon onPressed: null when isLoading; presence of the
+    // FilledButton.icon onPressed: null when isLoading; presence of the
     // 'Signing in…' label is sufficient signal.
   });
 }

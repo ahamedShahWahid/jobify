@@ -15,6 +15,7 @@ import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
 import 'package:jobify_app/presentation/theme/jobify_typography.dart';
 import 'package:jobify_app/presentation/theme/theme_mode_controller.dart';
 import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
+import 'package:jobify_app/presentation/widgets/bold_header.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -25,17 +26,15 @@ class ProfileScreen extends ConsumerWidget {
     final signOut = ref.watch(signOutControllerProvider);
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-        actions: [
-          TextButton(
-            onPressed: () => context.go(Routes.profileEdit),
-            child: const Text('Edit'),
-          ),
-        ],
+    return BoldScaffold(
+      header: BoldHeader(
+        title: 'Profile',
+        trailing: TextButton(
+          onPressed: () => context.go(Routes.profileEdit),
+          child: const Text('Edit'),
+        ),
       ),
-      body: AsyncValueWidget(
+      child: AsyncValueWidget(
         value: me,
         onRetry: () => ref.read(meControllerProvider.notifier).refresh(),
         data: (data) => ListView(
@@ -59,8 +58,9 @@ class ProfileScreen extends ConsumerWidget {
                 child: ListTile(
                   leading: const Icon(Icons.business_center_outlined),
                   title: const Text("I'm hiring — post a job"),
-                  subtitle:
-                      const Text('Create your company to start recruiting'),
+                  subtitle: const Text(
+                    'Create your company to start recruiting',
+                  ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push(Routes.onboardingEmployer),
                 ),

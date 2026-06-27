@@ -49,6 +49,18 @@ abstract final class JobifyColors {
   static const brandInkLight = Color(0xFFFFFFFF); // text/icon on brand fill
   static const brandInkDark = Color(0xFF04101F);
 
+  // ── Brand canvas — always-blue hero surfaces (sign-in + bold headers) ────
+  // Theme-independent BY DESIGN: the bold-blue identity does not invert with
+  // light/dark. `brandCanvasMid` doubles as the on-white-button foreground, so
+  // the gradient mid-stop and the button-label colour stay intentionally
+  // coupled.
+  static const brandCanvasTop = Color(0xFF0B53B8);
+  static const brandCanvasMid = Color(0xFF013A86);
+  static const brandCanvasBottom = Color(0xFF001229);
+
+  /// Light-blue accent used as a glow/dot against the brand canvas.
+  static const brandGlow = Color(0xFF7FB0FF);
+
   // ── Caveat amber — the honest weakness, only ────────────────────────────
   static const caveatLight = Color(0xFFC77A1E);
   static const caveatDark = Color(0xFFE0A24A);

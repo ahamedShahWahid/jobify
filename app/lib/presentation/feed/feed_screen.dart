@@ -8,6 +8,7 @@ import 'package:jobify_app/presentation/routing/routes.dart';
 import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
 import 'package:jobify_app/presentation/widgets/arrive.dart';
 import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
+import 'package:jobify_app/presentation/widgets/bold_header.dart';
 import 'package:jobify_app/presentation/widgets/jobify_empty_state.dart';
 import 'package:jobify_app/presentation/widgets/jobify_loading_view.dart';
 
@@ -39,18 +40,17 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   @override
   Widget build(BuildContext context) {
     final value = ref.watch(feedControllerProvider);
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('For you'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () =>
-                ref.read(feedControllerProvider.notifier).refresh(),
-          ),
-        ],
+    return BoldScaffold(
+      header: BoldHeader(
+        title: 'For you',
+        subtitle: 'Roles matched to your profile',
+        trailing: IconButton(
+          icon: const Icon(Icons.refresh),
+          tooltip: 'Refresh',
+          onPressed: () => ref.read(feedControllerProvider.notifier).refresh(),
+        ),
       ),
-      body: AsyncValueWidget<FeedState>(
+      child: AsyncValueWidget<FeedState>(
         value: value,
         onRetry: () => ref.read(feedControllerProvider.notifier).refresh(),
         isEmpty: (s) => s.items.isEmpty,

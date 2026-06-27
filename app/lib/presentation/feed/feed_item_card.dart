@@ -77,9 +77,10 @@ class FeedItemCard extends StatelessWidget {
                 Text(
                   explanation!.fit,
                   style: theme.textTheme.titleMedium?.copyWith(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w500,
-                    height: 1.4,
+                    fontSize: 18.5,
+                    fontWeight: FontWeight.w600,
+                    height: 1.35,
+                    letterSpacing: -0.3,
                     color: theme.colorScheme.onSurface,
                   ),
                   maxLines: 3,
