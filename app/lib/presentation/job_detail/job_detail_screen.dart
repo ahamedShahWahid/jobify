@@ -10,7 +10,9 @@ import 'package:jobify_app/presentation/job_detail/apply_to_job_controller.dart'
 import 'package:jobify_app/presentation/job_detail/job_detail_controller.dart';
 import 'package:jobify_app/presentation/job_detail/save_job_controller.dart';
 import 'package:jobify_app/presentation/job_detail/unsave_job_controller.dart';
+import 'package:jobify_app/presentation/theme/jobify_colors.dart';
 import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/theme/jobify_typography.dart';
 import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
 import 'package:jobify_app/presentation/widgets/jobify_empty_state.dart';
 import 'package:jobify_app/presentation/widgets/jobify_score_badge.dart';
@@ -112,6 +114,27 @@ class JobDetailScreen extends ConsumerWidget {
   }
 }
 
+class _CaveatLine extends StatelessWidget {
+  const _CaveatLine({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final amber = isDark ? JobifyColors.caveatDark : JobifyColors.caveatLight;
+    return Container(
+      padding: const EdgeInsets.only(left: JobifySpacing.sm),
+      decoration: BoxDecoration(
+        border: Border(left: BorderSide(color: amber, width: 2.5)),
+      ),
+      child: Text(
+        'Counts against: $text',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: amber),
+      ),
+    );
+  }
+}
+
 class _MatchCard extends StatelessWidget {
   const _MatchCard({required this.match});
   final MatchSummaryDto match;
@@ -138,16 +161,27 @@ class _MatchCard extends StatelessWidget {
             ),
             if (exp != null) ...[
               const SizedBox(height: JobifySpacing.md),
-              Text(exp.fit, style: theme.textTheme.bodyMedium),
+              Text(
+                exp.fit,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w500,
+                  height: 1.4,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
               if (exp.caveat != null) ...[
                 const SizedBox(height: JobifySpacing.sm),
-                Text(
-                  exp.caveat!,
-                  style: theme.textTheme.bodySmall,
-                ),
+                _CaveatLine(text: exp.caveat!),
               ],
               const SizedBox(height: JobifySpacing.sm),
-              Text(exp.generator.label, style: theme.textTheme.labelSmall),
+              Text(
+                exp.generator.label,
+                style: JobifyTypography.mono(
+                  fontSize: 11,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
             ],
           ],
         ),

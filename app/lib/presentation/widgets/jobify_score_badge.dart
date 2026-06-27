@@ -1,37 +1,34 @@
 import 'package:flutter/material.dart';
 
 import 'package:jobify_app/presentation/theme/jobify_colors.dart';
-import 'package:jobify_app/presentation/theme/jobify_radii.dart';
-import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/theme/jobify_typography.dart';
 
+/// The match score, demoted to a quiet monospace stamp.
+///
+/// Brand blue when the match is strong (>= 0.80) — "worth your attention" —
+/// otherwise inkSoft. No filled pill: the *sentence* is the hero, not the
+/// number.
 class JobifyScoreBadge extends StatelessWidget {
   const JobifyScoreBadge({required this.score, super.key});
 
   final double score;
 
-  Color get _bandColor {
-    if (score >= 0.80) return JobifyColors.scoreHigh;
-    if (score >= 0.65) return JobifyColors.scoreMid;
-    return JobifyColors.scoreLow;
-  }
+  static bool isStrong(double score) => score >= 0.80;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final percent = (score * 100).round().clamp(0, 100);
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: JobifySpacing.sm,
-        vertical: JobifySpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: _bandColor,
-        borderRadius: JobifyRadii.borderRadiusPill,
-      ),
-      child: Text(
-        '$percent%',
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: Colors.white,
-            ),
+    final color = isStrong(score)
+        ? (isDark ? JobifyColors.brandBlueDark : JobifyColors.brandBlueLight)
+        : (isDark ? JobifyColors.inkSoftDark : JobifyColors.inkSoftLight);
+    return Text(
+      '$percent%',
+      style: JobifyTypography.mono(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: color,
+        letterSpacing: -0.2,
       ),
     );
   }

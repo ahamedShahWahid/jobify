@@ -5,11 +5,10 @@ import 'package:jobify_app/presentation/theme/jobify_radii.dart';
 import 'package:jobify_app/presentation/theme/jobify_typography.dart';
 
 /// Single ThemeData factory for both brightness modes.
-/// Warm-paper token set — light and dark variants picked by the isDark flag.
+/// Clear Sky token set — light and dark variants picked by the isDark flag.
 ThemeData buildTheme(Brightness brightness) {
   final isDark = brightness == Brightness.dark;
 
-  // ── Pick light / dark token values ───────────────────────────────────────
   final paper = isDark ? JobifyColors.paperDark : JobifyColors.paperLight;
   final panel = isDark ? JobifyColors.panelDark : JobifyColors.panelLight;
   final ink = isDark ? JobifyColors.inkDark : JobifyColors.inkLight;
@@ -18,55 +17,40 @@ ThemeData buildTheme(Brightness brightness) {
   final lineStrong =
       isDark ? JobifyColors.lineStrongDark : JobifyColors.lineStrongLight;
 
-  final accent = isDark ? JobifyColors.accentDark : JobifyColors.accentLight;
-  final accentDeep =
-      isDark ? JobifyColors.accentDeepDark : JobifyColors.accentDeepLight;
-  final accentWash =
-      isDark ? JobifyColors.accentWashDark : JobifyColors.accentWashLight;
-  final accentInk =
-      isDark ? JobifyColors.accentInkDark : JobifyColors.accentInkLight;
-  final onPrimaryContainer = isDark ? accent : accentDeep;
-
-  final brandBlue =
+  final brand =
       isDark ? JobifyColors.brandBlueDark : JobifyColors.brandBlueLight;
-  final brandBlueDeep =
+  final brandDeep =
       isDark ? JobifyColors.brandBlueDeepDark : JobifyColors.brandBlueDeepLight;
-  final brandBlueTint =
+  final brandTint =
       isDark ? JobifyColors.brandBlueTintDark : JobifyColors.brandBlueTintLight;
-  const onSecondaryLight = Color(0xFFFFFFFF);
-  const onSecondaryDark = Color(0xFF0A1020);
-  final onSecondary = isDark ? onSecondaryDark : onSecondaryLight;
-  final onSecondaryContainer = isDark ? brandBlue : brandBlueDeep;
-
-  final forest = isDark ? JobifyColors.forestDark : JobifyColors.forestLight;
-  final forestSoft =
-      isDark ? JobifyColors.forestSoftDark : JobifyColors.forestSoftLight;
-  const onTertiaryLight = Color(0xFFFFFFFF);
-  const onTertiaryDark = Color(0xFF06210F);
-  final onTertiary = isDark ? onTertiaryDark : onTertiaryLight;
+  final brandInk =
+      isDark ? JobifyColors.brandInkDark : JobifyColors.brandInkLight;
 
   final danger = isDark ? JobifyColors.dangerDark : JobifyColors.dangerLight;
-  const onErrorLight = Color(0xFFFFFFFF);
-  const onErrorDark = Color(0xFF2A0A06);
-  final onError = isDark ? onErrorDark : onErrorLight;
+  final onDanger = isDark ? const Color(0xFF2A0606) : const Color(0xFFFFFFFF);
 
-  // ── ColorScheme ──────────────────────────────────────────────────────────
   final scheme = ColorScheme(
     brightness: brightness,
-    primary: accent,
-    onPrimary: accentInk,
-    primaryContainer: accentWash,
-    onPrimaryContainer: onPrimaryContainer,
-    secondary: brandBlue,
-    onSecondary: onSecondary,
-    secondaryContainer: brandBlueTint,
-    onSecondaryContainer: onSecondaryContainer,
-    tertiary: forest,
-    onTertiary: onTertiary,
-    tertiaryContainer: forestSoft,
-    onTertiaryContainer: forest,
+    // Brand blue is primary: CTAs, the "Applied" pill, selected nav.
+    primary: brand,
+    onPrimary: brandInk,
+    primaryContainer: brandTint,
+    onPrimaryContainer: brand,
+    // secondary / tertiary are not consumed by any screen; keep them in the
+    // brand family so nothing renders an off-palette color if used later.
+    secondary: brandDeep,
+    onSecondary: brandInk,
+    secondaryContainer: brandTint,
+    onSecondaryContainer: brand,
+    tertiary: brandDeep,
+    onTertiary: brandInk,
+    tertiaryContainer: brandTint,
+    onTertiaryContainer: brand,
     error: danger,
-    onError: onError,
+    onError: onDanger,
+    errorContainer:
+        isDark ? JobifyColors.caveatWashDark : const Color(0xFFF7DCD8),
+    onErrorContainer: danger,
     surface: paper,
     onSurface: ink,
     surfaceContainerHighest: panel,
@@ -109,7 +93,7 @@ ThemeData buildTheme(Brightness brightness) {
     ),
     cardTheme: CardThemeData(
       shape: const RoundedRectangleBorder(
-        borderRadius: JobifyRadii.borderRadiusLg,
+        borderRadius: JobifyRadii.borderRadiusXl,
       ),
       margin: EdgeInsets.zero,
       elevation: 0,

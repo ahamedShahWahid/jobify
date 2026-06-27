@@ -7,7 +7,9 @@ import 'package:jobify_app/data/jobs/application_status.dart';
 import 'package:jobify_app/presentation/applications/applications_controller.dart';
 import 'package:jobify_app/presentation/routing/routes.dart';
 import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/theme/jobify_typography.dart';
 import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
+import 'package:jobify_app/presentation/widgets/bold_header.dart';
 import 'package:jobify_app/presentation/widgets/jobify_empty_state.dart';
 import 'package:jobify_app/presentation/widgets/jobify_loading_view.dart';
 
@@ -41,9 +43,12 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
   @override
   Widget build(BuildContext context) {
     final value = ref.watch(applicationsControllerProvider);
-    return Scaffold(
-      appBar: AppBar(title: const Text('Applications')),
-      body: AsyncValueWidget<ApplicationsState>(
+    return BoldScaffold(
+      header: const BoldHeader(
+        title: 'Applications',
+        subtitle: 'Roles you applied to',
+      ),
+      child: AsyncValueWidget<ApplicationsState>(
         value: value,
         onRetry: () =>
             ref.read(applicationsControllerProvider.notifier).refresh(),
@@ -111,17 +116,16 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                             final whenDate = isWithdrawn
                                 ? item.application.updatedAt
                                 : item.application.createdAt;
-                            final whenLabel = isWithdrawn
-                                ? 'Withdrawn ${_dateFormat.format(whenDate)}'
-                                : 'Applied ${_dateFormat.format(whenDate)}';
-                            return whenLabel;
+                            final when = _dateFormat.format(whenDate);
+                            return isWithdrawn
+                                ? 'Withdrawn $when'
+                                : 'Applied $when';
                           }(),
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
+                          style: JobifyTypography.mono(
+                            fontSize: 12,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ],
                     ),

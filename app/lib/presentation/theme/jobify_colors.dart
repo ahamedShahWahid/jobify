@@ -1,89 +1,77 @@
 import 'package:flutter/material.dart';
 
-/// Jobify warm-paper color tokens — light and dark variants.
+/// Jobify "Clear Sky" color tokens — light and dark variants.
 ///
-/// Each semantic role has a `*Light` and `*Dark` constant. `buildTheme`
-/// picks the appropriate pair via its isDark branch.
+/// Color is rationed: only `brandBlue*` (the match / primary action) and
+/// `caveat*` (the honest weakness) carry meaning. Everything else is ink on a
+/// cool sky surface. `buildTheme` picks the light/dark pair via its isDark flag.
 abstract final class JobifyColors {
-  // ── Paper surfaces ──────────────────────────────────────────────────────
-  static const paperLight = Color(0xFFF4EFE3);
-  static const paperDark = Color(0xFF0D110E);
+  // ── Sky surfaces ────────────────────────────────────────────────────────
+  static const paperLight = Color(0xFFF4F6F9);
+  static const paperDark = Color(0xFF0B1620);
 
-  static const paper2Light = Color(0xFFECE4D3);
-  static const paper2Dark = Color(0xFF080B09);
+  static const paper2Light = Color(0xFFEAEEF4);
+  static const paper2Dark = Color(0xFF0F1C28);
 
-  static const paper3Light = Color(0xFFE4DAC4);
-  static const paper3Dark = Color(0xFF1A201A);
+  static const paper3Light = Color(0xFFDFE5EE);
+  static const paper3Dark = Color(0xFF0A141D);
 
-  static const panelLight = Color(0xFFFAF7EF);
-  static const panelDark = Color(0xFF121712);
+  static const panelLight = Color(0xFFFFFFFF);
+  static const panelDark = Color(0xFF13212E);
 
   // ── Ink (text / icon) ───────────────────────────────────────────────────
-  static const inkLight = Color(0xFF221C16);
-  static const inkDark = Color(0xFFE9E4D6);
+  static const inkLight = Color(0xFF0F2440);
+  static const inkDark = Color(0xFFE8EDF3);
 
-  static const inkSoftLight = Color(0xFF6C6354);
-  static const inkSoftDark = Color(0xFFB7B2A3);
+  static const inkSoftLight = Color(0xFF5C6B7E);
+  static const inkSoftDark = Color(0xFF9DB0C2);
 
-  static const inkFaintLight = Color(0xFF9B917E);
-  static const inkFaintDark = Color(0xFF6F7868);
+  static const inkFaintLight = Color(0xFF94A1B2);
+  static const inkFaintDark = Color(0xFF5E7186);
 
   // ── Lines / dividers ────────────────────────────────────────────────────
-  static const lineLight = Color(0xFFD9CFB9);
-  static const lineDark = Color(0xFF232B23);
+  static const lineLight = Color(0xFFE3E8EF);
+  static const lineDark = Color(0xFF1E2D3B);
 
-  static const lineStrongLight = Color(0xFFC4B89C);
-  static const lineStrongDark = Color(0xFF34402F);
+  static const lineStrongLight = Color(0xFFCED7E2);
+  static const lineStrongDark = Color(0xFF2C3F50);
 
-  // ── Brand blue ──────────────────────────────────────────────────────────
+  // ── Brand blue — the one meaning color (the match + primary action) ──────
   static const brandBlueLight = Color(0xFF0048A8);
-  static const brandBlueDark = Color(0xFF4F8CFF);
+  static const brandBlueDark = Color(0xFF5B9BFF);
 
-  static const brandBlueDeepLight = Color(0xFF003C8F);
-  static const brandBlueDeepDark = Color(0xFF2F6FE0);
+  static const brandBlueDeepLight = Color(0xFF00367D);
+  static const brandBlueDeepDark = Color(0xFF3F86F5);
 
-  static const brandBlueTintLight = Color(0xFFE1ECF8);
-  static const brandBlueTintDark = Color(0xFF16243F);
+  static const brandBlueTintLight = Color(0xFFE7EEF8); // wash behind a match
+  static const brandBlueTintDark = Color(0xFF13294A);
 
-  // ── Accent (terracotta / coral) ─────────────────────────────────────────
-  static const accentLight = Color(0xFFD8472A);
-  static const accentDark = Color(0xFFFF6A48);
+  static const brandInkLight = Color(0xFFFFFFFF); // text/icon on brand fill
+  static const brandInkDark = Color(0xFF04101F);
 
-  static const accentDeepLight = Color(0xFFB23A20);
-  static const accentDeepDark = Color(0xFFD8472A);
+  // ── Brand canvas — always-blue hero surfaces (sign-in + bold headers) ────
+  // Theme-independent BY DESIGN: the bold-blue identity does not invert with
+  // light/dark. `brandCanvasMid` doubles as the on-white-button foreground, so
+  // the gradient mid-stop and the button-label colour stay intentionally
+  // coupled.
+  static const brandCanvasTop = Color(0xFF0B53B8);
+  static const brandCanvasMid = Color(0xFF013A86);
+  static const brandCanvasBottom = Color(0xFF001229);
 
-  static const accentWashLight = Color(0xFFF3D9CF);
-  static const accentWashDark = Color(0xFF3A1C14);
+  /// Light-blue accent used as a glow/dot against the brand canvas.
+  static const brandGlow = Color(0xFF7FB0FF);
 
-  static const accentInkLight = Color(0xFFFFFFFF);
-  static const accentInkDark = Color(0xFF1A0F0A);
+  // ── Caveat amber — the honest weakness, only ────────────────────────────
+  static const caveatLight = Color(0xFFC77A1E);
+  static const caveatDark = Color(0xFFE0A24A);
 
-  // ── Forest (success / positive) ─────────────────────────────────────────
-  static const forestLight = Color(0xFF1F4034);
-  static const forestDark = Color(0xFF6FDC8C);
+  static const caveatWashLight = Color(0xFFFBF0E0);
+  static const caveatWashDark = Color(0xFF2A1F0E);
 
-  static const forestSoftLight = Color(0xFFCFDCD2);
-  static const forestSoftDark = Color(0xFF143020);
-
-  // ── Gold ────────────────────────────────────────────────────────────────
-  static const goldLight = Color(0xFFB8842F);
-  static const goldDark = Color(0xFFFFB000);
+  static const caveatInkLight = Color(0xFFFFFFFF);
+  static const caveatInkDark = Color(0xFF1F1404);
 
   // ── Danger / error ──────────────────────────────────────────────────────
-  static const dangerLight = Color(0xFFB23A20);
-  static const dangerDark = Color(0xFFFF5D49);
-
-  // ── Semantic aliases (brightness-agnostic, used in build_theme) ─────────
-  static const error = dangerLight; // light fallback; build_theme overrides
-  static const onError = Color(0xFFFFFFFF);
-
-  // ── Score bands — product semantics, not chrome ─────────────────────────
-  /// `total_score < 0.65`
-  static const scoreLow = Color(0xFFCF8A1D);
-
-  /// `0.65 <= total_score < 0.80`
-  static const scoreMid = Color(0xFF0048A8); // brand blue for consistency
-
-  /// `total_score >= 0.80`
-  static const scoreHigh = Color(0xFF1E8A4F);
+  static const dangerLight = Color(0xFFC0362B);
+  static const dangerDark = Color(0xFFFF6A5A);
 }
