@@ -19,7 +19,6 @@ from urllib.parse import quote
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response
-from pydantic import BaseModel, ConfigDict
 from sqlalchemy import and_, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -46,49 +45,17 @@ from jobify_api.auth.dependencies import (
 )
 from jobify_api.dependencies import get_session, get_storage
 from jobify_api.pagination import decode_cursor, encode_cursor, make_weak_etag
+from jobify_api.routes.applications_schemas import (
+    ApplicationListItem,
+    ApplicationListResponse,
+    ApplicationRead,
+    ApplyRequest,
+    WithdrawRequest,
+)
 from jobify_api.routes.schemas import EmployerRead, JobRead
 
 _log = structlog.get_logger(__name__)
 router = APIRouter(prefix="/v1", tags=["applications"])
-
-# ---------------------------------------------------------------------------
-# Pydantic shapes
-# ---------------------------------------------------------------------------
-
-
-class ApplicationRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: uuid.UUID
-    job_id: uuid.UUID
-    status: str  # "applied" | "withdrawn"
-    source: str
-    created_at: datetime
-    updated_at: datetime
-
-
-class ApplicationListItem(BaseModel):
-    application: ApplicationRead
-    job: JobRead
-    employer: EmployerRead
-
-
-class ApplicationListResponse(BaseModel):
-    items: list[ApplicationListItem]
-    next_cursor: str | None
-
-
-class ApplyRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    source: str = "feed"
-
-
-class WithdrawRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    status: str  # must be "withdrawn"
-
 
 # ---------------------------------------------------------------------------
 # Cursor helpers (keyed on created_at + application_id — distinct from feed)

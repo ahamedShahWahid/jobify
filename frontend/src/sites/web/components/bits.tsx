@@ -1,11 +1,18 @@
 import type { ReactNode } from "react";
 import type { JobRead } from "../api/types";
+import { inrLakh } from "../../../shared/format";
+import {
+  EmptyState as SharedEmptyState,
+  ErrorNotice as SharedErrorNotice,
+} from "../../../shared/components/notices";
 
-/** ₹ lakh formatting for CTC bands. */
+/** ₹ lakh formatting for CTC bands — delegates to the shared `inrLakh`. */
 export function ctcBand(min: number | null, max: number | null): string {
-  const lakh = (v: number) => `₹${(v / 100_000).toFixed(v % 100_000 === 0 ? 0 : 1)}L`;
   if (min === null && max === null) return "Undisclosed";
-  return [min, max].filter((v): v is number => v !== null).map(lakh).join(" – ");
+  return [min, max]
+    .map(inrLakh)
+    .filter((v): v is string => v !== null)
+    .join(" – ");
 }
 
 /** Relative "Nd ago" from an ISO timestamp. */
@@ -56,14 +63,13 @@ export function JobFacts({ job }: { job: JobRead }) {
 }
 
 export function ErrorNotice({ error }: { error: string | null }) {
-  if (!error) return null;
-  return <div className="notice err">⚠ {error}</div>;
+  return <SharedErrorNotice error={error} className="notice err" />;
 }
 
 export function EmptyState({ children }: { children: ReactNode }) {
   return (
-    <div className="empty">
-      <p className="serif">{children}</p>
-    </div>
+    <SharedEmptyState as="p" innerClassName="serif">
+      {children}
+    </SharedEmptyState>
   );
 }

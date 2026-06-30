@@ -18,6 +18,7 @@ from jobify.observability.logging import configure_logging
 from jobify.settings import Settings
 from jobify_api.auth.google_verifier import JwksGoogleIdTokenVerifier
 from jobify_api.middleware.error_handler import register_error_handlers
+from jobify_api.middleware.metrics import MetricsMiddleware
 from jobify_api.middleware.request_id import RequestIdMiddleware
 from jobify_api.routes import (
     admin,
@@ -32,6 +33,7 @@ from jobify_api.routes import (
     invites,
     jobs,
     me,
+    metrics,
     notifications,
     ready,
     resumes,
@@ -65,6 +67,10 @@ def create_app() -> FastAPI:
         cache_ttl_seconds=settings.google_jwks_cache_ttl_seconds,
     )
     app.add_middleware(RequestIdMiddleware)
+    # MetricsMiddleware wraps RequestIdMiddleware (counts real routed requests,
+    # including HTTPException/500 responses) but stays INSIDE CORS below, so CORS
+    # preflight (OPTIONS) short-circuits are not counted. Pure-ASGI (see metrics.py).
+    app.add_middleware(MetricsMiddleware)
     # Added after RequestIdMiddleware so it wraps it (outermost): CORS handles the
     # browser preflight (OPTIONS) and stamps Access-Control-* on every response,
     # including errors. Starlette's CORSMiddleware is pure-ASGI, so it's safe
@@ -82,6 +88,7 @@ def create_app() -> FastAPI:
     # it directly. Versioned API routes will be mounted with prefix="/v1" later.
     app.include_router(health.router)
     app.include_router(ready.router)
+    app.include_router(metrics.router)  # /metrics — ops scrape, include_in_schema=False
     app.include_router(resumes.router)
     app.include_router(applicants.router)
     app.include_router(employers.router)
