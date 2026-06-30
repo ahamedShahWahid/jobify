@@ -30,17 +30,25 @@ class MetricsMiddleware:
             return
 
         method = scope.get("method", "")
-        seen: dict[str, int] = {}
+        started_status: int | None = None
 
         async def _send_with_metrics(message: Message) -> None:
+            nonlocal started_status
             if message["type"] == "http.response.start":
-                seen["status"] = message["status"]
+                started_status = message["status"]
             await send(message)
 
         try:
             await self.app(scope, receive, _send_with_metrics)
         except Exception:
-            record_request(method, seen.get("status", 500))
+            # Server fault. If the response had already started, the client saw
+            # that status; otherwise ServerErrorMiddleware will emit a 500.
+            # (CancelledError and other BaseExceptions — e.g. a client disconnect
+            # — are intentionally not caught here, so they're not miscounted as 5xx.)
+            record_request(method, started_status if started_status is not None else 500)
             raise
         else:
-            record_request(method, seen.get("status", 500))
+            # Count the status actually emitted. A clean return with no response
+            # (pathological) is left uncounted rather than booked as a phantom 500.
+            if started_status is not None:
+                record_request(method, started_status)

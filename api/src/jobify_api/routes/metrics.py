@@ -19,5 +19,9 @@ _PROMETHEUS_CONTENT_TYPE = "text/plain; version=0.0.4; charset=utf-8"
 
 
 @router.get("/metrics", include_in_schema=False)
-def metrics() -> PlainTextResponse:
+async def metrics() -> PlainTextResponse:
+    # async on purpose: a sync handler runs in a threadpool, where
+    # render_prometheus iterating _REQUEST_COUNTS would race the event loop's
+    # record_request mutating it ("dictionary changed size during iteration").
+    # Staying on the event loop keeps render's lock-free iteration atomic.
     return PlainTextResponse(render_prometheus(), media_type=_PROMETHEUS_CONTENT_TYPE)

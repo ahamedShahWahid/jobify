@@ -14,7 +14,10 @@ Counters live at module scope (incremented once per request via
 ``record_request``); ``create_app()`` is called per-test, so defining them here
 rather than inside the factory keeps a single series set for the process. Under
 asyncio's cooperative single thread the ``+=`` increment has no await between
-read and write, so it needs no lock.
+read and write, so it needs no lock — but this holds ONLY on the event loop.
+``record_request`` and ``render_prometheus`` must both run there; in particular
+the ``/metrics`` handler is ``async`` so ``render_prometheus`` does not iterate
+``_REQUEST_COUNTS`` from a threadpool thread while the loop mutates it.
 """
 
 from __future__ import annotations
@@ -50,5 +53,6 @@ def render_prometheus() -> str:
 
 
 def reset_metrics() -> None:
-    """Clear all counters (test-support; not used in production paths)."""
+    """Clear all counters. Used by tests for per-test isolation of the
+    process-global counters; not called on production paths."""
     _REQUEST_COUNTS.clear()
