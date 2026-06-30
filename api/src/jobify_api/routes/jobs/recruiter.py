@@ -1,6 +1,13 @@
-"""GET /v1/jobs/{id} — single job + employer + match for current applicant.
+"""Recruiter job management.
+
 GET /v1/jobs/me — recruiter's own jobs with counts + cursor pagination.
-POST /v1/jobs — create a new job posting (recruiter-only).
+POST /v1/jobs — create a new job posting.
+PATCH/DELETE /v1/jobs/{job_id} — update / soft-delete (owner only).
+GET /v1/jobs/{job_id}/applicants — who applied (PII-audited).
+
+NOTE: ``GET /v1/jobs/me`` must be matched BEFORE the applicant router's
+``GET /v1/jobs/{job_id}`` — guaranteed by the include order in this package's
+``__init__`` (recruiter first), since FastAPI/Starlette match in registration order.
 """
 
 from __future__ import annotations
@@ -25,7 +32,6 @@ from jobify.db.models import (
     Job,
     JobStatus,
     Match,
-    SavedJob,
     User,
 )
 from jobify_api.auth.dependencies import (
@@ -33,19 +39,9 @@ from jobify_api.auth.dependencies import (
     _require_recruiter_at_employer,
     current_user,
 )
-from jobify_api.auth.dependencies import (
-    require_applicant as _require_applicant,
-)
 from jobify_api.dependencies import get_session
-from jobify_api.pagination import decode_cursor, encode_cursor, make_weak_etag
-from jobify_api.routes.schemas import (
-    EmployerRead,
-    JobDetailApplicationRead,
-    JobDetailResponse,
-    JobDetailSavedJobRead,
-    JobRead,
-    MatchRead,
-)
+from jobify_api.pagination import decode_cursor, encode_cursor
+from jobify_api.routes.schemas import JobRead
 
 _log = structlog.get_logger(__name__)
 router = APIRouter(prefix="/v1", tags=["jobs"])
@@ -73,9 +69,6 @@ def _decode_jobs_me_cursor(cursor: str) -> tuple[datetime, uuid.UUID]:
         raise HTTPException(status_code=400, detail="invalid_cursor") from e
 
 
-# NOTE: /v1/jobs/me MUST be registered BEFORE /v1/jobs/{job_id} — FastAPI
-# matches routes in declaration order, and otherwise "me" is interpreted as
-# a (failing) UUID path-param.
 @router.get("/jobs/me", response_model=RecruiterJobsPage)
 async def list_my_jobs(
     user: User = Depends(current_user),  # noqa: B008
@@ -165,102 +158,6 @@ async def list_my_jobs(
         _encode_jobs_me_cursor(rows[-1][0].posted_at, rows[-1][0].id) if has_more and rows else None
     )
     return RecruiterJobsPage(items=items, next_cursor=next_cursor)
-
-
-@router.get("/jobs/{job_id}", response_model=JobDetailResponse)
-async def get_job_detail(
-    request: Request,
-    response: Response,
-    job_id: uuid.UUID,
-    user: User = Depends(current_user),  # noqa: B008
-    session: AsyncSession = Depends(get_session),  # noqa: B008
-) -> JobDetailResponse | Response:
-    applicant = await _require_applicant(user, session)
-
-    # Job + employer, uniform 404 across unknown / closed / soft-deleted.
-    row = (
-        await session.execute(
-            select(Job, Employer)
-            .join(Employer, Employer.id == Job.employer_id)
-            .where(
-                Job.id == job_id,
-                Job.deleted_at.is_(None),
-                Job.status == JobStatus.OPEN,
-                Employer.deleted_at.is_(None),
-            )
-        )
-    ).first()
-    if row is None:
-        raise HTTPException(status_code=404, detail="job_not_found")
-    job, employer = row
-
-    match = (
-        await session.execute(
-            select(Match).where(
-                Match.applicant_id == applicant.id,
-                Match.job_id == job_id,
-                Match.deleted_at.is_(None),
-            )
-        )
-    ).scalar_one_or_none()
-
-    # Current applicant's live application for this job (any status — applied
-    # or withdrawn — see CLAUDE.md "Applications + saved jobs routes": withdraw
-    # does NOT soft-delete, it flips status). The Flutter ActionBar uses
-    # status to decide between Apply / Withdraw, so we must include withdrawn
-    # rows too — otherwise re-apply after withdraw won't UPDATE the existing
-    # row and the partial-UNIQUE INSERT collides.
-    application = (
-        await session.execute(
-            select(Application).where(
-                Application.applicant_id == applicant.id,
-                Application.job_id == job_id,
-                Application.deleted_at.is_(None),
-            )
-        )
-    ).scalar_one_or_none()
-
-    saved_job = (
-        await session.execute(
-            select(SavedJob).where(
-                SavedJob.applicant_id == applicant.id,
-                SavedJob.job_id == job_id,
-                SavedJob.deleted_at.is_(None),
-            )
-        )
-    ).scalar_one_or_none()
-
-    # ETag includes application + saved_job updated_at so the client sees a
-    # fresh response (not 304) after applying / withdrawing / saving.
-    etag_parts: list[object] = [job.id, job.updated_at]
-    if match is not None:
-        etag_parts.append(match.updated_at)
-    if application is not None:
-        etag_parts.append(application.updated_at)
-    if saved_job is not None:
-        etag_parts.append(saved_job.updated_at)
-    etag = make_weak_etag(*etag_parts)
-    if request.headers.get("if-none-match") == etag:
-        return Response(status_code=304)
-    response.headers["ETag"] = etag
-
-    return JobDetailResponse(
-        job=JobRead.from_job_and_employer(job, employer),
-        employer=EmployerRead(
-            id=employer.id,
-            name=employer.name,
-            verified=employer.verified_at is not None,
-        ),
-        match=MatchRead.model_validate(match) if match is not None else None,
-        application=(
-            JobDetailApplicationRead.model_validate(application)
-            if application is not None
-            else None
-        ),
-        saved_job=(
-            JobDetailSavedJobRead.model_validate(saved_job) if saved_job is not None else None
-        ),
-    )
 
 
 class JobCreate(BaseModel):
