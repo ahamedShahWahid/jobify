@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { inrLakh, istClock, istDateTime } from "../../../shared/format";
+import {
+  EmptyState as SharedEmptyState,
+  ErrorNotice as SharedErrorNotice,
+} from "../../../shared/components/notices";
 
 /** ₹ lakh formatting for a single CTC figure (null → null). Thin re-export of
  *  the shared `inrLakh` (single source in shared/format.ts) for the recruiter
@@ -128,15 +132,14 @@ export function Drawer({
 }
 
 export function ErrorNotice({ error }: { error: string | null }) {
-  if (!error) return null;
-  return <div className="notice error">⚠ {error}</div>;
+  return <SharedErrorNotice error={error} className="notice error" />;
 }
 
 export function EmptyState({ children }: { children: ReactNode }) {
   return (
-    <div className="empty">
-      <div className="flavor">{children}</div>
-    </div>
+    <SharedEmptyState as="div" innerClassName="flavor">
+      {children}
+    </SharedEmptyState>
   );
 }
 
