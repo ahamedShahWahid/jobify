@@ -9,14 +9,16 @@ applicant_preferences — see PATCH /v1/applicants/me/preferences below.
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import Annotated
 from uuid import UUID
 
 import structlog
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from jobify.db.models import User
+from jobify.db.models import ApplicantPreferences, RoleCategory, User
 from jobify_api.auth.dependencies import (
     current_user,
 )
@@ -92,3 +94,86 @@ async def update_profile(
     if changed_matching:
         _dispatch_score(applicant.id)
     return response
+
+
+class PreferencesRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    desired_role: RoleCategory | None
+    locations: list[str]
+    expected_ctc: Decimal | None
+
+
+class PreferencesUpdate(BaseModel):
+    """Partial preferences update — same partial-update contract as
+    ProfileUpdate. `desired_role`/`expected_ctc` are nullable and accept an
+    explicit null to clear; `locations` is non-nullable (empty list clears
+    it instead)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    desired_role: RoleCategory | None = Field(default=None)
+    locations: list[Annotated[str, Field(min_length=1, max_length=100)]] | None = Field(
+        default=None, max_length=10
+    )
+    expected_ctc: Decimal | None = Field(default=None, ge=0, le=Decimal("9999999999.99"))
+
+    @model_validator(mode="after")
+    def _no_null_for_locations(self) -> PreferencesUpdate:
+        if "locations" in self.model_fields_set and self.locations is None:
+            raise ValueError("locations cannot be null")
+        return self
+
+
+async def _get_or_404_preferences(
+    applicant_id: UUID, session: AsyncSession
+) -> ApplicantPreferences:
+    """Every applicant gets a live preferences row eagerly at signup
+    (AuthService._upsert_identity) — a missing row here is unreachable in
+    the real system but guarded defensively, same shape as
+    require_applicant's applicant_missing 500."""
+    row = (
+        await session.execute(
+            select(ApplicantPreferences).where(
+                ApplicantPreferences.applicant_id == applicant_id,
+                ApplicantPreferences.deleted_at.is_(None),
+            )
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        _log.error("preferences.row-missing-for-applicant", applicant_id=str(applicant_id))
+        raise HTTPException(status_code=500, detail="applicant_preferences_missing")
+    return row
+
+
+@router.get("/preferences", response_model=PreferencesRead, status_code=status.HTTP_200_OK)
+async def get_preferences(
+    user: User = Depends(current_user),  # noqa: B008
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> PreferencesRead:
+    applicant = await _require_applicant(user, session)
+    row = await _get_or_404_preferences(applicant.id, session)
+    return PreferencesRead.model_validate(row, from_attributes=True)
+
+
+@router.patch("/preferences", response_model=PreferencesRead, status_code=status.HTTP_200_OK)
+async def update_preferences(
+    payload: PreferencesUpdate,
+    user: User = Depends(current_user),  # noqa: B008
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> PreferencesRead:
+    applicant = await _require_applicant(user, session)
+    row = await _get_or_404_preferences(applicant.id, session)
+
+    changed_matching = False
+    for name in payload.model_fields_set:
+        setattr(row, name, getattr(payload, name))
+        if name in _PREFERENCES_MATCHING_FIELDS:
+            changed_matching = True
+    await session.flush()
+    await session.commit()
+    await session.refresh(row)
+
+    if changed_matching:
+        _dispatch_score(applicant.id)
+    return PreferencesRead.model_validate(row, from_attributes=True)
