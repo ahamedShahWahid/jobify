@@ -31,6 +31,7 @@ from jobify.celery_app import settings as _settings
 from jobify.db.models import (
     Applicant,
     ApplicantEmbedding,
+    ApplicantPreferences,
     Employer,
     Job,
     JobEmbedding,
@@ -94,19 +95,24 @@ async def _score_applicant_async(
     async with sm() as session:
         applicant_row = (
             await session.execute(
-                select(Applicant, ApplicantEmbedding)
+                select(Applicant, ApplicantEmbedding, ApplicantPreferences)
                 .join(ApplicantEmbedding, ApplicantEmbedding.applicant_id == Applicant.id)
+                .outerjoin(
+                    ApplicantPreferences,
+                    ApplicantPreferences.applicant_id == Applicant.id,
+                )
                 .where(
                     Applicant.id == applicant_id,
                     Applicant.deleted_at.is_(None),
                     ApplicantEmbedding.deleted_at.is_(None),
+                    ApplicantPreferences.deleted_at.is_(None),
                 )
             )
         ).first()
         if applicant_row is None:
             _log.info("score.applicant-skipped", applicant_id=str(applicant_id))
             return
-        applicant, applicant_emb = applicant_row
+        applicant, applicant_emb, applicant_prefs = applicant_row
 
         jobs_stmt = (
             select(Job, JobEmbedding, Employer.name)
@@ -146,9 +152,9 @@ async def _score_applicant_async(
             )
         applicant_emb_vec = list(applicant_emb.embedding)
         applicant_emb_model = applicant_emb.model_name
-        applicant_locs = list(applicant.locations or [])
+        applicant_locs = list(applicant_prefs.locations or []) if applicant_prefs else []
         applicant_years = applicant.years_experience
-        applicant_ctc = applicant.expected_ctc
+        applicant_ctc = applicant_prefs.expected_ctc if applicant_prefs else None
 
     if not scored_inputs:
         _log.info(
