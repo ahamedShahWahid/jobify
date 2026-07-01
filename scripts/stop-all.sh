@@ -87,8 +87,18 @@ pgrep -f 'celery -A jobify_worker' >/dev/null 2>&1 && { printf '  \033[33m!\033[
 
 if [ "$WITH_INFRA" -eq 1 ]; then
   say "Stopping Postgres + Redis (Homebrew)…"
-  brew services stop postgresql@16 >/dev/null 2>&1 && ok "postgresql@16 stopped" || info "postgresql@16 not running"
-  brew services stop redis         >/dev/null 2>&1 && ok "redis stopped"         || info "redis not running"
+  # Version-agnostic: stop whichever postgresql@NN service is registered
+  # (started, or wedged in `error`), not a hardcoded @16.
+  pg_svcs=$(brew services list 2>/dev/null \
+    | awk '$1 ~ /^postgresql(@[0-9]+)?$/ && ($2 == "started" || $2 == "error") {print $1}')
+  if [ -n "$pg_svcs" ]; then
+    for svc in $pg_svcs; do
+      brew services stop "$svc" >/dev/null 2>&1 && ok "$svc stopped" || info "$svc not running"
+    done
+  else
+    info "no postgresql service registered"
+  fi
+  brew services stop redis >/dev/null 2>&1 && ok "redis stopped" || info "redis not running"
 else
   info "Postgres + Redis left running (use --with-infra to stop them)"
 fi

@@ -3,7 +3,7 @@
 # start-all.sh — boot the full local Jobify stack in the background.
 #
 # Brings up (idempotently — safe to re-run):
-#   • Postgres 16  (Homebrew service)        • Celery worker (parse/embed/score/notify)
+#   • Postgres     (Homebrew service)        • Celery worker (parse/embed/score/notify)
 #   • Redis        (Homebrew service)         • Frontend     (Vite dev server  :5173)
 #   • Alembic migrations → head               • Flutter web  (:8080, opt-in)
 #   • API          (FastAPI/uvicorn  :8000)
@@ -40,14 +40,34 @@ mkdir -p "$RUN_DIR"
 port_up()  { lsof -i ":$1" -sTCP:LISTEN -t >/dev/null 2>&1; }
 running()  { local f=$1; [ -f "$f" ] && kill -0 "$(cat "$f")" 2>/dev/null; }
 
-# ensure_brew <service> — start a Homebrew service unless already started.
-ensure_brew() {
-  local svc=$1
-  if brew services list 2>/dev/null | grep -qE "^$svc[[:space:]]+started"; then
-    ok "$svc already running"
+# ensure_service <label> <formula-regex> <port> — make sure the daemon that
+# serves <port> is up. Version-agnostic and deliberately tolerant:
+#   • If <port> already answers, do nothing — covers "started under your user",
+#     "loaded as a LaunchAgent", or a hand-started server. This is the case that
+#     kept aborting the script: `brew services start postgresql@16` fails with
+#     an I/O error when @17 already owns :5432.
+#   • Otherwise start the NEWEST installed formula matching <formula-regex>, so
+#     an @16→@17 bump needs no edit here.
+#   • A brew failure (already-bootstrapped, or invoked under sudo) WARNS and
+#     continues — an infra hiccup must not abort the whole stack.
+# Never `sudo` this script: Homebrew services must run as your user.
+ensure_service() {
+  local label=$1 regex=$2 port=$3 formula
+  if port_up "$port"; then
+    ok "$label already serving on :$port"
+    return 0
+  fi
+  formula=$(brew list --formula 2>/dev/null | grep -E "$regex" | sort -V | tail -1) || true
+  if [ -z "$formula" ]; then
+    warn "$label: no Homebrew formula matching /$regex/ installed — start it yourself, then re-run"
+    return 0
+  fi
+  say "starting $formula (Homebrew)…"
+  if brew services start "$formula" >/dev/null 2>&1; then
+    for _ in $(seq 1 10); do port_up "$port" && break; sleep 1; done
+    port_up "$port" && ok "$formula serving on :$port" || warn "$formula started but :$port not answering yet"
   else
-    say "starting $svc (Homebrew)…"
-    brew services start "$svc" >/dev/null && ok "$svc started"
+    warn "brew could not start $formula (already loaded, or run under sudo?) — continuing"
   fi
 }
 
@@ -68,8 +88,8 @@ spawn() {
 
 # ── 1. Shared infra ────────────────────────────────────────────────────────
 say "Ensuring Postgres + Redis are up…"
-ensure_brew postgresql@16
-ensure_brew redis
+ensure_service Postgres '^postgresql(@[0-9]+)?$' 5432
+ensure_service Redis    '^redis$'                6379
 
 # ── 2. Migrations (canary: catches drift before the API serves 500s) ───────
 say "Applying Alembic migrations (→ head)…"
