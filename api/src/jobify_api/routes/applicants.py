@@ -1,15 +1,14 @@
 """Applicant profile update — PATCH /v1/applicants/me.
 
-The authenticated applicant edits their own profile fields. A change to a
-matching-relevant field (locations / expected_ctc / years_experience) fires a
-fire-and-forget rescore post-commit, because those feed the structured score
-(the embedding is built from the resume, not these fields).
+The authenticated applicant edits their own profile fields. A change to
+years_experience fires a fire-and-forget rescore post-commit (it feeds the
+structured score). locations/expected_ctc moved to
+applicant_preferences — see PATCH /v1/applicants/me/preferences below.
 """
 
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Annotated
 from uuid import UUID
 
 import structlog
@@ -32,30 +31,27 @@ _log = structlog.get_logger(__name__)
 router = APIRouter(prefix="/v1/applicants/me", tags=["applicants"])
 
 # Fields whose change must trigger a rescore (they drive the structured score).
-_MATCHING_FIELDS = {"locations", "expected_ctc", "years_experience"}
+_MATCHING_FIELDS = {"years_experience"}
+# Same list, for the preferences endpoint below.
+_PREFERENCES_MATCHING_FIELDS = {"locations", "expected_ctc"}
 
 
 class ProfileUpdate(BaseModel):
     """Partial profile update. Only keys present in the request are applied
-    (`model_fields_set`); an explicit null clears a nullable column. `full_name`
-    and `locations` are non-nullable and reject an explicit null."""
+    (`model_fields_set`); an explicit null clears a nullable column.
+    `full_name` is non-nullable and rejects an explicit null."""
 
     model_config = ConfigDict(extra="forbid")
 
     full_name: str | None = Field(default=None, min_length=1, max_length=200)
-    locations: list[Annotated[str, Field(min_length=1, max_length=100)]] | None = Field(
-        default=None, max_length=10
-    )
     notice_period_days: int | None = Field(default=None, ge=0, le=365)
     current_ctc: Decimal | None = Field(default=None, ge=0, le=Decimal("9999999999.99"))
-    expected_ctc: Decimal | None = Field(default=None, ge=0, le=Decimal("9999999999.99"))
     years_experience: Decimal | None = Field(default=None, ge=0, le=Decimal("60"))
 
     @model_validator(mode="after")
     def _no_null_for_required(self) -> ProfileUpdate:
-        for f in ("full_name", "locations"):
-            if f in self.model_fields_set and getattr(self, f) is None:
-                raise ValueError(f"{f} cannot be null")
+        if "full_name" in self.model_fields_set and self.full_name is None:
+            raise ValueError("full_name cannot be null")
         return self
 
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
 
 import httpx
 import pytest
@@ -45,18 +46,18 @@ async def test_patch_partial_update(
     resp = await async_client.patch(
         "/v1/applicants/me",
         headers={"Authorization": f"Bearer {access}"},
-        json={"locations": ["Pune", "Bengaluru"], "expected_ctc": 1800000},
+        json={"years_experience": 4.5, "current_ctc": 1200000},
     )
     assert resp.status_code == 200
     body = resp.json()
-    assert body["applicant"]["locations"] == ["Pune", "Bengaluru"]
-    assert body["applicant"]["expected_ctc"] == "1800000.00"
+    assert body["applicant"]["years_experience"] == "4.5"
+    assert body["applicant"]["current_ctc"] == "1200000.00"
     assert body["applicant"]["full_name"] == "Alice"
 
     row = (
         await session.execute(select(Applicant).where(Applicant.user_id == signin["user"]["id"]))
     ).scalar_one()
-    assert row.locations == ["Pune", "Bengaluru"]
+    assert row.years_experience == Decimal("4.5")
 
 
 async def test_patch_explicit_null_clears_nullable(
@@ -81,7 +82,7 @@ async def test_patch_omitted_key_unchanged(
     headers = {"Authorization": f"Bearer {signin['access_token']}"}
     await async_client.patch("/v1/applicants/me", headers=headers, json={"notice_period_days": 45})
     resp = await async_client.patch(
-        "/v1/applicants/me", headers=headers, json={"locations": ["Pune"]}
+        "/v1/applicants/me", headers=headers, json={"years_experience": 3}
     )
     assert resp.status_code == 200
     assert resp.json()["applicant"]["notice_period_days"] == 45
@@ -93,9 +94,6 @@ async def test_patch_omitted_key_unchanged(
         {"full_name": ""},
         {"full_name": "x" * 201},
         {"full_name": None},
-        {"locations": None},
-        {"locations": [""]},
-        {"locations": ["a"] * 11},
         {"notice_period_days": -1},
         {"notice_period_days": 400},
         {"current_ctc": -5},
@@ -130,7 +128,7 @@ async def test_patch_recruiter_returns_403(
     resp = await async_client.patch(
         "/v1/applicants/me",
         headers={"Authorization": f"Bearer {access}"},
-        json={"locations": ["Pune"]},
+        json={"notice_period_days": 30},
     )
     assert resp.status_code == 403
     assert resp.json()["detail"] == "not_an_applicant"
@@ -153,7 +151,7 @@ async def test_patch_matching_field_dispatches_rescore(
     headers = {"Authorization": f"Bearer {signin['access_token']}"}
 
     resp = await async_client.patch(
-        "/v1/applicants/me", headers=headers, json={"locations": ["Pune"]}
+        "/v1/applicants/me", headers=headers, json={"years_experience": 3}
     )
     assert resp.status_code == 200
     assert calls == [signin["user"]["applicant_id"]]
