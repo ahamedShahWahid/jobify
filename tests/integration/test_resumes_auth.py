@@ -12,7 +12,7 @@ import httpx
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from jobify.db.models import User, UserRole
+from jobify.db.models import Applicant, Resume, ResumeParseStatus, User, UserRole
 from jobify_api.auth.tokens import mint_access_token
 
 pytestmark = pytest.mark.integration
@@ -130,3 +130,35 @@ async def test_upload_applicant_role_without_applicant_row_returns_500(
     )
     assert response.status_code == 500
     assert response.json()["detail"] == "applicant_missing"
+
+
+async def test_get_resume_includes_parsed_json(
+    async_client: httpx.AsyncClient, session: AsyncSession
+) -> None:
+    user = User(email="parsed-json@example.com", role=UserRole.APPLICANT)
+    session.add(user)
+    await session.flush()
+    applicant = Applicant(user_id=user.id, full_name="Parsed Json")
+    session.add(applicant)
+    await session.flush()
+    resume = Resume(
+        applicant_id=applicant.id,
+        original_filename="cv.pdf",
+        content_type="application/pdf",
+        storage_key="resumes/x.pdf",
+        size_bytes=10,
+        parse_status=ResumeParseStatus.PARSED,
+        parsed_json={"name": "Parsed Json", "skills": ["Python"]},
+    )
+    session.add(resume)
+    await session.commit()
+
+    token = mint_access_token(
+        user_id=user.id, role=user.role.value, secret=_JWT_SECRET, ttl_seconds=600
+    )
+    resp = await async_client.get(
+        f"/v1/applicants/me/resumes/{resume.id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["parsed_json"] == {"name": "Parsed Json", "skills": ["Python"]}
