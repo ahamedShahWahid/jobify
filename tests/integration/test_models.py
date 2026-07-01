@@ -591,3 +591,30 @@ async def test_notification_user_fk_cascades(session: AsyncSession) -> None:
         await session.execute(select(Notification).where(Notification.user_id == user.id))
     ).all()
     assert remaining == []
+
+
+def test_applicant_preferences_model_shape() -> None:
+    from jobify.db.models import ApplicantPreferences, RoleCategory
+
+    assert ApplicantPreferences.__tablename__ == "applicant_preferences"
+    mapper = ApplicantPreferences.__mapper__
+    columns = {c.key for c in mapper.columns}
+    assert columns == {
+        "id",
+        "applicant_id",
+        "desired_role",
+        "locations",
+        "expected_ctc",
+        "created_at",
+        "updated_at",
+        "deleted_at",
+    }
+    assert len(RoleCategory) == 16
+
+
+def test_applicant_no_longer_has_locations_or_expected_ctc() -> None:
+    from jobify.db.models import Applicant
+
+    columns = {c.key for c in Applicant.__mapper__.columns}
+    assert "locations" not in columns
+    assert "expected_ctc" not in columns
