@@ -25,14 +25,12 @@ class ApplicantRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    # Nullable to mirror the DB schema — migration 0015 made full_name and
-    # locations nullable for DSR scrubbing. A non-optional str here turns a
-    # NULL row into a Pydantic ValidationError → 500.
+    # Nullable to mirror the DB schema — migration 0015 made full_name
+    # nullable for DSR scrubbing. A non-optional str here turns a NULL row
+    # into a Pydantic ValidationError -> 500.
     full_name: str | None
-    locations: list[str] | None
     notice_period_days: int | None
     current_ctc: Decimal | None
-    expected_ctc: Decimal | None
     years_experience: Decimal | None
 
 
