@@ -13,6 +13,7 @@ import jobify_worker.tasks.score_job as score_job_task
 from jobify.db.models import (
     Applicant,
     ApplicantEmbedding,
+    ApplicantPreferences,
     Employer,
     Job,
     JobEmbedding,
@@ -36,9 +37,10 @@ async def _seed_applicant_with_emb(session: AsyncSession, *, email: str) -> Appl
     user = User(email=email, role=UserRole.APPLICANT)
     session.add(user)
     await session.flush()
-    applicant = Applicant(user_id=user.id, full_name="A", locations=["Bangalore"])
+    applicant = Applicant(user_id=user.id, full_name="A")
     session.add(applicant)
     await session.flush()
+    session.add(ApplicantPreferences(applicant_id=applicant.id, locations=["Bangalore"]))
     session.add(
         ApplicantEmbedding(
             applicant_id=applicant.id,
@@ -153,7 +155,7 @@ async def test_score_job_skips_applicants_without_embeddings(session: AsyncSessi
     user = User(email="ano@example.com", role=UserRole.APPLICANT)
     session.add(user)
     await session.flush()
-    a_no = Applicant(user_id=user.id, full_name="NoEmb", locations=["Bangalore"])
+    a_no = Applicant(user_id=user.id, full_name="NoEmb")
     session.add(a_no)
     await session.flush()
     job = await _seed_job_with_emb(session)
