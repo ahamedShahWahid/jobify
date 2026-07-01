@@ -139,9 +139,13 @@ dedicated `/meta/role-categories` endpoint (same approach as `JobStatus`,
 which has no meta endpoint either). This is intentionally capture-only for
 this iteration — `desired_role` is not wired into matching/scoring.
 
-**Resume summary**: no new endpoint. The existing
-`GET /v1/applicants/me/resumes/{resume_id}` already returns `parsed_json`;
-the new screen reads name/skills/experience/education from it directly.
+**Resume summary**: `ResumeRead` (`api/src/jobify_api/routes/resumes.py:47`)
+currently returns metadata only — `parsed_json` is NOT exposed today
+(verified against the route source during planning; the original draft of
+this section was wrong). Add `parsed_json: dict[str, Any] | None = None` to
+`ResumeRead`; `from_attributes=True` picks it up off the existing
+`Resume.parsed_json` column with no other backend change. The new screen
+reads name/skills/experience/education from it directly.
 
 ## Frontend (Flutter)
 
