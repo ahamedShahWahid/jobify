@@ -9,6 +9,7 @@ abstract final class Routes {
   static const profile = '/profile';
   static const profileEdit = '/profile/edit';
   static const resume = '/profile/resume';
+  static const preferences = '/profile/preferences';
   static const notifications = '/profile/notifications';
   static const privacy = '/profile/privacy';
   static const privacyDelete = '/profile/privacy/delete';

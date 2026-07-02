@@ -17,6 +17,7 @@ import 'package:jobify_app/presentation/privacy/delete_account_screen.dart';
 import 'package:jobify_app/presentation/privacy/privacy_screen.dart';
 import 'package:jobify_app/presentation/onboarding/employer_onboarding_screen.dart';
 import 'package:jobify_app/data/jobs/recruiter_job_dto.dart';
+import 'package:jobify_app/data/resume/resume_dto.dart';
 import 'package:jobify_app/presentation/recruiter/job_applicants_screen.dart';
 import 'package:jobify_app/presentation/recruiter/job_form_screen.dart';
 import 'package:jobify_app/presentation/recruiter/recruiter_dashboard_screen.dart';
@@ -25,6 +26,7 @@ import 'package:jobify_app/presentation/recruiter/recruiter_job_detail_screen.da
 import 'package:jobify_app/presentation/recruiter/recruiter_jobs_screen.dart';
 import 'package:jobify_app/presentation/recruiter/recruiter_profile_screen.dart';
 import 'package:jobify_app/presentation/resume/resume_screen.dart';
+import 'package:jobify_app/presentation/preferences/preferences_screen.dart';
 import 'package:jobify_app/presentation/profile/profile_screen.dart';
 import 'package:jobify_app/presentation/routing/role_redirect.dart';
 import 'package:jobify_app/presentation/routing/routes.dart';
@@ -170,6 +172,11 @@ GoRouter router(Ref ref) {
                   GoRoute(
                     path: 'resume',
                     builder: (_, __) => const ResumeScreen(),
+                  ),
+                  GoRoute(
+                    path: 'preferences',
+                    builder: (_, s) =>
+                        PreferencesScreen(resume: s.extra as ResumeDto?),
                   ),
                   GoRoute(
                     path: 'notifications',
