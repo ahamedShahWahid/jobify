@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:jobify_app/data/preferences/desired_role.dart';
 import 'package:jobify_app/data/preferences/preferences_dto.dart';
 import 'package:jobify_app/data/preferences/preferences_repository.dart';
 import 'package:jobify_app/data/preferences/preferences_repository_impl.dart';
@@ -33,6 +34,33 @@ class _IncompletePrefsRepo implements PreferencesRepository {
   @override
   Future<PreferencesDto> fetch() async =>
       const PreferencesDto(desiredRole: null, locations: [], expectedCtc: null);
+  @override
+  Future<PreferencesDto> update(PreferencesUpdateDto update) async => fetch();
+}
+
+/// Counts fetch() calls, so a regression back to a plain (autoDispose)
+/// preferencesControllerProvider is observable: without keepAlive,
+/// ResumeScreen's transient `ref.read(...future)` disposes the provider
+/// once its own await completes, so PreferencesScreen's later `ref.watch`
+/// triggers a SECOND fetch() (fetchCount == 2) instead of reusing the
+/// cached, already-resolved value (fetchCount == 1). No artificial delay
+/// here — flutter_test's fake-async pump loop doesn't reliably advance a
+/// real `Future.delayed` sitting outside a `tester.pump()` call, and a
+/// delay isn't needed anyway: fetchCount distinguishes the two cases
+/// regardless of timing.
+class _CountingPrefsRepo implements PreferencesRepository {
+  int fetchCount = 0;
+
+  @override
+  Future<PreferencesDto> fetch() async {
+    fetchCount++;
+    return const PreferencesDto(
+      desiredRole: DesiredRole.softwareEngineering,
+      locations: [],
+      expectedCtc: null,
+    );
+  }
+
   @override
   Future<PreferencesDto> update(PreferencesUpdateDto update) async => fetch();
 }
@@ -117,5 +145,42 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(PreferencesScreen), findsOneWidget);
+  });
+
+  testWidgets(
+      'preferencesControllerProvider stays alive across the navigation '
+      '(pins the keepAlive fix — regresses to a double fetch without it)',
+      (tester) async {
+    final router = GoRouter(
+      routes: [
+        GoRoute(path: '/', builder: (_, __) => const ResumeScreen()),
+        GoRoute(
+          path: '/profile/preferences',
+          builder: (_, s) => PreferencesScreen(resume: s.extra as ResumeDto?),
+        ),
+      ],
+    );
+    final prefsRepo = _CountingPrefsRepo();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          resumeRepositoryProvider
+              .overrideWithValue(_Repo(_dto(ResumeParseStatus.parsed))),
+          preferencesRepositoryProvider.overrideWithValue(prefsRepo),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final state = tester.state<State<ResumeScreen>>(find.byType(ResumeScreen));
+    final navigate =
+        (state as dynamic).maybeNavigateToPreferencesForTest() as Future<void>;
+    await navigate;
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PreferencesScreen), findsOneWidget);
+    expect(prefsRepo.fetchCount, 1);
+    expect(find.text('Software Engineering'), findsOneWidget);
   });
 }
