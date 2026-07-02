@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:jobify_app/presentation/feed/feed_controller.dart';
 import 'package:jobify_app/presentation/feed/feed_item_card.dart';
+import 'package:jobify_app/presentation/feed/feed_nudge_banner.dart';
 import 'package:jobify_app/presentation/routing/routes.dart';
 import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
 import 'package:jobify_app/presentation/widgets/arrive.dart';
@@ -50,62 +51,75 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
           onPressed: () => ref.read(feedControllerProvider.notifier).refresh(),
         ),
       ),
-      child: AsyncValueWidget<FeedState>(
-        value: value,
-        onRetry: () => ref.read(feedControllerProvider.notifier).refresh(),
-        isEmpty: (s) => s.items.isEmpty,
-        empty: () => const JobifyEmptyState(
-          headline: "We're still looking for matches",
-          body: 'Upload a resume to help us find you better roles.',
-          icon: Icons.search_off,
-        ),
-        data: (s) => RefreshIndicator(
-          onRefresh: () => ref.read(feedControllerProvider.notifier).refresh(),
-          child: ListView.separated(
-            controller: _scroll,
-            padding: const EdgeInsets.all(JobifySpacing.lg),
-            itemCount: s.items.length + 1,
-            separatorBuilder: (_, __) =>
-                const SizedBox(height: JobifySpacing.md),
-            itemBuilder: (context, i) {
-              if (i == s.items.length) {
-                if (s.isLoadingMore) {
-                  return const Padding(
-                    padding: EdgeInsets.all(JobifySpacing.lg),
-                    child: JobifyLoadingView(),
-                  );
-                }
-                if (!s.hasMore) {
-                  return Padding(
-                    padding: const EdgeInsets.all(JobifySpacing.lg),
-                    child: Center(
-                      child: Text(
-                        "You're all caught up",
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
+      child: Column(
+        children: [
+          const FeedNudgeBanner(),
+          Expanded(
+            child: AsyncValueWidget<FeedState>(
+              value: value,
+              onRetry: () =>
+                  ref.read(feedControllerProvider.notifier).refresh(),
+              isEmpty: (s) => s.items.isEmpty,
+              empty: () => const JobifyEmptyState(
+                headline: "We're still looking for matches",
+                body: 'Upload a resume to help us find you better roles.',
+                icon: Icons.search_off,
+              ),
+              data: (s) => RefreshIndicator(
+                onRefresh: () =>
+                    ref.read(feedControllerProvider.notifier).refresh(),
+                child: ListView.separated(
+                  controller: _scroll,
+                  padding: const EdgeInsets.all(JobifySpacing.lg),
+                  itemCount: s.items.length + 1,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(height: JobifySpacing.md),
+                  itemBuilder: (context, i) {
+                    if (i == s.items.length) {
+                      if (s.isLoadingMore) {
+                        return const Padding(
+                          padding: EdgeInsets.all(JobifySpacing.lg),
+                          child: JobifyLoadingView(),
+                        );
+                      }
+                      if (!s.hasMore) {
+                        return Padding(
+                          padding: const EdgeInsets.all(JobifySpacing.lg),
+                          child: Center(
+                            child: Text(
+                              "You're all caught up",
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
                             ),
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    }
+                    final item = s.items[i];
+                    return Arrive(
+                      index: i,
+                      child: FeedItemCard(
+                        job: item.job,
+                        employer: item.employer,
+                        onTap: () =>
+                            context.go('${Routes.feed}/jobs/${item.job.id}'),
+                        match: item.match,
+                        explanation: item.match.explanation,
                       ),
-                    ),
-                  );
-                }
-                return const SizedBox.shrink();
-              }
-              final item = s.items[i];
-              return Arrive(
-                index: i,
-                child: FeedItemCard(
-                  job: item.job,
-                  employer: item.employer,
-                  onTap: () => context.go('${Routes.feed}/jobs/${item.job.id}'),
-                  match: item.match,
-                  explanation: item.match.explanation,
+                    );
+                  },
                 ),
-              );
-            },
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
