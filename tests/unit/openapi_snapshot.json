@@ -221,18 +221,6 @@
             ],
             "title": "Current Ctc"
           },
-          "expected_ctc": {
-            "anyOf": [
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Expected Ctc"
-          },
           "full_name": {
             "anyOf": [
               {
@@ -248,20 +236,6 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
-          },
-          "locations": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Locations"
           },
           "notice_period_days": {
             "anyOf": [
@@ -290,10 +264,8 @@
         "required": [
           "id",
           "full_name",
-          "locations",
           "notice_period_days",
           "current_ctc",
-          "expected_ctc",
           "years_experience"
         ],
         "title": "ApplicantRead",
@@ -1687,17 +1659,20 @@
         "title": "OwnerlessEmployerWarning",
         "type": "object"
       },
-      "ProfileUpdate": {
-        "additionalProperties": false,
-        "description": "Partial profile update. Only keys present in the request are applied\n(`model_fields_set`); an explicit null clears a nullable column. `full_name`\nand `locations` are non-nullable and reject an explicit null.",
+      "PreferencesRead": {
         "properties": {
-          "current_ctc": {
+          "desired_role": {
             "anyOf": [
               {
-                "maximum": 9999999999.99,
-                "minimum": 0.0,
-                "type": "number"
+                "$ref": "#/components/schemas/RoleCategory"
               },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expected_ctc": {
+            "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
@@ -1706,7 +1681,37 @@
                 "type": "null"
               }
             ],
-            "title": "Current Ctc"
+            "title": "Expected Ctc"
+          },
+          "locations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Locations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "desired_role",
+          "locations",
+          "expected_ctc"
+        ],
+        "title": "PreferencesRead",
+        "type": "object"
+      },
+      "PreferencesUpdate": {
+        "additionalProperties": false,
+        "description": "Partial preferences update \u2014 same partial-update contract as\nProfileUpdate. `desired_role`/`expected_ctc` are nullable and accept an\nexplicit null to clear; `locations` is non-nullable (empty list clears\nit instead).",
+        "properties": {
+          "desired_role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RoleCategory"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "expected_ctc": {
             "anyOf": [
@@ -1725,19 +1730,6 @@
             ],
             "title": "Expected Ctc"
           },
-          "full_name": {
-            "anyOf": [
-              {
-                "maxLength": 200,
-                "minLength": 1,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Full Name"
-          },
           "locations": {
             "anyOf": [
               {
@@ -1754,6 +1746,44 @@
               }
             ],
             "title": "Locations"
+          }
+        },
+        "title": "PreferencesUpdate",
+        "type": "object"
+      },
+      "ProfileUpdate": {
+        "additionalProperties": false,
+        "description": "Partial profile update. Only keys present in the request are applied\n(`model_fields_set`); an explicit null clears a nullable column.\n`full_name` is non-nullable and rejects an explicit null.",
+        "properties": {
+          "current_ctc": {
+            "anyOf": [
+              {
+                "maximum": 9999999999.99,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Ctc"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
           },
           "notice_period_days": {
             "anyOf": [
@@ -2006,6 +2036,18 @@
           "parse_status": {
             "$ref": "#/components/schemas/ResumeParseStatus"
           },
+          "parsed_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parsed Json"
+          },
           "size_bytes": {
             "title": "Size Bytes",
             "type": "integer"
@@ -2022,6 +2064,28 @@
         ],
         "title": "ResumeRead",
         "type": "object"
+      },
+      "RoleCategory": {
+        "enum": [
+          "software_engineering",
+          "data_analytics",
+          "product_management",
+          "design",
+          "sales",
+          "marketing",
+          "customer_support",
+          "operations",
+          "finance_accounting",
+          "hr_recruiting",
+          "legal",
+          "consulting",
+          "business_development",
+          "content_communications",
+          "administration",
+          "other"
+        ],
+        "title": "RoleCategory",
+        "type": "string"
       },
       "SavedJobListItem": {
         "properties": {
@@ -2875,6 +2939,66 @@
           }
         },
         "summary": "Update Profile",
+        "tags": [
+          "applicants"
+        ]
+      }
+    },
+    "/v1/applicants/me/preferences": {
+      "get": {
+        "operationId": "get_preferences_v1_applicants_me_preferences_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferencesRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Preferences",
+        "tags": [
+          "applicants"
+        ]
+      },
+      "patch": {
+        "operationId": "update_preferences_v1_applicants_me_preferences_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferencesUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferencesRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Preferences",
         "tags": [
           "applicants"
         ]
