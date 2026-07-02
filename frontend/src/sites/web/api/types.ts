@@ -15,11 +15,18 @@ export interface MeResponse {
 export interface ApplicantRead {
   id: string;
   full_name: string | null;
-  locations: string[] | null;
   notice_period_days: number | null;
   current_ctc: string | null; // Decimal → JSON string
-  expected_ctc: string | null;
   years_experience: string | null;
+}
+
+// locations/expected_ctc moved off ApplicantRead onto their own resource —
+// GET/PATCH /v1/applicants/me/preferences (source: routes/applicants.py
+// PreferencesRead). desired_role is new; nothing here writes it yet.
+export interface PreferencesRead {
+  desired_role: string | null;
+  locations: string[];
+  expected_ctc: string | null; // Decimal → JSON string
 }
 
 export interface ConsentRead {

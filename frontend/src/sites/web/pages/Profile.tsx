@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { errorMessage } from "../api/client";
-import type { ConsentRead } from "../api/types";
+import type { ConsentRead, PreferencesRead } from "../api/types";
 import { istDate } from "../../../shared/format";
 import { Masthead } from "../components/Chrome";
 import { ctcBand, ErrorNotice } from "../components/bits";
@@ -108,6 +108,25 @@ export function Profile() {
 
   const applicant = identity.applicant;
   const name = applicant?.full_name ?? identity.email?.split("@")[0] ?? "there";
+
+  // ---- preferences (locations/expected_ctc — moved off ApplicantRead) -----
+  const [preferences, setPreferences] = useState<PreferencesRead | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    client
+      .getPreferences()
+      .then((p) => {
+        if (!cancelled) setPreferences(p);
+      })
+      .catch(() => {
+        // Read-only display field — a failed fetch just leaves it as "—"
+        // rather than surfacing another error banner on this page.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [client]);
 
   // ---- consents -----------------------------------------------------------
   const [consents, setConsents] = useState<ConsentRead[] | null>(null);
@@ -256,11 +275,11 @@ export function Profile() {
   }
 
   // ---- render -------------------------------------------------------------
-  const locations = applicant?.locations?.join(" · ") ?? "—";
+  const locations = preferences?.locations.join(" · ") || "—";
   const years = num(applicant?.years_experience ?? null);
   const notice = applicant?.notice_period_days ?? null;
   const curCtc = num(applicant?.current_ctc ?? null);
-  const expCtc = num(applicant?.expected_ctc ?? null);
+  const expCtc = num(preferences?.expected_ctc ?? null);
   const ctcLabel =
     curCtc === null && expCtc === null
       ? "Undisclosed"
@@ -321,8 +340,8 @@ export function Profile() {
             </div>
           </div>
           <p className="pf-note dim">
-            These fields are derived from your latest parsed résumé — they update when you upload a
-            new one. There's no edit form here by design.
+            Name and experience come from your latest parsed résumé; location and expected CTC are
+            what you told us when asked. There's no edit form here by design.
           </p>
         </section>
 

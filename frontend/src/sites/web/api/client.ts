@@ -10,6 +10,7 @@ import type {
   MyInviteRead,
   NotificationListResponse,
   NotificationRead,
+  PreferencesRead,
   SavedJobListResponse,
   SavedJobRead,
 } from "./types";
@@ -32,6 +33,7 @@ export interface JobifyClient {
   saved(cursor?: string): Promise<SavedJobListResponse>;
   getConsents(): Promise<ConsentRead[]>;
   setConsent(scope: string, granted: boolean): Promise<ConsentRead>;
+  getPreferences(): Promise<PreferencesRead>;
   dsrExport(): Promise<unknown>;
   dsrDelete(): Promise<unknown>;
   notifications(cursor?: string): Promise<NotificationListResponse>;
@@ -78,6 +80,9 @@ export class HttpClient extends BaseHttpClient implements JobifyClient {
   }
   setConsent(scope: string, granted: boolean) {
     return this.request<ConsentRead>("PATCH", `/v1/me/consents/${encodeURIComponent(scope)}`, { granted });
+  }
+  getPreferences() {
+    return this.request<PreferencesRead>("GET", "/v1/applicants/me/preferences");
   }
   dsrExport() {
     return this.request<unknown>("POST", "/v1/me/dsr/export");

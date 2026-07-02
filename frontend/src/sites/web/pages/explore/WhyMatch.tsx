@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { errorMessage } from "../../api/client";
-import type { ApplicantRead, JobDetailResponse, MeResponse } from "../../api/types";
+import type { ApplicantRead, JobDetailResponse, MeResponse, PreferencesRead } from "../../api/types";
 import { Masthead } from "../../components/Chrome";
 import { ago, ctcBand, ErrorNotice, JobFacts, VerifiedTag } from "../../components/bits";
 import { useSession } from "../../session";
@@ -45,8 +45,8 @@ function num(s: string | null): number | null {
 }
 
 /** Coarse overlap markers for the you-vs-role comparison rows. */
-function locationAlign(applicant: ApplicantRead | null, job: JobDetailResponse["job"]): "✓" | "~" {
-  const mine = applicant?.locations ?? [];
+function locationAlign(preferences: PreferencesRead | null, job: JobDetailResponse["job"]): "✓" | "~" {
+  const mine = preferences?.locations ?? [];
   const hit = mine.some((m) =>
     job.locations.some(
       (j) => j.toLowerCase().includes(m.toLowerCase()) || m.toLowerCase().includes(j.toLowerCase()),
@@ -62,8 +62,8 @@ function experienceAlign(applicant: ApplicantRead | null, job: JobDetailResponse
   return yrs >= job.min_exp_years && yrs <= job.max_exp_years ? "✓" : "~";
 }
 
-function ctcAlign(applicant: ApplicantRead | null, job: JobDetailResponse["job"]): "✓" | "~" {
-  const want = num(applicant?.expected_ctc ?? null);
+function ctcAlign(preferences: PreferencesRead | null, job: JobDetailResponse["job"]): "✓" | "~" {
+  const want = num(preferences?.expected_ctc ?? null);
   if (want === null || job.ctc_max === null) return "~";
   return job.ctc_max >= want ? "✓" : "~";
 }
@@ -73,6 +73,7 @@ export function WhyMatch() {
   const { jobId } = useParams<{ jobId: string }>();
   const [data, setData] = useState<JobDetailResponse | null>(null);
   const [me, setMe] = useState<MeResponse | null>(null);
+  const [preferences, setPreferences] = useState<PreferencesRead | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [acting, setActing] = useState(false);
 
@@ -85,7 +86,12 @@ export function WhyMatch() {
       setMe(identity);
     } catch (e) {
       setError(errorMessage(e));
+      return;
     }
+    // Fetched separately, non-blocking: the you-vs-role comparison degrades
+    // to "—"/"~" if this fails, but the rest of the breakdown (score,
+    // components) doesn't depend on it and shouldn't fail the whole page.
+    client.getPreferences().then(setPreferences).catch(() => {});
   }, [client, jobId]);
 
   useEffect(() => {
@@ -176,10 +182,10 @@ export function WhyMatch() {
       ? `Your strongest signal here is ${(COMPONENT_LABELS[strongestKey] ?? strongestKey).toLowerCase()} — that's what pulled this role onto your feed.`
       : "This role cleared your bar across the board.");
 
-  const myLocations = applicant?.locations?.join(" · ") ?? "—";
+  const myLocations = preferences?.locations.join(" · ") || "—";
   const myExp = num(applicant?.years_experience ?? null);
   const myExpLabel = myExp === null ? "—" : `${myExp} yrs`;
-  const myExpected = num(applicant?.expected_ctc ?? null);
+  const myExpected = num(preferences?.expected_ctc ?? null);
   const myExpectedLabel = myExpected === null ? "—" : ctcBand(myExpected, myExpected).split(" – ")[0];
 
   return (
@@ -290,14 +296,14 @@ export function WhyMatch() {
               </div>
             </div>
             <div className="why-vs-marks">
-              <span className={`why-mark ${locationAlign(applicant, job) === "✓" ? "ok" : "near"}`}>
-                {locationAlign(applicant, job)}
+              <span className={`why-mark ${locationAlign(preferences, job) === "✓" ? "ok" : "near"}`}>
+                {locationAlign(preferences, job)}
               </span>
               <span className={`why-mark ${experienceAlign(applicant, job) === "✓" ? "ok" : "near"}`}>
                 {experienceAlign(applicant, job)}
               </span>
-              <span className={`why-mark ${ctcAlign(applicant, job) === "✓" ? "ok" : "near"}`}>
-                {ctcAlign(applicant, job)}
+              <span className={`why-mark ${ctcAlign(preferences, job) === "✓" ? "ok" : "near"}`}>
+                {ctcAlign(preferences, job)}
               </span>
             </div>
             <div className="why-vs-col">
