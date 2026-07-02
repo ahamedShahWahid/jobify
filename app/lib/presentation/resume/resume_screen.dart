@@ -1,12 +1,17 @@
+import 'dart:async';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import 'package:jobify_app/core/error/exceptions.dart';
 import 'package:jobify_app/data/resume/resume_dto.dart';
 import 'package:jobify_app/data/resume/resume_parse_status.dart';
+import 'package:jobify_app/presentation/preferences/preferences_controller.dart';
 import 'package:jobify_app/presentation/resume/resume_controller.dart';
+import 'package:jobify_app/presentation/routing/routes.dart';
 import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
 import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
 
@@ -27,6 +32,8 @@ class ResumeScreen extends ConsumerStatefulWidget {
 }
 
 class _ResumeScreenState extends ConsumerState<ResumeScreen> {
+  String? _navigatedForResumeId;
+
   Future<void> _pickAndUpload() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -57,9 +64,44 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> {
     }
   }
 
-  void _refreshIfMounted() {
-    if (mounted) ref.read(resumeControllerProvider.notifier).refresh();
+  Future<void> _refreshIfMounted() async {
+    if (!mounted) return;
+    await ref.read(resumeControllerProvider.notifier).refresh();
+    if (!mounted) return;
+    await _maybeNavigateToPreferences();
   }
+
+  Future<void> _maybeNavigateToPreferences() async {
+    final resume = ref.read(resumeControllerProvider).value;
+    if (resume == null) return;
+    if (resume.parseStatus != ResumeParseStatus.parsed &&
+        resume.parseStatus != ResumeParseStatus.failed) {
+      return;
+    }
+    if (_navigatedForResumeId == resume.id) return;
+
+    final prefs = await AsyncValue.guard(
+      () => ref.read(preferencesControllerProvider.future),
+    ).then((r) => r.value);
+    if (!mounted || prefs == null || prefs.isComplete) return;
+
+    _navigatedForResumeId = resume.id;
+    // Fire-and-forget: the caller (a delayed refresh or the test hook below)
+    // doesn't wait for the pushed screen to pop, and mustn't — awaiting here
+    // would block `_refreshIfMounted` until the user leaves PreferencesScreen.
+    unawaited(context.push(Routes.preferences, extra: resume));
+  }
+
+  /// Test-only entry point for [_maybeNavigateToPreferences]. Dart privacy
+  /// is per-library: `(state as dynamic)._maybeNavigateToPreferences()`
+  /// from a different file always throws `NoSuchMethodError` (verified —
+  /// not a flutter_test tooling quirk), so a test can't call the private
+  /// method directly. This public forwarder lets widget tests exercise the
+  /// navigation trigger without waiting out the real 2s/5s `Future.delayed`
+  /// timers scheduled in `_pickAndUpload`.
+  @visibleForTesting
+  Future<void> maybeNavigateToPreferencesForTest() =>
+      _maybeNavigateToPreferences();
 
   void _snack(String msg) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
