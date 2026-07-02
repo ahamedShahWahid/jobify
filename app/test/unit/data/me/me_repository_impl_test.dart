@@ -52,5 +52,6 @@ void main() {
         mock.lastDataFor('PATCH', '/v1/applicants/me')! as Map<String, dynamic>;
     expect(sent['full_name'], 'Alice Khan');
     expect(sent.containsKey('notice_period_days'), isTrue);
+    expect(sent['notice_period_days'], isNull);
   });
 }

@@ -13,8 +13,8 @@ class ResumeDto {
     required this.contentType,
     required this.sizeBytes,
     required this.parseStatus,
-    this.parsedJson,
     required this.createdAt,
+    this.parsedJson,
   });
 
   factory ResumeDto.fromJson(Map<String, dynamic> json) =>
