@@ -34,7 +34,7 @@ async def test_create_user_and_applicant(session: AsyncSession) -> None:
     user = User(email="a@example.com", role=UserRole.APPLICANT)
     session.add(user)
     await session.flush()
-    applicant = Applicant(user_id=user.id, full_name="A. Test", locations=["Bengaluru", "Pune"])
+    applicant = Applicant(user_id=user.id, full_name="A. Test")
     session.add(applicant)
     await session.commit()
 
@@ -42,7 +42,6 @@ async def test_create_user_and_applicant(session: AsyncSession) -> None:
         await session.execute(select(Applicant).where(Applicant.user_id == user.id))
     ).scalar_one()
     assert loaded.full_name == "A. Test"
-    assert loaded.locations == ["Bengaluru", "Pune"]
 
 
 @pytest.mark.integration

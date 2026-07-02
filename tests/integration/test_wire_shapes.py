@@ -127,7 +127,7 @@ async def _make_applicant(session: AsyncSession, email: str) -> tuple[User, Appl
     user = User(email=email, role=UserRole.APPLICANT)
     session.add(user)
     await session.flush()
-    applicant = Applicant(user_id=user.id, full_name="Wire Shape", locations=["Bangalore"])
+    applicant = Applicant(user_id=user.id, full_name="Wire Shape")
     session.add(applicant)
     await session.flush()
     return user, applicant
