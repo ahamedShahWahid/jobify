@@ -20,11 +20,8 @@ from collections.abc import Callable, Coroutine
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-import sqlalchemy as sa
 import structlog
 from sqlalchemy import and_, select
-from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.sql import func
 
 from jobify.celery_app import celery_app
 from jobify.celery_app import settings as _settings
@@ -36,18 +33,15 @@ from jobify.db.models import (
     Job,
     JobEmbedding,
     JobStatus,
-    Match,
 )
-from jobify.scoring.match import TransientScoringError, score_match
+from jobify.scoring.match import TransientScoringError
 from jobify_worker.runtime import get_session_maker
+from jobify_worker.tasks._scoring_common import ScoringInput, explain_scores, match_upsert_statement
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 _log = structlog.get_logger(__name__)
-
-# Upper bound on concurrent explain() calls per batch (LLM impl hits Gemini).
-_EXPLAIN_CONCURRENCY = 10
 
 
 @celery_app.task(  # type: ignore[untyped-decorator]
@@ -170,116 +164,53 @@ async def _score_applicant_async(
         )
         return
 
-    # --- (no DB) compute ---
-    from jobify.scoring.explainer import ExplainContext
+    # --- (no DB) compute + explain ---
     from jobify_worker.runtime import get_match_explainer
 
-    _explainer = get_match_explainer()
-
-    pending: list[tuple[UUID, Any, str, ExplainContext]] = []
-    for (
-        job_id,
-        job_title,
-        job_locs,
-        job_min_exp,
-        job_max_exp,
-        job_ctc_min,
-        job_ctc_max,
-        job_emb_vec,
-        job_emb_model,
-        employer_name,
-    ) in scored_inputs:
-        ms = score_match(
+    scoring_inputs = [
+        ScoringInput(
+            applicant_id=applicant_id,
+            job_id=job_id,
             applicant_embedding=applicant_emb_vec,
-            job_embedding=job_emb_vec,
+            applicant_embedding_model=applicant_emb_model,
             applicant_locations=applicant_locs,
             applicant_years=applicant_years,
             applicant_expected_ctc=applicant_ctc,
+            job_embedding=job_emb_vec,
+            job_embedding_model=job_emb_model,
+            job_title=job_title,
             job_locations=job_locs,
             job_min_exp_years=job_min_exp,
             job_max_exp_years=job_max_exp,
             job_ctc_min=job_ctc_min,
             job_ctc_max=job_ctc_max,
-            vector_weight=_settings.match_vector_weight,
-            threshold=_settings.match_surface_threshold,
-        )
-        ctx = ExplainContext(
-            components=ms.components,
-            vector=ms.vector,
-            structured=ms.structured,
-            total=ms.total,
-            threshold=_settings.match_surface_threshold,
-            job_title=job_title,
-            job_locations=job_locs,
-            job_min_exp_years=job_min_exp,
-            job_max_exp_years=job_max_exp,
-            job_ctc_max=job_ctc_max,
             employer_name=employer_name,
-            applicant_expected_ctc=applicant_ctc,
-            applicant_locations=applicant_locs,
         )
-        pending.append((job_id, ms, job_emb_model, ctx))
-
-    # explain() never raises (explainer contract) and the LLM impl is
-    # I/O-bound — run the batch concurrently instead of one Gemini round-trip
-    # per job, bounded so a large batch doesn't stampede the API.
-    sem = asyncio.Semaphore(_EXPLAIN_CONCURRENCY)
-
-    async def _explain_bounded(ctx: ExplainContext) -> dict[str, str]:
-        async with sem:
-            return await _explainer.explain(ctx)
-
-    explanations = await asyncio.gather(*(_explain_bounded(ctx) for *_, ctx in pending))
-    scores: list[tuple[UUID, Any, str, dict[str, str]]] = [
-        (job_id, ms, model, explanation)
-        for (job_id, ms, model, _ctx), explanation in zip(pending, explanations, strict=True)
+        for (
+            job_id,
+            job_title,
+            job_locs,
+            job_min_exp,
+            job_max_exp,
+            job_ctc_min,
+            job_ctc_max,
+            job_emb_vec,
+            job_emb_model,
+            employer_name,
+        ) in scored_inputs
     ]
+    scores = await explain_scores(
+        get_match_explainer(),
+        scoring_inputs,
+        vector_weight=_settings.match_vector_weight,
+        threshold=_settings.match_surface_threshold,
+    )
 
     # --- Txn 2: UPSERT each row ---
     async with sm() as session:
         try:
-            for job_id, ms, job_emb_model, explanation in scores:
-                model_versions = {
-                    "applicant_model": applicant_emb_model,
-                    "job_model": job_emb_model,
-                    "vector_weight": _settings.match_vector_weight,
-                    "threshold": _settings.match_surface_threshold,
-                }
-                stmt = (
-                    pg_insert(Match)
-                    .values(
-                        applicant_id=applicant_id,
-                        job_id=job_id,
-                        vector_score=ms.vector,
-                        structured_score=ms.structured,
-                        total_score=ms.total,
-                        score_components=ms.components,
-                        model_versions=model_versions,
-                        surfaced_at=func.now() if ms.crosses_threshold else None,
-                        explanation=explanation,
-                    )
-                    .on_conflict_do_update(
-                        index_elements=["applicant_id", "job_id"],
-                        index_where=sa.text("deleted_at IS NULL"),
-                        set_={
-                            "vector_score": ms.vector,
-                            "structured_score": ms.structured,
-                            "total_score": ms.total,
-                            "score_components": ms.components,
-                            "model_versions": model_versions,
-                            "surfaced_at": func.coalesce(
-                                Match.surfaced_at,
-                                sa.case(
-                                    (sa.literal(ms.crosses_threshold), func.now()),
-                                    else_=None,
-                                ),
-                            ),
-                            "explanation": explanation,
-                            "updated_at": func.now(),
-                        },
-                    )
-                )
-                await session.execute(stmt)
+            for scored in scores:
+                await session.execute(match_upsert_statement(scored))
             await session.commit()
         except Exception as exc:
             await session.rollback()
