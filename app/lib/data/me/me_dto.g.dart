@@ -29,13 +29,8 @@ ApplicantSummaryDto _$ApplicantSummaryDtoFromJson(Map<String, dynamic> json) =>
     ApplicantSummaryDto(
       id: json['id'] as String,
       fullName: json['full_name'] as String?,
-      locations: (json['locations'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          const [],
       noticePeriodDays: (json['notice_period_days'] as num?)?.toInt(),
       currentCtc: json['current_ctc'] as String?,
-      expectedCtc: json['expected_ctc'] as String?,
       yearsExperience: json['years_experience'] as String?,
     );
 
@@ -44,9 +39,7 @@ Map<String, dynamic> _$ApplicantSummaryDtoToJson(
     <String, dynamic>{
       'id': instance.id,
       'full_name': instance.fullName,
-      'locations': instance.locations,
       'notice_period_days': instance.noticePeriodDays,
       'current_ctc': instance.currentCtc,
-      'expected_ctc': instance.expectedCtc,
       'years_experience': instance.yearsExperience,
     };

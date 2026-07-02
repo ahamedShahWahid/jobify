@@ -14,6 +14,7 @@ ResumeDto _$ResumeDtoFromJson(Map<String, dynamic> json) => ResumeDto(
       sizeBytes: (json['size_bytes'] as num).toInt(),
       parseStatus: $enumDecode(_$ResumeParseStatusEnumMap, json['parse_status'],
           unknownValue: ResumeParseStatus.unknown),
+      parsedJson: json['parsed_json'] as Map<String, dynamic>?,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
 

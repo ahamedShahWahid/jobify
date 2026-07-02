@@ -13,6 +13,7 @@ class ResumeDto {
     required this.contentType,
     required this.sizeBytes,
     required this.parseStatus,
+    this.parsedJson,
     required this.createdAt,
   });
 
@@ -30,6 +31,8 @@ class ResumeDto {
   final int sizeBytes;
   @JsonKey(name: 'parse_status', unknownEnumValue: ResumeParseStatus.unknown)
   final ResumeParseStatus parseStatus;
+  @JsonKey(name: 'parsed_json')
+  final Map<String, dynamic>? parsedJson;
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
 }
