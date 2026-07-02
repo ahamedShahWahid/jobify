@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jobify.consent import seed_default_consents
 from jobify.db.models import (
     Applicant,
+    ApplicantPreferences,
     OAuthIdentity,
     OAuthProvider,
     RefreshToken,
@@ -161,6 +162,9 @@ class AuthService:
             full_name=claims.name or claims.email.split("@", 1)[0],
         )
         self._session.add(applicant)
+        await self._session.flush()  # populates applicant.id
+
+        self._session.add(ApplicantPreferences(applicant_id=applicant.id))
 
         identity = OAuthIdentity(
             user_id=user.id,

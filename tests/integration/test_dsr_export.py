@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jobify.consent import seed_default_consents
 from jobify.db.models import (
     Applicant,
+    ApplicantPreferences,
     AuditLog,
     Employer,
     EmployerInvite,
@@ -57,6 +58,7 @@ async def _make_applicant(session: AsyncSession) -> tuple[User, Applicant, str]:
     applicant = Applicant(user_id=user.id, full_name="DSR Test User")
     session.add(applicant)
     await session.flush()
+    session.add(ApplicantPreferences(applicant_id=applicant.id))
     await seed_default_consents(session, user=user)
     await session.commit()
     token = mint_access_token(
@@ -115,6 +117,8 @@ async def test_applicant_export_happy_path(
     assert body["user"]["id"] == str(user.id)
     assert body["applicant"] is not None
     assert body["applicant"]["full_name"] == "DSR Test User"
+    assert len(body["applicant_preferences"]) == 1
+    assert body["applicant_preferences"][0]["locations"] == []
     assert len(body["user_consents"]) == 7  # all default scopes
     assert body["employer_memberships"] == []
     assert body["owned_jobs"] == []
@@ -171,6 +175,35 @@ async def test_export_includes_received_and_sent_invites(
     assert body["sent_invites"][0]["email"] == "someone-else@example.com"
     assert len(body["received_invites"]) == 1
     assert body["received_invites"][0]["employer_name"] == "Other Co"
+
+
+@pytest.mark.asyncio
+async def test_export_includes_live_and_soft_deleted_preferences_rows(
+    async_client: AsyncClient, session: AsyncSession
+) -> None:
+    """Export convention: ALL rows we hold, no deleted_at filter. A live +
+    soft-deleted pair is legal under the partial-unique index — the old
+    scalar_one_or_none() raised MultipleResultsFound on exactly this."""
+    from datetime import UTC, datetime
+
+    user, applicant, token = await _make_applicant(session)
+    old_row = (
+        await session.execute(
+            select(ApplicantPreferences).where(ApplicantPreferences.applicant_id == applicant.id)
+        )
+    ).scalar_one()
+    old_row.deleted_at = datetime.now(UTC)
+    session.add(ApplicantPreferences(applicant_id=applicant.id, locations=["Pune"]))
+    await session.commit()
+
+    resp = await async_client.post(
+        "/v1/me/dsr/export",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    prefs = resp.json()["applicant_preferences"]
+    assert len(prefs) == 2
+    assert sorted(p["deleted_at"] is not None for p in prefs) == [False, True]
 
 
 @pytest.mark.asyncio

@@ -8,6 +8,12 @@ Load-bearing invariants for the FastAPI-free domain package (`core/src/jobify`):
 
 Every domain table: `id` (uuid4), `created_at`, `updated_at`, `deleted_at TIMESTAMPTZ NULL`. Live queries filter `deleted_at IS NULL`; uniqueness via partial indexes `WHERE deleted_at IS NULL` (e.g. `User.ix_users_email_live`). New tables reuse the `CreatedAt`/`UpdatedAt`/`DeletedAt` `Annotated` types in `db/models.py`. `Base.__table_args__` is typed `Any` + `# noqa: RUF012` — don't "fix" the noqa.
 
+## Applicant preferences (`applicant_preferences`) — spec `2026-07-01-resume-review-preferences-design.md`
+
+- **One live row per applicant** (partial-unique `ix_applicant_preferences_applicant_live`), **eagerly created at signup** by `AuthService._upsert_identity` (like consent seeding) — the API assumes presence (missing live row → 500). Workers still outer-join defensively for seeded/test applicants, with `deleted_at IS NULL` in the JOIN's **ON clause** so a soft-deleted row degrades to "no prefs" rather than dropping the applicant (see `worker/CLAUDE.md` → Scoring).
+- **`desired_role` is varchar in DB, `RoleCategory` StrEnum at the boundary** (same precedent as consent scopes — adding a value is a plain Python enum edit, no PG-enum migration). It is **capture-only**: scoring reads `locations`/`expected_ctc`/`years_experience`, never `desired_role` — its absence from the rescore triggers is deliberate.
+- `expected_ctc >= 0` enforced by DB CHECK (`ck_applicant_preferences_expected_ctc_nonneg`); upper bound + locations cardinality (≤10, each ≤100 chars) enforced at the API boundary only.
+
 ## Audit logs (`audit_log()`) — spec `2026-05-28-audit-logs-substrate-design.md`
 
 - **Append-only, caller-owns-txn:** flushes one row in the caller's txn (no commit, no fire-and-forget; rolls back with the business action). The **documented exception** to soft-delete: `AuditLog` skips the `Created/Updated/DeletedAt` types and never filters `deleted_at IS NULL`. No UPDATE/DELETE.

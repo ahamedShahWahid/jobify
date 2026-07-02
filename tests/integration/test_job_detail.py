@@ -33,7 +33,7 @@ async def _make_applicant(
     user = User(email=email, role=UserRole.APPLICANT)
     session.add(user)
     await session.flush()
-    applicant = Applicant(user_id=user.id, full_name="JD Test", locations=["Bangalore"])
+    applicant = Applicant(user_id=user.id, full_name="JD Test")
     session.add(applicant)
     await session.flush()
     return user, applicant

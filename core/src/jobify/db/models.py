@@ -127,16 +127,78 @@ class Applicant(Base):
         unique=True,
     )
     full_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    locations: Mapped[list[str] | None] = mapped_column(
-        ARRAY(String(100)), nullable=True, server_default="{}"
-    )
     notice_period_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
     current_ctc: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
-    expected_ctc: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
     years_experience: Mapped[float | None] = mapped_column(Numeric(4, 1), nullable=True)
     created_at: Mapped[CreatedAt]
     updated_at: Mapped[UpdatedAt]
     deleted_at: Mapped[DeletedAt]
+
+
+class RoleCategory(StrEnum):
+    SOFTWARE_ENGINEERING = "software_engineering"
+    DATA_ANALYTICS = "data_analytics"
+    PRODUCT_MANAGEMENT = "product_management"
+    DESIGN = "design"
+    SALES = "sales"
+    MARKETING = "marketing"
+    CUSTOMER_SUPPORT = "customer_support"
+    OPERATIONS = "operations"
+    FINANCE_ACCOUNTING = "finance_accounting"
+    HR_RECRUITING = "hr_recruiting"
+    LEGAL = "legal"
+    CONSULTING = "consulting"
+    BUSINESS_DEVELOPMENT = "business_development"
+    CONTENT_COMMUNICATIONS = "content_communications"
+    ADMINISTRATION = "administration"
+    OTHER = "other"
+
+
+class ApplicantPreferences(Base):
+    """Desired role / location / expected CTC — captured after resume upload
+    or via the profile edit screen. Single source for these 3 fields (they
+    used to live on Applicant); one live row per applicant, eagerly created
+    at signup by AuthService._upsert_identity so scoring workers and the
+    GET endpoint never need to handle a missing row for a real applicant
+    (workers still outer-join defensively for seeded/test applicants)."""
+
+    __tablename__ = "applicant_preferences"
+
+    id: Mapped[UuidPK]
+    applicant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("jobify.applicants.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    desired_role: Mapped[RoleCategory | None] = mapped_column(
+        SAEnum(
+            RoleCategory,
+            name="role_category",
+            native_enum=False,
+            create_constraint=False,
+            length=50,
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        nullable=True,
+    )
+    locations: Mapped[list[str]] = mapped_column(
+        ARRAY(String(100)), nullable=False, server_default="{}"
+    )
+    expected_ctc: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
+    created_at: Mapped[CreatedAt]
+    updated_at: Mapped[UpdatedAt]
+    deleted_at: Mapped[DeletedAt]
+
+    __table_args__ = (
+        Index(
+            "ix_applicant_preferences_applicant_live",
+            "applicant_id",
+            unique=True,
+            postgresql_where="deleted_at IS NULL",
+        ),
+        CheckConstraint("expected_ctc >= 0", name="ck_applicant_preferences_expected_ctc_nonneg"),
+        {"schema": "jobify"},
+    )
 
 
 class ResumeParseStatus(StrEnum):

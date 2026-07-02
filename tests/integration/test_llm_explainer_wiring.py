@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from jobify.db.models import (
     Applicant,
     ApplicantEmbedding,
+    ApplicantPreferences,
     Employer,
     Job,
     JobEmbedding,
@@ -43,11 +44,11 @@ async def test_score_applicant_routes_through_match_explainer_factory(
     applicant = Applicant(
         user_id=user.id,
         full_name="Wiring Test",
-        locations=["Bangalore"],
         years_experience=4,
     )
     session.add(applicant)
     await session.flush()
+    session.add(ApplicantPreferences(applicant_id=applicant.id, locations=["Bangalore"]))
     session.add(
         ApplicantEmbedding(
             applicant_id=applicant.id,

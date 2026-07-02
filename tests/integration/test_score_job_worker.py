@@ -13,6 +13,7 @@ import jobify_worker.tasks.score_job as score_job_task
 from jobify.db.models import (
     Applicant,
     ApplicantEmbedding,
+    ApplicantPreferences,
     Employer,
     Job,
     JobEmbedding,
@@ -36,9 +37,10 @@ async def _seed_applicant_with_emb(session: AsyncSession, *, email: str) -> Appl
     user = User(email=email, role=UserRole.APPLICANT)
     session.add(user)
     await session.flush()
-    applicant = Applicant(user_id=user.id, full_name="A", locations=["Bangalore"])
+    applicant = Applicant(user_id=user.id, full_name="A")
     session.add(applicant)
     await session.flush()
+    session.add(ApplicantPreferences(applicant_id=applicant.id, locations=["Bangalore"]))
     session.add(
         ApplicantEmbedding(
             applicant_id=applicant.id,
@@ -153,7 +155,7 @@ async def test_score_job_skips_applicants_without_embeddings(session: AsyncSessi
     user = User(email="ano@example.com", role=UserRole.APPLICANT)
     session.add(user)
     await session.flush()
-    a_no = Applicant(user_id=user.id, full_name="NoEmb", locations=["Bangalore"])
+    a_no = Applicant(user_id=user.id, full_name="NoEmb")
     session.add(a_no)
     await session.flush()
     job = await _seed_job_with_emb(session)
@@ -190,6 +192,68 @@ async def test_score_job_skips_deleted_job(session: AsyncSession) -> None:
 
     rows = (await session.execute(select(func.count()).select_from(Match))).scalar_one()
     assert rows == 0
+
+
+@pytest.mark.integration
+async def test_score_job_scores_applicant_without_preferences_row(
+    session: AsyncSession,
+) -> None:
+    """Seeded/test applicant with an embedding but NO preferences row —
+    the outer join degrades to empty preferences instead of dropping them."""
+    user = User(email="noprefs-job@example.com", role=UserRole.APPLICANT)
+    session.add(user)
+    await session.flush()
+    applicant = Applicant(user_id=user.id, full_name="NoPrefs")
+    session.add(applicant)
+    await session.flush()
+    session.add(
+        ApplicantEmbedding(
+            applicant_id=applicant.id,
+            embedding=[1.0] * 1536,
+            model_name="test-model",
+            canonicalized_text_hash="a" * 64,
+            input_tokens=10,
+        )
+    )
+    job = await _seed_job_with_emb(session)
+    await session.commit()
+
+    await _score_job_async(job.id, sm=_make_sm(session))
+
+    row = (
+        await session.execute(select(Match).where(Match.applicant_id == applicant.id))
+    ).scalar_one()
+    assert row.job_id == job.id
+    # Empty-preference degrade: no location signal (0.5), no ctc signal (0.5).
+    assert row.score_components["location"] == 0.5
+    assert row.score_components["ctc"] == 0.5
+
+
+@pytest.mark.integration
+async def test_score_job_soft_deleted_preferences_treated_as_missing(
+    session: AsyncSession,
+) -> None:
+    """Pins the ON-clause fix — a soft-deleted preferences row degrades to
+    "no prefs"; before the fix this applicant was silently dropped."""
+    applicant = await _seed_applicant_with_emb(session, email="softdel-job@example.com")
+    prefs = (
+        await session.execute(
+            select(ApplicantPreferences).where(ApplicantPreferences.applicant_id == applicant.id)
+        )
+    ).scalar_one()
+    prefs.deleted_at = datetime.now(UTC)
+    job = await _seed_job_with_emb(session)
+    await session.commit()
+
+    await _score_job_async(job.id, sm=_make_sm(session))
+
+    row = (
+        await session.execute(select(Match).where(Match.applicant_id == applicant.id))
+    ).scalar_one()
+    assert row.job_id == job.id
+    # Treated as no prefs: seeded ["Bangalore"] is ignored → no-signal 0.5.
+    assert row.score_components["location"] == 0.5
+    assert row.score_components["ctc"] == 0.5
 
 
 @pytest.mark.integration

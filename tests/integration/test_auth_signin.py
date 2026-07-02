@@ -103,6 +103,18 @@ async def test_signin_creates_user_applicant_and_identity(
     # Every seeded audit row carries the request_id from the sign-in HTTP call.
     assert all("request_id" in a.context for a in audit_rows)
 
+    # ApplicantPreferences row eagerly provisioned in the same txn.
+    from jobify.db.models import ApplicantPreferences
+
+    prefs = (
+        await session.execute(
+            select(ApplicantPreferences).where(ApplicantPreferences.applicant_id == db_applicant.id)
+        )
+    ).scalar_one()
+    assert prefs.desired_role is None
+    assert prefs.locations == []
+    assert prefs.expected_ctc is None
+
 
 async def test_signin_returning_user_updates_last_seen(
     async_client: httpx.AsyncClient,

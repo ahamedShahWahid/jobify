@@ -18,7 +18,6 @@ void main() {
       'applicant': {
         'id': 'a1',
         'full_name': 'U',
-        'locations': <String>[],
         'notice_period_days': null,
       },
     });
@@ -39,7 +38,6 @@ void main() {
       'applicant': {
         'id': 'a1',
         'full_name': 'Alice Khan',
-        'locations': ['Pune'],
         'notice_period_days': null,
       },
     });
@@ -47,14 +45,13 @@ void main() {
     final me = await repo.updateProfile(
       const ProfileUpdateDto(
         fullName: 'Alice Khan',
-        locations: ['Pune'],
       ),
     );
     expect(me.applicant?.fullName, 'Alice Khan');
     final sent =
         mock.lastDataFor('PATCH', '/v1/applicants/me')! as Map<String, dynamic>;
     expect(sent['full_name'], 'Alice Khan');
-    expect(sent['locations'], ['Pune']);
-    expect(sent.containsKey('expected_ctc'), isTrue);
+    expect(sent.containsKey('notice_period_days'), isTrue);
+    expect(sent['notice_period_days'], isNull);
   });
 }

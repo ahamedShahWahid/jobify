@@ -13,7 +13,7 @@ from uuid import UUID
 
 import sqlalchemy as sa
 import structlog
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.sql import func
 
@@ -22,6 +22,7 @@ from jobify.celery_app import settings as _settings
 from jobify.db.models import (
     Applicant,
     ApplicantEmbedding,
+    ApplicantPreferences,
     Employer,
     Job,
     JobEmbedding,
@@ -105,8 +106,15 @@ async def _score_job_async(
         job, job_emb, employer_name = job_row
 
         apps_stmt = (
-            select(Applicant, ApplicantEmbedding)
+            select(Applicant, ApplicantEmbedding, ApplicantPreferences)
             .join(ApplicantEmbedding, ApplicantEmbedding.applicant_id == Applicant.id)
+            .outerjoin(
+                ApplicantPreferences,
+                and_(
+                    ApplicantPreferences.applicant_id == Applicant.id,
+                    ApplicantPreferences.deleted_at.is_(None),
+                ),
+            )
             .where(
                 Applicant.deleted_at.is_(None),
                 ApplicantEmbedding.deleted_at.is_(None),
@@ -122,13 +130,21 @@ async def _score_job_async(
         next_after_applicant_id = app_rows[-1][0].id if has_more and app_rows else None
         # Detach all entities from this session before closing — we read scalars in compute step.
         scored_inputs = []
-        for applicant, applicant_emb in app_rows:
+        for applicant, applicant_emb, applicant_prefs in app_rows:
+            if applicant_prefs is None:
+                # Eager creation at signup means this should never fire for a
+                # real applicant — degrading to empty preferences here.
+                _log.warning(
+                    "score.preferences-missing",
+                    applicant_id=str(applicant.id),
+                    job_id=str(job_id),
+                )
             scored_inputs.append(
                 (
                     applicant.id,
-                    list(applicant.locations or []),
+                    list(applicant_prefs.locations or []) if applicant_prefs else [],
                     applicant.years_experience,
-                    applicant.expected_ctc,
+                    applicant_prefs.expected_ctc if applicant_prefs else None,
                     list(applicant_emb.embedding),
                     applicant_emb.model_name,
                 )

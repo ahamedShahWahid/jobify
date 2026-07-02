@@ -41,10 +41,8 @@ class ApplicantSummaryDto {
   const ApplicantSummaryDto({
     required this.id,
     required this.fullName,
-    this.locations = const [],
     this.noticePeriodDays,
     this.currentCtc,
-    this.expectedCtc,
     this.yearsExperience,
   });
 
@@ -58,8 +56,6 @@ class ApplicantSummaryDto {
   @JsonKey(name: 'full_name')
   final String? fullName;
 
-  final List<String> locations;
-
   @JsonKey(name: 'notice_period_days')
   final int? noticePeriodDays;
 
@@ -68,9 +64,6 @@ class ApplicantSummaryDto {
   // Callers parse with double.tryParse(...) when they need a value.
   @JsonKey(name: 'current_ctc')
   final String? currentCtc;
-
-  @JsonKey(name: 'expected_ctc')
-  final String? expectedCtc;
 
   @JsonKey(name: 'years_experience')
   final String? yearsExperience;

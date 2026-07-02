@@ -14,6 +14,7 @@ class ResumeDto {
     required this.sizeBytes,
     required this.parseStatus,
     required this.createdAt,
+    this.parsedJson,
   });
 
   factory ResumeDto.fromJson(Map<String, dynamic> json) =>
@@ -30,6 +31,8 @@ class ResumeDto {
   final int sizeBytes;
   @JsonKey(name: 'parse_status', unknownEnumValue: ResumeParseStatus.unknown)
   final ResumeParseStatus parseStatus;
+  @JsonKey(name: 'parsed_json')
+  final Map<String, dynamic>? parsedJson;
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
 }

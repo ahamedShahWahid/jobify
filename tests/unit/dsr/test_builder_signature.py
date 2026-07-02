@@ -23,6 +23,7 @@ def test_user_export_top_level_fields() -> None:
         "exported_for_user_id",
         "user",
         "applicant",
+        "applicant_preferences",
         "oauth_identities",
         "resumes",
         "applicant_embedding",

@@ -15,10 +15,8 @@ void main() {
       'applicant': {
         'id': 'a1',
         'full_name': 'Alice',
-        'locations': ['Pune'],
         'notice_period_days': 30,
         'current_ctc': '1200000.50',
-        'expected_ctc': '1500000',
         'years_experience': '4.5',
       },
     });
@@ -32,7 +30,6 @@ void main() {
     final applicant = dto.applicant!;
     expect(applicant.id, 'a1');
     expect(applicant.fullName, 'Alice');
-    expect(applicant.locations, ['Pune']);
     expect(applicant.noticePeriodDays, 30);
     // Decimal-on-the-wire is a string.
     expect(applicant.currentCtc, '1200000.50');

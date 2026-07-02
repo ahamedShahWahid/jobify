@@ -34,7 +34,7 @@ async def test_create_user_and_applicant(session: AsyncSession) -> None:
     user = User(email="a@example.com", role=UserRole.APPLICANT)
     session.add(user)
     await session.flush()
-    applicant = Applicant(user_id=user.id, full_name="A. Test", locations=["Bengaluru", "Pune"])
+    applicant = Applicant(user_id=user.id, full_name="A. Test")
     session.add(applicant)
     await session.commit()
 
@@ -42,7 +42,6 @@ async def test_create_user_and_applicant(session: AsyncSession) -> None:
         await session.execute(select(Applicant).where(Applicant.user_id == user.id))
     ).scalar_one()
     assert loaded.full_name == "A. Test"
-    assert loaded.locations == ["Bengaluru", "Pune"]
 
 
 @pytest.mark.integration
@@ -591,3 +590,30 @@ async def test_notification_user_fk_cascades(session: AsyncSession) -> None:
         await session.execute(select(Notification).where(Notification.user_id == user.id))
     ).all()
     assert remaining == []
+
+
+def test_applicant_preferences_model_shape() -> None:
+    from jobify.db.models import ApplicantPreferences, RoleCategory
+
+    assert ApplicantPreferences.__tablename__ == "applicant_preferences"
+    mapper = ApplicantPreferences.__mapper__
+    columns = {c.key for c in mapper.columns}
+    assert columns == {
+        "id",
+        "applicant_id",
+        "desired_role",
+        "locations",
+        "expected_ctc",
+        "created_at",
+        "updated_at",
+        "deleted_at",
+    }
+    assert len(RoleCategory) == 16
+
+
+def test_applicant_no_longer_has_locations_or_expected_ctc() -> None:
+    from jobify.db.models import Applicant
+
+    columns = {c.key for c in Applicant.__mapper__.columns}
+    assert "locations" not in columns
+    assert "expected_ctc" not in columns

@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jobify.db.models import (
     Applicant,
     ApplicantEmbedding,
+    ApplicantPreferences,
     Application,
     AuditLog,
     Employer,
@@ -57,6 +58,9 @@ class UserExport(BaseModel):
 
     user: dict[str, Any]
     applicant: dict[str, Any] | None = None
+    # ALL preferences rows we hold (live + soft-deleted), matching the
+    # resumes convention below — export everything, no deleted_at filter.
+    applicant_preferences: list[dict[str, Any]] = []
 
     oauth_identities: list[dict[str, Any]] = []
     resumes: list[dict[str, Any]] = []
@@ -229,9 +233,22 @@ async def build_user_export(
     applications: list[dict[str, Any]] = []
     saved_jobs: list[dict[str, Any]] = []
     matches: list[dict[str, Any]] = []
+    applicant_preferences: list[dict[str, Any]] = []
 
     if applicant_row is not None:
         applicant_id = applicant_row.id
+        applicant_preferences = [
+            _row_to_dict(p)
+            for p in (
+                await session.execute(
+                    select(ApplicantPreferences).where(
+                        ApplicantPreferences.applicant_id == applicant_id
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        ]
         resumes = [
             _row_to_dict(r)
             for r in (
@@ -364,6 +381,7 @@ async def build_user_export(
         exported_for_user_id=user.id,
         user=user_dict,
         applicant=applicant_dict,
+        applicant_preferences=applicant_preferences,
         oauth_identities=[_row_to_dict(o) for o in oauth_rows],
         resumes=resumes,
         applicant_embedding=embedding_dict,

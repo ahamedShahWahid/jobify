@@ -13,6 +13,7 @@ import jobify_worker.tasks.score_applicant as score_applicant_task
 from jobify.db.models import (
     Applicant,
     ApplicantEmbedding,
+    ApplicantPreferences,
     Employer,
     Job,
     JobEmbedding,
@@ -34,13 +35,18 @@ def _make_sm(session: AsyncSession) -> async_sessionmaker[AsyncSession]:
     return async_sessionmaker(bind=session.bind, expire_on_commit=False)
 
 
-async def _seed_applicant(session: AsyncSession, *, email: str = "s@example.com") -> Applicant:
+async def _seed_applicant(
+    session: AsyncSession, *, email: str = "s@example.com", locations: list[str] | None = None
+) -> Applicant:
     user = User(email=email, role=UserRole.APPLICANT)
     session.add(user)
     await session.flush()
-    applicant = Applicant(user_id=user.id, full_name="S Test", locations=["Bangalore"])
+    applicant = Applicant(user_id=user.id, full_name="S Test")
     session.add(applicant)
     await session.flush()
+    session.add(
+        ApplicantPreferences(applicant_id=applicant.id, locations=locations or ["Bangalore"])
+    )
     session.add(
         ApplicantEmbedding(
             applicant_id=applicant.id,
@@ -200,9 +206,10 @@ async def test_score_applicant_does_not_surface_below_threshold(
     user = User(email="s2@example.com", role=UserRole.APPLICANT)
     session.add(user)
     await session.flush()
-    applicant = Applicant(user_id=user.id, full_name="S2", locations=["Mumbai"])
+    applicant = Applicant(user_id=user.id, full_name="S2")
     session.add(applicant)
     await session.flush()
+    session.add(ApplicantPreferences(applicant_id=applicant.id, locations=["Mumbai"]))
     emb = [0.0] * 1536
     emb[0] = 1.0  # applicant unit vector along axis 0
     session.add(
@@ -295,13 +302,75 @@ async def test_score_applicant_skips_deleted_applicant(session: AsyncSession) ->
 
 
 @pytest.mark.integration
+async def test_score_applicant_without_preferences_row_still_scored(
+    session: AsyncSession,
+) -> None:
+    """Seeded/test applicant with an embedding but NO preferences row —
+    the outer join degrades to empty preferences instead of dropping them."""
+    user = User(email="noprefs@example.com", role=UserRole.APPLICANT)
+    session.add(user)
+    await session.flush()
+    applicant = Applicant(user_id=user.id, full_name="NoPrefs")
+    session.add(applicant)
+    await session.flush()
+    session.add(
+        ApplicantEmbedding(
+            applicant_id=applicant.id,
+            embedding=[1.0] * 1536,
+            model_name="test-model",
+            canonicalized_text_hash="a" * 64,
+            input_tokens=10,
+        )
+    )
+    j = await _seed_job(session, title="NoPrefsJob", embedding=[1.0] * 1536)
+    await session.commit()
+
+    await _score_applicant_async(applicant.id, sm=_make_sm(session))
+
+    row = (
+        await session.execute(select(Match).where(Match.applicant_id == applicant.id))
+    ).scalar_one()
+    assert row.job_id == j.id
+    # Empty-preference degrade: no location signal (0.5), no ctc signal (0.5).
+    assert row.score_components["location"] == 0.5
+    assert row.score_components["ctc"] == 0.5
+
+
+@pytest.mark.integration
+async def test_score_applicant_soft_deleted_preferences_treated_as_missing(
+    session: AsyncSession,
+) -> None:
+    """Pins the ON-clause fix — a soft-deleted preferences row degrades to
+    "no prefs"; before the fix this applicant was silently dropped."""
+    applicant = await _seed_applicant(session)
+    j = await _seed_job(session, title="SoftDelPrefs", embedding=[1.0] * 1536)
+    prefs = (
+        await session.execute(
+            select(ApplicantPreferences).where(ApplicantPreferences.applicant_id == applicant.id)
+        )
+    ).scalar_one()
+    prefs.deleted_at = datetime.now(UTC)
+    await session.commit()
+
+    await _score_applicant_async(applicant.id, sm=_make_sm(session))
+
+    row = (
+        await session.execute(select(Match).where(Match.applicant_id == applicant.id))
+    ).scalar_one()
+    assert row.job_id == j.id
+    # Treated as no prefs: seeded ["Bangalore"] is ignored → no-signal 0.5.
+    assert row.score_components["location"] == 0.5
+    assert row.score_components["ctc"] == 0.5
+
+
+@pytest.mark.integration
 async def test_score_applicant_skips_when_no_applicant_embedding(
     session: AsyncSession,
 ) -> None:
     user = User(email="noemb@example.com", role=UserRole.APPLICANT)
     session.add(user)
     await session.flush()
-    applicant = Applicant(user_id=user.id, full_name="NoEmb", locations=["Bangalore"])
+    applicant = Applicant(user_id=user.id, full_name="NoEmb")
     session.add(applicant)
     await session.flush()
     await _seed_job(session, title="W", embedding=[1.0] * 1536)

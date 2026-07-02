@@ -25,7 +25,7 @@ class _ErrRepo implements MeRepository {
       throw const ApiException(statusCode: 422, slug: 'bad');
 }
 
-const _update = ProfileUpdateDto(fullName: 'A', locations: ['Pune']);
+const _update = ProfileUpdateDto(fullName: 'A');
 
 void main() {
   test('submit success returns true', () async {

@@ -9,9 +9,7 @@ part of 'profile_update_dto.dart';
 Map<String, dynamic> _$ProfileUpdateDtoToJson(ProfileUpdateDto instance) =>
     <String, dynamic>{
       'full_name': instance.fullName,
-      'locations': instance.locations,
       'notice_period_days': instance.noticePeriodDays,
       'current_ctc': instance.currentCtc,
-      'expected_ctc': instance.expectedCtc,
       'years_experience': instance.yearsExperience,
     };

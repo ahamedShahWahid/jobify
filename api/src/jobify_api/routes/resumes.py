@@ -9,6 +9,7 @@ from __future__ import annotations
 import io
 import zipfile
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 import structlog
@@ -55,6 +56,7 @@ class ResumeRead(BaseModel):
     content_type: str
     size_bytes: int
     parse_status: ResumeParseStatus
+    parsed_json: dict[str, Any] | None = None
     created_at: datetime
 
 

@@ -15,6 +15,7 @@ ResumeDto _$ResumeDtoFromJson(Map<String, dynamic> json) => ResumeDto(
       parseStatus: $enumDecode(_$ResumeParseStatusEnumMap, json['parse_status'],
           unknownValue: ResumeParseStatus.unknown),
       createdAt: DateTime.parse(json['created_at'] as String),
+      parsedJson: json['parsed_json'] as Map<String, dynamic>?,
     );
 
 const _$ResumeParseStatusEnumMap = {

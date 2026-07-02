@@ -48,7 +48,6 @@ async def test_me_returns_user_and_applicant(
     assert body["role"] == "applicant"
     assert body["applicant"]["id"] == signin["user"]["applicant_id"]
     assert body["applicant"]["full_name"] == "Alice"
-    assert body["applicant"]["locations"] == []
     assert body["applicant"]["notice_period_days"] is None
 
 
@@ -120,25 +119,16 @@ async def test_me_deleted_user_returns_401(
 async def test_me_tolerates_nullable_email_and_scrubbed_applicant_fields(
     async_client: httpx.AsyncClient, session
 ) -> None:
-    """users.email, applicants.full_name and applicants.locations are nullable
-    in the DB (migration 0015 / phone-only-auth future). The wire contract must
-    mirror that instead of 500-ing on a null or masking it as ""."""
+    """users.email and applicants.full_name are nullable (DSR scrubbing) —
+    /v1/me must not 500 on a scrubbed row."""
     from jobify.db.models import Applicant, UserRole
     from jobify_api.auth.tokens import mint_access_token
 
     user = User(email=None, role=UserRole.APPLICANT)
     session.add(user)
     await session.flush()
-    applicant = Applicant(user_id=user.id, full_name=None, locations=None)
+    applicant = Applicant(user_id=user.id, full_name=None)
     session.add(applicant)
-    await session.flush()
-    # ORM inserts let server_default="{}" win for locations=None; the DSR
-    # deleter scrubs via UPDATE, which writes a real NULL — mirror that.
-    from sqlalchemy import update
-
-    await session.execute(
-        update(Applicant).where(Applicant.id == applicant.id).values(locations=None)
-    )
     await session.flush()
     token = mint_access_token(
         user_id=user.id, role=user.role.value, secret="x" * 32, ttl_seconds=600
@@ -149,4 +139,3 @@ async def test_me_tolerates_nullable_email_and_scrubbed_applicant_fields(
     body = resp.json()
     assert body["email"] is None
     assert body["applicant"]["full_name"] is None
-    assert body["applicant"]["locations"] is None

@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:jobify_app/data/me/me_dto.dart';
 import 'package:jobify_app/data/me/profile_update_dto.dart';
+import 'package:jobify_app/data/preferences/desired_role.dart';
+import 'package:jobify_app/data/preferences/preferences_dto.dart';
+import 'package:jobify_app/data/preferences/preferences_update_dto.dart';
+import 'package:jobify_app/presentation/preferences/preferences_controller.dart';
 import 'package:jobify_app/presentation/profile/me_controller.dart';
 import 'package:jobify_app/presentation/profile/profile_edit_controller.dart';
 import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
@@ -15,25 +20,33 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _fullName;
-  late final TextEditingController _experience;
-  late final TextEditingController _notice;
-  late final TextEditingController _currentCtc;
-  late final TextEditingController _expectedCtc;
+  final _fullName = TextEditingController();
+  final _experience = TextEditingController();
+  final _notice = TextEditingController();
+  final _currentCtc = TextEditingController();
+  final _expectedCtc = TextEditingController();
   final _locationInput = TextEditingController();
-  late List<String> _locations;
+  List<String> _locations = [];
+  DesiredRole? _desiredRole;
+  bool _seeded = false;
 
-  @override
-  void initState() {
-    super.initState();
-    final a = ref.read(meControllerProvider).value?.applicant;
-    _fullName = TextEditingController(text: a?.fullName ?? '');
-    _experience = TextEditingController(text: a?.yearsExperience ?? '');
-    _notice =
-        TextEditingController(text: a?.noticePeriodDays?.toString() ?? '');
-    _currentCtc = TextEditingController(text: a?.currentCtc ?? '');
-    _expectedCtc = TextEditingController(text: a?.expectedCtc ?? '');
-    _locations = List<String>.from(a?.locations ?? const []);
+  /// One-shot seed from resolved data (mirrors PreferencesScreen's
+  /// `_seedFromPreferences`). Never called with unresolved providers — the
+  /// old eager `initState` read `.value` while preferences could still be
+  /// loading, seeding `_locations = []` and silently wiping the saved
+  /// locations server-side on the next Save.
+  void _seed(ApplicantSummaryDto? a, PreferencesDto prefs) {
+    _seeded = true;
+    _fullName.text = a?.fullName ?? '';
+    _experience.text = a?.yearsExperience ?? '';
+    _notice.text = a?.noticePeriodDays?.toString() ?? '';
+    _currentCtc.text = a?.currentCtc ?? '';
+    _expectedCtc.text = prefs.expectedCtc ?? '';
+    _locations = List<String>.from(prefs.locations);
+    // Keep the raw seeded value INCLUDING `unknown`: an untouched unknown
+    // is omitted on save, preserving the server's (newer-than-this-build)
+    // role instead of clearing it.
+    _desiredRole = prefs.desiredRole;
   }
 
   @override
@@ -71,29 +84,81 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    final update = ProfileUpdateDto(
+    final profileUpdate = ProfileUpdateDto(
       fullName: _fullName.text.trim(),
-      locations: _locations,
       noticePeriodDays: int.tryParse(_notice.text.trim()),
       currentCtc: num.tryParse(_currentCtc.text.trim()),
-      expectedCtc: num.tryParse(_expectedCtc.text.trim()),
       yearsExperience: num.tryParse(_experience.text.trim()),
     );
-    final ok =
-        await ref.read(profileEditControllerProvider.notifier).submit(update);
+    final preferencesUpdate = PreferencesUpdateDto(
+      desiredRole: _desiredRole,
+      locations: _locations,
+      expectedCtc: num.tryParse(_expectedCtc.text.trim()),
+    );
+    final profileOk = await ref
+        .read(profileEditControllerProvider.notifier)
+        .submit(profileUpdate);
+    final prefsOk = await ref
+        .read(preferencesControllerProvider.notifier)
+        .submit(preferencesUpdate);
     if (!mounted) return;
-    if (ok) {
+    if (profileOk && prefsOk) {
       if (context.canPop()) context.pop();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Couldn't save. Try again.")),
-      );
+      return;
     }
+    // Two sequential PATCHes can partially succeed — say which half failed.
+    final message = profileOk
+        ? "Saved your profile, but couldn't save preferences. Try again."
+        : prefsOk
+            ? "Saved your preferences, but couldn't save your profile. "
+                'Try again.'
+            : "Couldn't save. Try again.";
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final saving = ref.watch(profileEditControllerProvider).isLoading;
+    final me = ref.watch(meControllerProvider);
+    final prefs = ref.watch(preferencesControllerProvider);
+
+    if (!_seeded) {
+      if (me.hasValue && prefs.hasValue) {
+        _seed(me.requireValue.applicant, prefs.requireValue);
+      } else {
+        // The form (and Save) must be unreachable until seeded from real
+        // data — saving a half-seeded form would wipe server-side values.
+        final meFailed = me.hasError && !me.hasValue;
+        final prefsFailed = prefs.hasError && !prefs.hasValue;
+        return Scaffold(
+          appBar: AppBar(title: const Text('Edit Profile')),
+          body: Center(
+            child: meFailed || prefsFailed
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text("Couldn't load your profile."),
+                      const SizedBox(height: JobifySpacing.sm),
+                      TextButton(
+                        onPressed: () {
+                          if (meFailed) ref.invalidate(meControllerProvider);
+                          if (prefsFailed) {
+                            ref.invalidate(preferencesControllerProvider);
+                          }
+                        },
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  )
+                : const CircularProgressIndicator(),
+          ),
+        );
+      }
+    }
+
+    final saving =
+        ref.watch(profileEditControllerProvider).isLoading || prefs.isLoading;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Profile'),
@@ -118,6 +183,26 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 if (t.length > 200) return 'Too long (max 200)';
                 return null;
               },
+            ),
+            const SizedBox(height: JobifySpacing.lg),
+            DropdownButtonFormField<DesiredRole>(
+              // `unknown` (unrecognised server value) has no menu item;
+              // show it as no selection. `_desiredRole` keeps the raw
+              // `unknown` until the user picks something, so an untouched
+              // save omits the key and preserves the server value.
+              initialValue:
+                  _desiredRole == DesiredRole.unknown ? null : _desiredRole,
+              decoration: const InputDecoration(labelText: 'Desired role'),
+              items: [
+                // A null item so a previously set role can be CLEARED.
+                const DropdownMenuItem<DesiredRole>(
+                  child: Text('No preference'),
+                ),
+                for (final role in DesiredRole.values
+                    .where((r) => r != DesiredRole.unknown))
+                  DropdownMenuItem(value: role, child: Text(role.label)),
+              ],
+              onChanged: (role) => setState(() => _desiredRole = role),
             ),
             const SizedBox(height: JobifySpacing.lg),
             Text('Locations', style: Theme.of(context).textTheme.labelLarge),

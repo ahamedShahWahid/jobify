@@ -42,6 +42,7 @@ EXPECTED_PII_TABLES: frozenset[str] = frozenset(
     {
         "users",
         "applicants",
+        "applicant_preferences",
         "resumes",
         "applicant_embeddings",
         "oauth_identities",

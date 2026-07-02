@@ -14,6 +14,7 @@ import type {
   MyInviteRead,
   NotificationListResponse,
   NotificationRead,
+  PreferencesRead,
   SavedJobListResponse,
   SavedJobRead,
 } from "./types";
@@ -295,10 +296,8 @@ export class DemoClient implements JobifyClient {
       applicant: {
         id: APPLICANT_ID,
         full_name: "You",
-        locations: ["Bengaluru"],
         notice_period_days: 60,
         current_ctc: "2800000",
-        expected_ctc: "4000000",
         years_experience: "6",
       },
     };
@@ -390,6 +389,11 @@ export class DemoClient implements JobifyClient {
         return { saved_job, job: item.job, employer: item.employer };
       });
     return { items, next_cursor: null };
+  }
+
+  async getPreferences(): Promise<PreferencesRead> {
+    await delay();
+    return { desired_role: null, locations: ["Bengaluru"], expected_ctc: "4000000" };
   }
 
   async getConsents(): Promise<ConsentRead[]> {
