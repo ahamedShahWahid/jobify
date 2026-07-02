@@ -115,6 +115,12 @@ async def _score_job_async(
             .where(
                 Applicant.deleted_at.is_(None),
                 ApplicantEmbedding.deleted_at.is_(None),
+                # NULL IS NULL is true, so a MISSING preferences row still
+                # passes (degrades to empty defaults below) — but nothing
+                # today ever soft-deletes an ApplicantPreferences row (only
+                # hard-deleted via DSR); if that ever changes, a soft-deleted
+                # row would fail this filter and silently drop the applicant
+                # from scoring instead of degrading.
                 ApplicantPreferences.deleted_at.is_(None),
             )
             .order_by(Applicant.id.asc())
