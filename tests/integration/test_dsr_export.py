@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jobify.consent import seed_default_consents
 from jobify.db.models import (
     Applicant,
+    ApplicantPreferences,
     AuditLog,
     Employer,
     EmployerInvite,
@@ -57,6 +58,7 @@ async def _make_applicant(session: AsyncSession) -> tuple[User, Applicant, str]:
     applicant = Applicant(user_id=user.id, full_name="DSR Test User")
     session.add(applicant)
     await session.flush()
+    session.add(ApplicantPreferences(applicant_id=applicant.id))
     await seed_default_consents(session, user=user)
     await session.commit()
     token = mint_access_token(
@@ -115,6 +117,8 @@ async def test_applicant_export_happy_path(
     assert body["user"]["id"] == str(user.id)
     assert body["applicant"] is not None
     assert body["applicant"]["full_name"] == "DSR Test User"
+    assert body["applicant_preferences"] is not None
+    assert body["applicant_preferences"]["locations"] == []
     assert len(body["user_consents"]) == 7  # all default scopes
     assert body["employer_memberships"] == []
     assert body["owned_jobs"] == []

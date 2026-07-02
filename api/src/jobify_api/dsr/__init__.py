@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jobify.db.models import (
     Applicant,
     ApplicantEmbedding,
+    ApplicantPreferences,
     Application,
     AuditLog,
     Employer,
@@ -57,6 +58,7 @@ class UserExport(BaseModel):
 
     user: dict[str, Any]
     applicant: dict[str, Any] | None = None
+    applicant_preferences: dict[str, Any] | None = None
 
     oauth_identities: list[dict[str, Any]] = []
     resumes: list[dict[str, Any]] = []
@@ -229,9 +231,19 @@ async def build_user_export(
     applications: list[dict[str, Any]] = []
     saved_jobs: list[dict[str, Any]] = []
     matches: list[dict[str, Any]] = []
+    applicant_preferences_dict: dict[str, Any] | None = None
 
     if applicant_row is not None:
         applicant_id = applicant_row.id
+        applicant_preferences_row = (
+            await session.execute(
+                select(ApplicantPreferences).where(
+                    ApplicantPreferences.applicant_id == applicant_id
+                )
+            )
+        ).scalar_one_or_none()
+        if applicant_preferences_row is not None:
+            applicant_preferences_dict = _row_to_dict(applicant_preferences_row)
         resumes = [
             _row_to_dict(r)
             for r in (
@@ -364,6 +376,7 @@ async def build_user_export(
         exported_for_user_id=user.id,
         user=user_dict,
         applicant=applicant_dict,
+        applicant_preferences=applicant_preferences_dict,
         oauth_identities=[_row_to_dict(o) for o in oauth_rows],
         resumes=resumes,
         applicant_embedding=embedding_dict,
