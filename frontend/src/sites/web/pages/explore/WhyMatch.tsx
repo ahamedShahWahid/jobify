@@ -81,17 +81,23 @@ export function WhyMatch() {
     if (!jobId) return;
     setError(null);
     try {
-      const [detail, identity] = await Promise.all([client.job(jobId), client.me()]);
+      // getPreferences() resolves in lockstep with job/me (not fired
+      // afterwards) so the you-vs-role marks never flash a false "not
+      // aligned" verdict before flipping once preferences catch up. A
+      // preferences-specific failure degrades to "—"/"~" for just that
+      // section (caught locally, not rethrown) rather than failing the
+      // whole breakdown, which doesn't depend on it.
+      const [detail, identity, prefs] = await Promise.all([
+        client.job(jobId),
+        client.me(),
+        client.getPreferences().catch(() => null),
+      ]);
       setData(detail);
       setMe(identity);
+      setPreferences(prefs);
     } catch (e) {
       setError(errorMessage(e));
-      return;
     }
-    // Fetched separately, non-blocking: the you-vs-role comparison degrades
-    // to "—"/"~" if this fails, but the rest of the breakdown (score,
-    // components) doesn't depend on it and shouldn't fail the whole page.
-    client.getPreferences().then(setPreferences).catch(() => {});
   }, [client, jobId]);
 
   useEffect(() => {
