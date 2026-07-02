@@ -23,8 +23,31 @@ export interface ApplicantRead {
 // locations/expected_ctc moved off ApplicantRead onto their own resource —
 // GET/PATCH /v1/applicants/me/preferences (source: routes/applicants.py
 // PreferencesRead). desired_role is new; nothing here writes it yet.
+
+// Mirrors the backend RoleCategory StrEnum. The trailing `(string & {})`
+// keeps this forward-compatible (the server may add values before this
+// client updates) while still offering the closed vocabulary to callers.
+export type RoleCategory =
+  | "software_engineering"
+  | "data_analytics"
+  | "product_management"
+  | "design"
+  | "sales"
+  | "marketing"
+  | "customer_support"
+  | "operations"
+  | "finance_accounting"
+  | "hr_recruiting"
+  | "legal"
+  | "consulting"
+  | "business_development"
+  | "content_communications"
+  | "administration"
+  | "other"
+  | (string & {});
+
 export interface PreferencesRead {
-  desired_role: string | null;
+  desired_role: RoleCategory | null;
   locations: string[];
   expected_ctc: string | null; // Decimal → JSON string
 }

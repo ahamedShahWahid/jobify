@@ -67,7 +67,12 @@ extension DesiredRoleWireValue on DesiredRole {
   /// The wire value sent to the backend, mirroring each @JsonValue above.
   /// Hand-written (not code-generated) because PreferencesUpdateDto's
   /// toJson() is hand-written too — see that file for why.
-  String? get wireValue => switch (this) {
+  ///
+  /// `unknown` is the unrecognised-server-value sentinel and must never be
+  /// serialized: an explicit `desired_role: null` would CLEAR the server's
+  /// value, so callers must OMIT the key instead (which preserves it).
+  /// Asking `unknown` for a wire value is therefore a caller bug — it throws.
+  String get wireValue => switch (this) {
         DesiredRole.softwareEngineering => 'software_engineering',
         DesiredRole.dataAnalytics => 'data_analytics',
         DesiredRole.productManagement => 'product_management',
@@ -84,6 +89,8 @@ extension DesiredRoleWireValue on DesiredRole {
         DesiredRole.contentCommunications => 'content_communications',
         DesiredRole.administration => 'administration',
         DesiredRole.other => 'other',
-        DesiredRole.unknown => null,
+        DesiredRole.unknown => throw StateError(
+            'DesiredRole.unknown has no wire value — omit the key instead',
+          ),
       };
 }

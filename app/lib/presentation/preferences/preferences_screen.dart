@@ -32,9 +32,11 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
     _expectedCtc = TextEditingController();
   }
 
-  void _seedFromPreferences(PreferencesDto? prefs) {
-    if (_seeded || prefs == null) return;
+  void _seedFromPreferences(PreferencesDto prefs) {
+    if (_seeded) return;
     _seeded = true;
+    // Keep the raw seeded value INCLUDING `unknown`: an untouched unknown
+    // is omitted on save, preserving the server's role instead of clearing.
     _desiredRole = prefs.desiredRole;
     _locations = List<String>.from(prefs.locations);
     _expectedCtc.text = prefs.expectedCtc ?? '';
@@ -87,8 +89,38 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
   @override
   Widget build(BuildContext context) {
     final prefsState = ref.watch(preferencesControllerProvider);
-    _seedFromPreferences(prefsState.value);
+    if (prefsState.hasValue) _seedFromPreferences(prefsState.requireValue);
     final saving = prefsState.isLoading && _seeded;
+
+    // The form must only render once seeded from real data — saving a
+    // half-seeded form would clear server-side values. Skip stays available
+    // in every state (this is a capture flow the user may bail out of).
+    if (!_seeded) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('What are you looking for?'),
+          actions: [
+            TextButton(onPressed: _skip, child: const Text('Skip')),
+          ],
+        ),
+        body: Center(
+          child: prefsState.hasError
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text("Couldn't load your preferences."),
+                    const SizedBox(height: JobifySpacing.sm),
+                    TextButton(
+                      onPressed: () =>
+                          ref.invalidate(preferencesControllerProvider),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                )
+              : const CircularProgressIndicator(),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -105,9 +137,18 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
             _ResumeSummaryCard(resume: widget.resume),
             const SizedBox(height: JobifySpacing.xl),
             DropdownButtonFormField<DesiredRole>(
-              initialValue: _desiredRole,
+              // `unknown` (unrecognised server value) has no menu item;
+              // show it as no selection. `_desiredRole` keeps the raw
+              // `unknown` until the user picks something, so an untouched
+              // save omits the key and preserves the server value.
+              initialValue:
+                  _desiredRole == DesiredRole.unknown ? null : _desiredRole,
               decoration: const InputDecoration(labelText: 'Desired role'),
               items: [
+                // A null item so a previously set role can be CLEARED.
+                const DropdownMenuItem<DesiredRole>(
+                  child: Text('No preference'),
+                ),
                 for (final role in DesiredRole.values
                     .where((r) => r != DesiredRole.unknown))
                   DropdownMenuItem(value: role, child: Text(role.label)),

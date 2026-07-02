@@ -71,11 +71,15 @@ class ApplicantPreferences(Base):
         nullable=False,
     )
     desired_role: Mapped[RoleCategory | None] = mapped_column(
+        # StrEnum at the boundary, plain varchar in the DB — same precedent as
+        # consent scopes (a native PG enum makes adding a value a painful
+        # autocommit migration; see core/CLAUDE.md).
         SAEnum(
             RoleCategory,
             name="role_category",
-            native_enum=True,
-            schema="jobify",
+            native_enum=False,
+            create_constraint=False,
+            length=50,
             values_callable=lambda x: [e.value for e in x],
         ),
         nullable=True,
@@ -102,8 +106,10 @@ One applicant → at most one live preferences row, enforced by a soft-delete-
 aware partial unique index (same pattern as `Employer.name_norm`).
 
 **Migration** (hand-written, `core/src/jobify/db/migrations/versions/`):
-creates `applicant_preferences` + the `role_category` enum type, and drops
-`Applicant.locations` + `Applicant.expected_ctc`. No backfill — there are no
+creates `applicant_preferences` (`desired_role` as plain varchar — the
+16-value vocabulary is enforced at the API boundary by the `RoleCategory`
+StrEnum, not a PG enum type) and drops `Applicant.locations` +
+`Applicant.expected_ctc`. No backfill — there are no
 existing users. `Applicant.current_ctc`, `years_experience`,
 `notice_period_days`, `full_name` are untouched; they are not part of this
 feature.
@@ -121,9 +127,11 @@ In `api/src/jobify_api/routes/applicants.py`, alongside the existing
 
 - `GET /v1/applicants/me/preferences` → `PreferencesRead`
   (`desired_role: RoleCategory | None`, `locations: list[str]`,
-  `expected_ctc: float | None`). If no row exists yet for the applicant, one
-  is created empty on first read (avoids a "row missing" vs "row with nulls"
-  distinction on the frontend).
+  `expected_ctc: Decimal | None` — serialized as a JSON *string*, like every
+  other Decimal on the wire). The row always exists: it is eagerly created
+  empty at signup by `AuthService._upsert_identity` (same pattern as consent
+  seeding), which avoids a "row missing" vs "row with nulls" distinction on
+  the frontend without a write-on-read GET.
 - `PATCH /v1/applicants/me/preferences` → `PreferencesUpdate` (all fields
   optional — partial update, same shape as the existing profile PATCH).
   Changing `locations` or `expected_ctc` dispatches the same async rescore
@@ -170,9 +178,9 @@ reads name/skills/experience/education from it directly.
    `GET /me/preferences`; if any of the 3 fields are still empty, it
    navigates to `PreferencesScreen` with the resume's parsed data (or the
    failure fallback) pre-loaded.
-2. **Nudge banner.** The feed/home screen replaces today's static empty-state
-   text with a persistent banner, derived from two checks (resume exists?
-   preferences complete?) with no additional stored state:
+2. **Nudge banner.** The feed/home screen adds a persistent banner above the
+   feed (the static empty-state text stays), derived from two checks (resume
+   exists? preferences complete?) with no additional stored state:
    - No resume at all → "Upload your resume so we can find you better
      roles" → taps into `ResumeScreen`.
    - Resume exists, preferences incomplete → "Tell us what you're looking
@@ -183,7 +191,7 @@ reads name/skills/experience/education from it directly.
    preferences state, so it simply stops rendering once the underlying data
    is complete.
 
-**Profile edit screen** (`app/lib/presentation/profile/profile_screen.dart`)
+**Profile edit screen** (`app/lib/presentation/profile/edit_profile_screen.dart`)
 keeps its existing simple edit UI for location/CTC from the user's
 perspective — it's just repointed at `GET`/`PATCH /me/preferences` under the
 hood instead of the old `Applicant` fields. It does not route through
@@ -192,15 +200,17 @@ above.
 
 ## Error handling
 
-- Save fails on `PreferencesScreen` (network/5xx) → inline error banner,
+- Save fails on `PreferencesScreen` (network/5xx) → error `SnackBar`,
   input retained, retryable — same pattern as the existing profile-edit
   screen.
 - Invalid `desired_role` value → 422 via Pydantic enum validation, surfaced
   as a field-level error.
 - Parse `FAILED` → summary card fallback text; the 3-field form is fully
   usable regardless, since it does not depend on parse having succeeded.
-- `GET /me/preferences` with no existing row → auto-created empty, not a
-  404.
+- `GET /me/preferences` with no live row → defensive 500
+  `applicant_preferences_missing` (unreachable in the real system — the row
+  is eagerly created at signup; same shape as `require_applicant`'s
+  `applicant_missing` 500).
 
 ## Testing
 
@@ -208,7 +218,8 @@ above.
   model/migration.
 - Backend integration (`tests/integration/`):
   `GET`/`PATCH /v1/applicants/me/preferences` — auth required, partial
-  update semantics, auto-create-on-first-read, rescore task dispatched on
+  update semantics, eager-create-at-signup (asserted in
+  `test_auth_signin.py`), rescore task dispatched on
   `locations`/`expected_ctc` change, 422 on invalid enum value. Mirrors the
   existing profile-PATCH tests in `test_applicants.py`.
 - Frontend widget tests: `PreferencesScreen` renders the parsed summary

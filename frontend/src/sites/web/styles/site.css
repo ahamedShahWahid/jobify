@@ -1883,6 +1883,10 @@ html {
   color: var(--gold);
   background: var(--gold-soft);
 }
+.surface-web .why-mark.unknown {
+  color: var(--ink-faint);
+  background: var(--paper-2);
+}
 
 .surface-web .why-trust {
   margin-top: 44px;

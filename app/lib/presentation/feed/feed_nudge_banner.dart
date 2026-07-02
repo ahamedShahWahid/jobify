@@ -15,7 +15,16 @@ class FeedNudgeBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final resume = ref.watch(resumeControllerProvider).value;
+    final resumeState = ref.watch(resumeControllerProvider);
+    final prefsState = ref.watch(preferencesControllerProvider);
+    // Only decide from resolved data — never render a nudge off a loading or
+    // failed fetch (a bare `.value == null` flashed the upload banner on
+    // every cold feed load). AsyncData(null) has hasValue == true, so a
+    // genuinely-absent resume still nudges.
+    if (!resumeState.hasValue || !prefsState.hasValue) {
+      return const SizedBox.shrink();
+    }
+    final resume = resumeState.value;
     if (resume == null) {
       return _Banner(
         text: 'Upload your résumé so we can find you better roles.',
@@ -23,8 +32,7 @@ class FeedNudgeBanner extends ConsumerWidget {
         onTap: () => context.push(Routes.resume),
       );
     }
-    final prefs = ref.watch(preferencesControllerProvider).value;
-    if (prefs != null && !prefs.isComplete) {
+    if (!prefsState.requireValue.isComplete) {
       return _Banner(
         text: "Tell us what you're looking for.",
         actionLabel: 'Answer',

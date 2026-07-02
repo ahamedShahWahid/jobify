@@ -22,6 +22,14 @@ class _CapturingRepo implements PreferencesRepository {
   }
 }
 
+class _ThrowingRepo implements PreferencesRepository {
+  @override
+  Future<PreferencesDto> fetch() async => throw Exception('boom');
+  @override
+  Future<PreferencesDto> update(PreferencesUpdateDto update) async =>
+      throw Exception('boom');
+}
+
 ResumeDto _resumeWithParsed() => ResumeDto(
       id: 'r1',
       applicantId: 'a1',
@@ -104,5 +112,16 @@ void main() {
     await tester.tap(find.widgetWithText(TextButton, 'Skip'));
     await tester.pumpAndSettle();
     expect(repo.captured, isNull);
+  });
+
+  testWidgets('fetch error shows Retry and keeps Skip available',
+      (tester) async {
+    await _pump(tester, repo: _ThrowingRepo(), resume: _resumeWithParsed());
+    expect(find.text('Retry'), findsOneWidget);
+    expect(find.text('Skip'), findsOneWidget);
+    // The form never renders off a failed fetch — saving a half-seeded
+    // form would clear server-side values.
+    expect(find.text('Save'), findsNothing);
+    expect(find.text('Locations'), findsNothing);
   });
 }

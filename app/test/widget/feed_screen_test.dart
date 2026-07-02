@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,6 +32,33 @@ class _FakeResumeRepo implements ResumeRepository {
   final ResumeDto? _current;
   @override
   Future<ResumeDto?> current() async => _current;
+  @override
+  Future<ResumeDto> upload({
+    required List<int> bytes,
+    required String filename,
+    required String contentType,
+  }) async =>
+      throw UnimplementedError();
+}
+
+/// Resume fetch that never resolves (loading) or always throws (error) —
+/// in both cases the nudge banner must NOT render: it only decides from
+/// resolved data.
+class _PendingResumeRepo implements ResumeRepository {
+  @override
+  Future<ResumeDto?> current() => Completer<ResumeDto?>().future;
+  @override
+  Future<ResumeDto> upload({
+    required List<int> bytes,
+    required String filename,
+    required String contentType,
+  }) async =>
+      throw UnimplementedError();
+}
+
+class _ThrowingResumeRepo implements ResumeRepository {
+  @override
+  Future<ResumeDto?> current() async => throw Exception('boom');
   @override
   Future<ResumeDto> upload({
     required List<int> bytes,
@@ -79,6 +108,7 @@ Widget _wrap(
   required FeedRepository repo,
   Object? resume = _unsetResume,
   PreferencesDto prefs = _completePrefs,
+  ResumeRepository? resumeRepo,
 }) {
   final resolvedResume = identical(resume, _unsetResume)
       ? _completeResumeDto
@@ -87,7 +117,7 @@ Widget _wrap(
     overrides: [
       feedRepositoryProvider.overrideWithValue(repo),
       resumeRepositoryProvider
-          .overrideWithValue(_FakeResumeRepo(resolvedResume)),
+          .overrideWithValue(resumeRepo ?? _FakeResumeRepo(resolvedResume)),
       preferencesRepositoryProvider.overrideWithValue(_FakePrefsRepo(prefs)),
     ],
     child: MaterialApp(
@@ -219,6 +249,36 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.textContaining("what you're looking for"), findsOneWidget);
+  });
+
+  testWidgets('no banner while the resume fetch is still pending',
+      (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        const FeedScreen(),
+        repo: _FakeFeedRepo(const FeedPageDto(items: [])),
+        prefs: _incompletePrefs,
+        resumeRepo: _PendingResumeRepo(),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(find.textContaining('Upload your résumé'), findsNothing);
+    expect(find.textContaining("what you're looking for"), findsNothing);
+  });
+
+  testWidgets('no banner when the resume fetch throws', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        const FeedScreen(),
+        repo: _FakeFeedRepo(const FeedPageDto(items: [])),
+        prefs: _incompletePrefs,
+        resumeRepo: _ThrowingResumeRepo(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Upload your résumé'), findsNothing);
+    expect(find.textContaining("what you're looking for"), findsNothing);
   });
 
   testWidgets('no banner when resume and preferences are complete',

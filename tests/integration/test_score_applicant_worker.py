@@ -302,6 +302,68 @@ async def test_score_applicant_skips_deleted_applicant(session: AsyncSession) ->
 
 
 @pytest.mark.integration
+async def test_score_applicant_without_preferences_row_still_scored(
+    session: AsyncSession,
+) -> None:
+    """Seeded/test applicant with an embedding but NO preferences row —
+    the outer join degrades to empty preferences instead of dropping them."""
+    user = User(email="noprefs@example.com", role=UserRole.APPLICANT)
+    session.add(user)
+    await session.flush()
+    applicant = Applicant(user_id=user.id, full_name="NoPrefs")
+    session.add(applicant)
+    await session.flush()
+    session.add(
+        ApplicantEmbedding(
+            applicant_id=applicant.id,
+            embedding=[1.0] * 1536,
+            model_name="test-model",
+            canonicalized_text_hash="a" * 64,
+            input_tokens=10,
+        )
+    )
+    j = await _seed_job(session, title="NoPrefsJob", embedding=[1.0] * 1536)
+    await session.commit()
+
+    await _score_applicant_async(applicant.id, sm=_make_sm(session))
+
+    row = (
+        await session.execute(select(Match).where(Match.applicant_id == applicant.id))
+    ).scalar_one()
+    assert row.job_id == j.id
+    # Empty-preference degrade: no location signal (0.5), no ctc signal (0.5).
+    assert row.score_components["location"] == 0.5
+    assert row.score_components["ctc"] == 0.5
+
+
+@pytest.mark.integration
+async def test_score_applicant_soft_deleted_preferences_treated_as_missing(
+    session: AsyncSession,
+) -> None:
+    """Pins the ON-clause fix — a soft-deleted preferences row degrades to
+    "no prefs"; before the fix this applicant was silently dropped."""
+    applicant = await _seed_applicant(session)
+    j = await _seed_job(session, title="SoftDelPrefs", embedding=[1.0] * 1536)
+    prefs = (
+        await session.execute(
+            select(ApplicantPreferences).where(ApplicantPreferences.applicant_id == applicant.id)
+        )
+    ).scalar_one()
+    prefs.deleted_at = datetime.now(UTC)
+    await session.commit()
+
+    await _score_applicant_async(applicant.id, sm=_make_sm(session))
+
+    row = (
+        await session.execute(select(Match).where(Match.applicant_id == applicant.id))
+    ).scalar_one()
+    assert row.job_id == j.id
+    # Treated as no prefs: seeded ["Bangalore"] is ignored → no-signal 0.5.
+    assert row.score_components["location"] == 0.5
+    assert row.score_components["ctc"] == 0.5
+
+
+@pytest.mark.integration
 async def test_score_applicant_skips_when_no_applicant_embedding(
     session: AsyncSession,
 ) -> None:

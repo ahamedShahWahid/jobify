@@ -72,6 +72,25 @@ class ProfileScreen extends ConsumerWidget {
             ],
             if (data.applicant case final a?) ...[
               const SizedBox(height: JobifySpacing.xl),
+              // The preference rows are simply absent while loading, but a
+              // failed fetch needs an affordance — otherwise the rows
+              // silently vanish with no way to get them back.
+              if (preferences.hasError && !preferences.hasValue)
+                Row(
+                  children: [
+                    const Expanded(
+                      child: _DetailRow(
+                        label: 'Preferences',
+                        value: "Couldn't load",
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () =>
+                          ref.invalidate(preferencesControllerProvider),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
               if (preferences.value case final p?) ...[
                 _DetailRow(
                   label: 'Desired role',

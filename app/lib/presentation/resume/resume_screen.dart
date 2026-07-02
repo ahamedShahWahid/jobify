@@ -66,7 +66,14 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> {
 
   Future<void> _refreshIfMounted() async {
     if (!mounted) return;
-    await ref.read(resumeControllerProvider.notifier).refresh();
+    try {
+      await ref.read(resumeControllerProvider.notifier).refresh();
+    } catch (_) {
+      // Invoked from discarded Future.delayed futures — a rethrow here would
+      // be an unhandled zone error. The provider's error state is already
+      // rendered by AsyncValueWidget; nothing more to surface.
+      return;
+    }
     if (!mounted) return;
     await _maybeNavigateToPreferences();
   }
@@ -80,10 +87,18 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> {
     }
     if (_navigatedForResumeId == resume.id) return;
 
-    final prefs = await AsyncValue.guard(
+    final prefsState = await AsyncValue.guard(
       () => ref.read(preferencesControllerProvider.future),
-    ).then((r) => r.value);
-    if (!mounted || prefs == null || prefs.isComplete) return;
+    );
+    if (!mounted) return;
+    if (prefsState.hasError) {
+      // Completeness unknown — the preferences screen shows its own
+      // error+retry state; dropping the capture flow silently is worse.
+      _navigatedForResumeId = resume.id;
+      unawaited(context.push(Routes.preferences, extra: resume));
+      return;
+    }
+    if (prefsState.requireValue.isComplete) return;
 
     _navigatedForResumeId = resume.id;
     // Fire-and-forget: the caller (a delayed refresh or the test hook below)

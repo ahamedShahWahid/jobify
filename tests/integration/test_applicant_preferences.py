@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import httpx
 import pytest
 from sqlalchemy import select
@@ -92,6 +94,15 @@ async def test_patch_omitted_key_unchanged(
     assert resp.status_code == 200
     assert resp.json()["expected_ctc"] == "1000000.00"
 
+    # And the reverse: a patch omitting locations leaves them untouched too.
+    resp = await async_client.patch(
+        "/v1/applicants/me/preferences",
+        headers=headers,
+        json={"expected_ctc": 2000000},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["locations"] == ["Remote"]
+
 
 @pytest.mark.parametrize(
     "body",
@@ -100,7 +111,9 @@ async def test_patch_omitted_key_unchanged(
         {"locations": None},
         {"locations": [""]},
         {"locations": ["a"] * 11},
+        {"locations": ["x" * 101]},
         {"expected_ctc": -5},
+        {"expected_ctc": 10000000000},
         {"unknown_field": "x"},
     ],
 )
@@ -175,3 +188,139 @@ async def test_patch_desired_role_only_no_rescore(
     )
     assert resp.status_code == 200
     assert calls == []  # desired_role is capture-only, not a matching field
+
+
+async def test_patch_expected_ctc_explicit_null_clears_and_rescores(
+    async_client: httpx.AsyncClient, google_verifier, monkeypatch
+) -> None:
+    import jobify.celery_app as _celery_mod
+
+    calls: list[str] = []
+
+    def _spy_enqueue(name: str, *args: object) -> None:
+        if name == "jobify.score_applicant":
+            calls.extend(args)
+
+    monkeypatch.setattr(_celery_mod, "enqueue", _spy_enqueue)
+
+    signin = await _signin(async_client, google_verifier)
+    headers = {"Authorization": f"Bearer {signin['access_token']}"}
+    resp = await async_client.patch(
+        "/v1/applicants/me/preferences", headers=headers, json={"expected_ctc": 1200000}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["expected_ctc"] == "1200000.00"
+    calls.clear()
+
+    resp = await async_client.patch(
+        "/v1/applicants/me/preferences", headers=headers, json={"expected_ctc": None}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["expected_ctc"] is None
+    # Clearing a matching field is still a matching change → rescore.
+    assert calls == [signin["user"]["applicant_id"]]
+
+
+async def test_patch_desired_role_explicit_null_clears_no_rescore(
+    async_client: httpx.AsyncClient, google_verifier, monkeypatch
+) -> None:
+    import jobify.celery_app as _celery_mod
+
+    calls: list[str] = []
+
+    def _spy_enqueue(name: str, *args: object) -> None:
+        if name == "jobify.score_applicant":
+            calls.extend(args)
+
+    monkeypatch.setattr(_celery_mod, "enqueue", _spy_enqueue)
+
+    signin = await _signin(async_client, google_verifier)
+    headers = {"Authorization": f"Bearer {signin['access_token']}"}
+    resp = await async_client.patch(
+        "/v1/applicants/me/preferences", headers=headers, json={"desired_role": "design"}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["desired_role"] == "design"
+
+    resp = await async_client.patch(
+        "/v1/applicants/me/preferences", headers=headers, json={"desired_role": None}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["desired_role"] is None
+    assert calls == []  # capture-only field, cleared or set
+
+
+async def test_patch_empty_body_is_noop(
+    async_client: httpx.AsyncClient, google_verifier, monkeypatch
+) -> None:
+    import jobify.celery_app as _celery_mod
+
+    calls: list[str] = []
+
+    def _spy_enqueue(name: str, *args: object) -> None:
+        if name == "jobify.score_applicant":
+            calls.extend(args)
+
+    monkeypatch.setattr(_celery_mod, "enqueue", _spy_enqueue)
+
+    signin = await _signin(async_client, google_verifier)
+    headers = {"Authorization": f"Bearer {signin['access_token']}"}
+    resp = await async_client.patch(
+        "/v1/applicants/me/preferences",
+        headers=headers,
+        json={"desired_role": "design", "locations": ["Pune"], "expected_ctc": 500000},
+    )
+    assert resp.status_code == 200
+    calls.clear()
+
+    resp = await async_client.patch("/v1/applicants/me/preferences", headers=headers, json={})
+    assert resp.status_code == 200
+    assert resp.json() == {
+        "desired_role": "design",
+        "locations": ["Pune"],
+        "expected_ctc": "500000.00",
+    }
+    assert calls == []  # nothing changed → no rescore
+
+
+async def test_get_soft_deleted_preferences_row_returns_500(
+    async_client: httpx.AsyncClient, google_verifier, session: AsyncSession
+) -> None:
+    """Mirrors test_upload_applicant_role_without_applicant_row_returns_500 —
+    the eagerly-created row soft-deleted out-of-band is an invariant
+    violation, surfaced as the pinned 500 slug (never auto-created)."""
+    signin = await _signin(async_client, google_verifier)
+    headers = {"Authorization": f"Bearer {signin['access_token']}"}
+
+    row = (
+        await session.execute(
+            select(ApplicantPreferences).where(
+                ApplicantPreferences.applicant_id == signin["user"]["applicant_id"]
+            )
+        )
+    ).scalar_one()
+    row.deleted_at = datetime.now(UTC)
+    await session.commit()
+
+    resp = await async_client.get("/v1/applicants/me/preferences", headers=headers)
+    assert resp.status_code == 500
+    assert resp.json()["detail"] == "applicant_preferences_missing"
+
+
+async def test_get_recruiter_returns_403(
+    async_client: httpx.AsyncClient, session: AsyncSession
+) -> None:
+    import uuid
+
+    recruiter = User(email=f"recruiter-get-{uuid.uuid4()}@example.com", role=UserRole.RECRUITER)
+    session.add(recruiter)
+    await session.flush()
+    access = mint_access_token(
+        user_id=recruiter.id, role=recruiter.role.value, secret=_JWT_SECRET, ttl_seconds=600
+    )
+    resp = await async_client.get(
+        "/v1/applicants/me/preferences",
+        headers={"Authorization": f"Bearer {access}"},
+    )
+    assert resp.status_code == 403
+    assert resp.json()["detail"] == "not_an_applicant"

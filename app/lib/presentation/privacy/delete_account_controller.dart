@@ -3,6 +3,7 @@ import 'package:jobify_app/data/auth/auth_state.dart';
 import 'package:jobify_app/data/dsr/dsr_repository_impl.dart';
 import 'package:jobify_app/presentation/auth/auth_providers.dart';
 import 'package:jobify_app/presentation/auth/delete_success_snackbar_provider.dart';
+import 'package:jobify_app/presentation/preferences/preferences_controller.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'delete_account_controller.g.dart';
@@ -23,6 +24,10 @@ class DeleteAccountController extends _$DeleteAccountController {
 
       ref.read(accessTokenHolderProvider).clear();
       ref.read(authStateProvider.notifier).set(const SignedOut());
+      // Same rationale as sign_out_controller.dart: the keepAlive
+      // preferences cache must not leak the deleted user's data into the
+      // next session.
+      ref.invalidate(preferencesControllerProvider);
 
       state = const AsyncData(null);
     } catch (e, st) {

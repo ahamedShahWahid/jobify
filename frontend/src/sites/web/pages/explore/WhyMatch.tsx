@@ -44,9 +44,15 @@ function num(s: string | null): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Coarse overlap markers for the you-vs-role comparison rows. */
-function locationAlign(preferences: PreferencesRead | null, job: JobDetailResponse["job"]): "✓" | "~" {
-  const mine = preferences?.locations ?? [];
+/** Coarse overlap markers for the you-vs-role comparison rows.
+ * "✓" = computed alignment, "~" = computed near-miss, "—" = not computable
+ * (preferences fetch failed / value never set) — never render a data-shaped
+ * verdict from missing data. */
+type AlignMark = "✓" | "~" | "—";
+
+function locationAlign(preferences: PreferencesRead | null, job: JobDetailResponse["job"]): AlignMark {
+  if (preferences === null) return "—";
+  const mine = preferences.locations;
   const hit = mine.some((m) =>
     job.locations.some(
       (j) => j.toLowerCase().includes(m.toLowerCase()) || m.toLowerCase().includes(j.toLowerCase()),
@@ -56,16 +62,20 @@ function locationAlign(preferences: PreferencesRead | null, job: JobDetailRespon
   return hit || remote ? "✓" : "~";
 }
 
-function experienceAlign(applicant: ApplicantRead | null, job: JobDetailResponse["job"]): "✓" | "~" {
+function experienceAlign(applicant: ApplicantRead | null, job: JobDetailResponse["job"]): AlignMark {
   const yrs = num(applicant?.years_experience ?? null);
-  if (yrs === null) return "~";
+  if (yrs === null) return "—";
   return yrs >= job.min_exp_years && yrs <= job.max_exp_years ? "✓" : "~";
 }
 
-function ctcAlign(preferences: PreferencesRead | null, job: JobDetailResponse["job"]): "✓" | "~" {
+function ctcAlign(preferences: PreferencesRead | null, job: JobDetailResponse["job"]): AlignMark {
   const want = num(preferences?.expected_ctc ?? null);
-  if (want === null || job.ctc_max === null) return "~";
+  if (want === null || job.ctc_max === null) return "—";
   return job.ctc_max >= want ? "✓" : "~";
+}
+
+function markClass(mark: AlignMark): string {
+  return mark === "✓" ? "ok" : mark === "~" ? "near" : "unknown";
 }
 
 export function WhyMatch() {
@@ -84,13 +94,16 @@ export function WhyMatch() {
       // getPreferences() resolves in lockstep with job/me (not fired
       // afterwards) so the you-vs-role marks never flash a false "not
       // aligned" verdict before flipping once preferences catch up. A
-      // preferences-specific failure degrades to "—"/"~" for just that
-      // section (caught locally, not rethrown) rather than failing the
+      // preferences-specific failure degrades that section to "—" (unknown,
+      // caught locally and logged, not rethrown) rather than failing the
       // whole breakdown, which doesn't depend on it.
       const [detail, identity, prefs] = await Promise.all([
         client.job(jobId),
         client.me(),
-        client.getPreferences().catch(() => null),
+        client.getPreferences().catch((e: unknown) => {
+          console.warn("preferences fetch failed — alignment marks degrade to unknown", e);
+          return null;
+        }),
       ]);
       setData(detail);
       setMe(identity);
@@ -302,13 +315,13 @@ export function WhyMatch() {
               </div>
             </div>
             <div className="why-vs-marks">
-              <span className={`why-mark ${locationAlign(preferences, job) === "✓" ? "ok" : "near"}`}>
+              <span className={`why-mark ${markClass(locationAlign(preferences, job))}`}>
                 {locationAlign(preferences, job)}
               </span>
-              <span className={`why-mark ${experienceAlign(applicant, job) === "✓" ? "ok" : "near"}`}>
+              <span className={`why-mark ${markClass(experienceAlign(applicant, job))}`}>
                 {experienceAlign(applicant, job)}
               </span>
-              <span className={`why-mark ${ctcAlign(preferences, job) === "✓" ? "ok" : "near"}`}>
+              <span className={`why-mark ${markClass(ctcAlign(preferences, job))}`}>
                 {ctcAlign(preferences, job)}
               </span>
             </div>

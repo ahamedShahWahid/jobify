@@ -119,9 +119,12 @@ export function Profile() {
       .then((p) => {
         if (!cancelled) setPreferences(p);
       })
-      .catch(() => {
-        // Read-only display field — a failed fetch just leaves it as "—"
-        // rather than surfacing another error banner on this page.
+      .catch((e: unknown) => {
+        // Read-only display field — a failed fetch leaves it as "—" rather
+        // than surfacing another error banner on this page, but never
+        // silently: log it so a persistent preferences outage (incl. the
+        // backend's applicant_preferences_missing 500) is debuggable.
+        console.error("preferences fetch failed", e);
       });
     return () => {
       cancelled = true;

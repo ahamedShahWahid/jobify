@@ -13,7 +13,7 @@ from uuid import UUID
 
 import sqlalchemy as sa
 import structlog
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.sql import func
 
@@ -110,18 +110,14 @@ async def _score_job_async(
             .join(ApplicantEmbedding, ApplicantEmbedding.applicant_id == Applicant.id)
             .outerjoin(
                 ApplicantPreferences,
-                ApplicantPreferences.applicant_id == Applicant.id,
+                and_(
+                    ApplicantPreferences.applicant_id == Applicant.id,
+                    ApplicantPreferences.deleted_at.is_(None),
+                ),
             )
             .where(
                 Applicant.deleted_at.is_(None),
                 ApplicantEmbedding.deleted_at.is_(None),
-                # NULL IS NULL is true, so a MISSING preferences row still
-                # passes (degrades to empty defaults below) — but nothing
-                # today ever soft-deletes an ApplicantPreferences row (only
-                # hard-deleted via DSR); if that ever changes, a soft-deleted
-                # row would fail this filter and silently drop the applicant
-                # from scoring instead of degrading.
-                ApplicantPreferences.deleted_at.is_(None),
             )
             .order_by(Applicant.id.asc())
             .limit(limit + 1)
@@ -135,6 +131,14 @@ async def _score_job_async(
         # Detach all entities from this session before closing — we read scalars in compute step.
         scored_inputs = []
         for applicant, applicant_emb, applicant_prefs in app_rows:
+            if applicant_prefs is None:
+                # Eager creation at signup means this should never fire for a
+                # real applicant — degrading to empty preferences here.
+                _log.warning(
+                    "score.preferences-missing",
+                    applicant_id=str(applicant.id),
+                    job_id=str(job_id),
+                )
             scored_inputs.append(
                 (
                     applicant.id,

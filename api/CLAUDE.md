@@ -40,6 +40,13 @@ SQLAlchemy models are never response models. Define `*Read`/`*Create`/`*Update` 
 
 Applicant id is **never** from the URL — from `current_user.id`. Prefix `/v1/applicants/me` (`me` literal). Storage key set **after** DB flush (`resumes/{resume.id}{ext}`); ext from `_CONTENT_TYPE_TO_EXT` off the validated content-type — never the filename. Parse dispatch is fire-and-forget post-commit (see `worker/CLAUDE.md` → Parse worker).
 
+## Applicant profile + preferences — spec `2026-07-01-resume-review-preferences-design.md`
+
+- **The `applicant_preferences` row is eagerly created at signup** (`AuthService._upsert_identity`, like consent seeding). GET/PATCH `/v1/applicants/me/preferences` treat a missing live row as an invariant violation — `_require_preferences_row` logs + raises 500 `applicant_preferences_missing`. Never auto-create on read.
+- **Two disjoint rescore-trigger sets:** `_MATCHING_FIELDS = {years_experience}` (profile PATCH) vs `_PREFERENCES_MATCHING_FIELDS = {locations, expected_ctc}` (preferences PATCH). **`desired_role` is deliberately NOT a trigger** — capture-only; scoring never reads it (see `core/CLAUDE.md`). Don't "fix" that.
+- **Partial-update contract** (both PATCHes): only `model_fields_set` keys are applied; explicit null clears `desired_role`/`expected_ctc`; `locations` is non-nullable (empty list clears). The setattr-from-fields-set loop is safe ONLY because `extra="forbid"` closes the field set — removing it opens mass assignment.
+- `applicant_preferences` is PII → DSR-wired: exported (ALL rows, list — export convention has no `deleted_at` filter) + hard-deleted in `deleter.py`; pinned in `test_dsr_coverage.py` + `test_builder_signature.py`.
+
 ## Feed + job detail — spec `2026-05-20-p2.3-feed-and-job-detail-design.md`
 
 - **`/v1/feed`** filters `surfaced_at IS NOT NULL` AND `jobs.status='open'` AND both sides `deleted_at IS NULL`; uses `ix_matches_applicant_surfaced (applicant_id, total_score DESC) WHERE ...` for seek + order.
@@ -85,7 +92,7 @@ Applicant id is **never** from the URL — from `current_user.id`. Prefix `/v1/a
 ## DSR delete — spec `2026-05-29-dsr-delete-design.md`
 
 - **Soft-delete + scrub, NOT hard-delete the User row** — hard-delete CASCADE-wipes applications/matches (lose analytics + eval substrate). Tombstone `users` + `applicants` with PII scrubbed; hard-delete the truly-PII tables around them.
-- **Migration 0015 made `applicants.full_name` + `applicants.locations` nullable** for scrubbing. New PII column on applicants/users/resumes → decide nullability + tombstone, update `delete_user_data` + a migration.
+- **Migration 0015 made `applicants.full_name` + `applicants.locations` nullable** for scrubbing (`applicants.locations` has since been DROPPED by 0021 — locations now live on `applicant_preferences`, which DSR hard-deletes). New PII column on applicants/users/resumes → decide nullability + tombstone, update `delete_user_data` + a migration.
 - **Application-layer deletion graph** (`jobify_api.dsr.deleter.delete_user_data`), not FK CASCADE — walks the graph for correct counts + order-sensitive blob-delete-before-scrub.
 - **Atomic txn** (handler does explicit `await session.commit()` at success) — partial deletion is worse than none. Re-signup works (email-collision filters `deleted_at IS NULL`). Confirmation token in **body** not query: `DELETE /v1/me/dsr` `{"confirmation": "DELETE_MY_ACCOUNT"}`.
 - Sole-owner employer → a `warnings` entry (employer stays). Blob deletion best-effort (`dsr.blob-delete-failed`, no rollback).

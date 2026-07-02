@@ -14,12 +14,23 @@ class PreferencesController extends _$PreferencesController {
       ref.read(preferencesRepositoryProvider).fetch();
 
   Future<bool> submit(PreferencesUpdateDto update) async {
-    state = const AsyncValue.loading();
+    // Preserve the loaded value across the submit: this provider is
+    // keepAlive and shared (ProfileScreen, FeedNudgeBanner,
+    // EditProfileScreen), so a bare AsyncLoading/AsyncError here would
+    // radiate a data-less state to every watcher.
+    final previous = state;
+    // ignore: invalid_use_of_internal_member
+    state = const AsyncValue<PreferencesDto>.loading().copyWithPrevious(
+      previous,
+    );
     final result = await AsyncValue.guard(
       () => ref.read(preferencesRepositoryProvider).update(update),
     );
     if (result.hasError) {
-      state = AsyncValue.error(result.error!, result.stackTrace!);
+      final error =
+          AsyncValue<PreferencesDto>.error(result.error!, result.stackTrace!);
+      // ignore: invalid_use_of_internal_member
+      state = error.copyWithPrevious(previous);
       return false;
     }
     state = AsyncValue.data(result.value!);

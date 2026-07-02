@@ -159,7 +159,8 @@ class ApplicantPreferences(Base):
     or via the profile edit screen. Single source for these 3 fields (they
     used to live on Applicant); one live row per applicant, eagerly created
     at signup by AuthService._upsert_identity so scoring workers and the
-    GET endpoint never need to handle a missing row for a real applicant."""
+    GET endpoint never need to handle a missing row for a real applicant
+    (workers still outer-join defensively for seeded/test applicants)."""
 
     __tablename__ = "applicant_preferences"
 
@@ -173,8 +174,9 @@ class ApplicantPreferences(Base):
         SAEnum(
             RoleCategory,
             name="role_category",
-            native_enum=True,
-            schema="jobify",
+            native_enum=False,
+            create_constraint=False,
+            length=50,
             values_callable=lambda x: [e.value for e in x],
         ),
         nullable=True,
@@ -194,6 +196,7 @@ class ApplicantPreferences(Base):
             unique=True,
             postgresql_where="deleted_at IS NULL",
         ),
+        CheckConstraint("expected_ctc >= 0", name="ck_applicant_preferences_expected_ctc_nonneg"),
         {"schema": "jobify"},
     )
 

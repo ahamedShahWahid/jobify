@@ -34,7 +34,8 @@ router = APIRouter(prefix="/v1/applicants/me", tags=["applicants"])
 
 # Fields whose change must trigger a rescore (they drive the structured score).
 _MATCHING_FIELDS = {"years_experience"}
-# Same list, for the preferences endpoint below.
+# Rescore-trigger fields for the preferences endpoint below (same purpose as
+# _MATCHING_FIELDS; the sets are disjoint).
 _PREFERENCES_MATCHING_FIELDS = {"locations", "expected_ctc"}
 
 
@@ -77,6 +78,8 @@ async def update_profile(
     applicant = await _require_applicant(user, session)
 
     changed_matching = False
+    # setattr-from-model_fields_set is safe only because extra="forbid" closes
+    # the field set to declared columns — removing it opens mass assignment.
     for name in payload.model_fields_set:
         setattr(applicant, name, getattr(payload, name))
         if name in _MATCHING_FIELDS:
@@ -125,7 +128,7 @@ class PreferencesUpdate(BaseModel):
         return self
 
 
-async def _get_or_404_preferences(
+async def _require_preferences_row(
     applicant_id: UUID, session: AsyncSession
 ) -> ApplicantPreferences:
     """Every applicant gets a live preferences row eagerly at signup
@@ -152,7 +155,7 @@ async def get_preferences(
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> PreferencesRead:
     applicant = await _require_applicant(user, session)
-    row = await _get_or_404_preferences(applicant.id, session)
+    row = await _require_preferences_row(applicant.id, session)
     return PreferencesRead.model_validate(row, from_attributes=True)
 
 
@@ -163,9 +166,11 @@ async def update_preferences(
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> PreferencesRead:
     applicant = await _require_applicant(user, session)
-    row = await _get_or_404_preferences(applicant.id, session)
+    row = await _require_preferences_row(applicant.id, session)
 
     changed_matching = False
+    # setattr-from-model_fields_set is safe only because extra="forbid" closes
+    # the field set to declared columns — removing it opens mass assignment.
     for name in payload.model_fields_set:
         setattr(row, name, getattr(payload, name))
         if name in _PREFERENCES_MATCHING_FIELDS:
