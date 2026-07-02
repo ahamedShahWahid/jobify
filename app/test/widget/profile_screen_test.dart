@@ -7,6 +7,10 @@ import 'package:jobify_app/data/me/me_dto.dart';
 import 'package:jobify_app/data/me/me_repository.dart';
 import 'package:jobify_app/data/me/me_repository_impl.dart';
 import 'package:jobify_app/data/me/profile_update_dto.dart';
+import 'package:jobify_app/data/preferences/preferences_dto.dart';
+import 'package:jobify_app/data/preferences/preferences_repository.dart';
+import 'package:jobify_app/data/preferences/preferences_repository_impl.dart';
+import 'package:jobify_app/data/preferences/preferences_update_dto.dart';
 import 'package:jobify_app/presentation/auth/auth_providers.dart';
 import 'package:jobify_app/presentation/profile/package_info_provider.dart';
 import 'package:jobify_app/presentation/profile/profile_screen.dart';
@@ -21,17 +25,23 @@ class _FakeRepo implements MeRepository {
   Future<MeDto> updateProfile(ProfileUpdateDto update) async => me;
 }
 
+class _FakePrefsRepo implements PreferencesRepository {
+  @override
+  Future<PreferencesDto> fetch() async => const PreferencesDto(
+        desiredRole: null,
+        locations: ['Pune'],
+        expectedCtc: '1800000.00',
+      );
+  @override
+  Future<PreferencesDto> update(PreferencesUpdateDto update) async => fetch();
+}
+
 const _me = MeDto(
   id: 'u1',
   email: 'eng@example.com',
   displayName: 'Eng U',
   role: 'applicant',
-  applicant: ApplicantSummaryDto(
-    id: 'a1',
-    fullName: 'Eng U',
-    locations: ['Pune'],
-    expectedCtc: '1800000.00',
-  ),
+  applicant: ApplicantSummaryDto(id: 'a1', fullName: 'Eng U'),
 );
 
 ProviderScope _buildScope({
@@ -41,6 +51,7 @@ ProviderScope _buildScope({
   return ProviderScope(
     overrides: [
       meRepositoryProvider.overrideWithValue(_FakeRepo(_me)),
+      preferencesRepositoryProvider.overrideWithValue(_FakePrefsRepo()),
       packageInfoProvider.overrideWith(
         (_) async => PackageInfo(
           appName: 'Jobify',

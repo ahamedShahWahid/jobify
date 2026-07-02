@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:jobify_app/data/auth/user_role.dart';
+import 'package:jobify_app/data/preferences/desired_role.dart';
 import 'package:jobify_app/presentation/auth/current_role_provider.dart';
+import 'package:jobify_app/presentation/preferences/preferences_controller.dart';
 import 'package:jobify_app/presentation/profile/ctc_format.dart';
 import 'package:jobify_app/presentation/profile/me_controller.dart';
 import 'package:jobify_app/presentation/profile/package_info_provider.dart';
@@ -23,6 +25,7 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final me = ref.watch(meControllerProvider);
+    final preferences = ref.watch(preferencesControllerProvider);
     final signOut = ref.watch(signOutControllerProvider);
     final theme = Theme.of(context);
 
@@ -69,10 +72,16 @@ class ProfileScreen extends ConsumerWidget {
             ],
             if (data.applicant case final a?) ...[
               const SizedBox(height: JobifySpacing.xl),
-              _DetailRow(
-                label: 'Locations',
-                value: a.locations.isEmpty ? '—' : a.locations.join(', '),
-              ),
+              if (preferences.value case final p?) ...[
+                _DetailRow(
+                  label: 'Desired role',
+                  value: p.desiredRole?.label ?? '—',
+                ),
+                _DetailRow(
+                  label: 'Locations',
+                  value: p.locations.isEmpty ? '—' : p.locations.join(', '),
+                ),
+              ],
               if (formatYears(a.yearsExperience) case final years?)
                 _DetailRow(label: 'Experience', value: years),
               if (a.noticePeriodDays != null)
@@ -84,10 +93,11 @@ class ProfileScreen extends ConsumerWidget {
                 label: 'Current CTC',
                 value: formatCtc(a.currentCtc),
               ),
-              _DetailRow(
-                label: 'Expected CTC',
-                value: formatCtc(a.expectedCtc),
-              ),
+              if (preferences.value case final p?)
+                _DetailRow(
+                  label: 'Expected CTC',
+                  value: formatCtc(p.expectedCtc),
+                ),
             ],
             const SizedBox(height: JobifySpacing.xl),
             Text('Account', style: theme.textTheme.titleMedium),
