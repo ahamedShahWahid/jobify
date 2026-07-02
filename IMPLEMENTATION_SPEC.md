@@ -92,13 +92,12 @@ Config is compile-time via `--dart-define` (`JOBIFY_API_BASE_URL`, `JOBIFY_GOOGL
 
 ### 3.4 API client
 
-`dio` with interceptors:
-- Auth: attach access token; on 401, attempt refresh, queue and retry pending requests.
-- Trace: send `X-Request-Id` (uuid v4 per request) — server echoes it; used for support tickets.
-- Telemetry: timing per endpoint, emit to analytics sink.
-- Retry: idempotent GETs only, exponential backoff capped at 3 attempts.
+`dio` with interceptors. **Shipped today** (`app/lib/data/api/`): auth (attach access token), refresh-on-401 (single-flight queue/retry), request-id (`X-Request-Id` uuid v4 per request, server echoes it).
 
-OpenAPI codegen from FastAPI's `/openapi.json` produces typed Dart clients. CI fails if generated client diverges from spec.
+**Backlog, not yet built** — no ticket/date attached, revisit if the pain shows up:
+- Telemetry interceptor (per-endpoint timing → analytics sink).
+- Retry interceptor for idempotent GETs (exponential backoff).
+- OpenAPI-to-Dart codegen with a CI diff-gate. The current mitigation is a per-DTO fixture-pin pattern (mirror-comment + literal-JSON round-trip test, see `MeDto`/`JobStatus`/`ApplicationStatus`) — cheaper at today's ~40 paths / 62 schemas; see `docs/architecture-review-2026-07.md` §5 for why full codegen isn't worth it yet.
 
 ### 3.5 Async UX patterns
 
