@@ -72,10 +72,10 @@ export function Footer() {
           </div>
           <div className="col">
             <h4>Product</h4>
-            <a href="/#how">How it works</a>
-            <a href="/#showcase">Match reasoning</a>
+            <Link to="/employers#how">How it works</Link>
+            <Link to="/employers#showcase">Match reasoning</Link>
             <Link to="/employers/verify">Get verified</Link>
-            <a href="/#pricing">Pricing</a>
+            <Link to="/employers#pricing">Pricing</Link>
           </div>
           <div className="col">
             <h4>For applicants</h4>

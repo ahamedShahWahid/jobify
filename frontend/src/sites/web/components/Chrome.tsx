@@ -17,7 +17,7 @@ export function Masthead() {
           <NavLink to="/" end className={({ isActive }) => (isActive ? "active" : "")}>
             Home
           </NavLink>
-          <a href="/#how">How it works</a>
+          <Link to="/#how">How it works</Link>
           <NavLink to="/trust" className={({ isActive }) => (isActive ? "active" : "")}>
             Trust
           </NavLink>
@@ -58,8 +58,8 @@ export function Footer() {
           <div>
             <h4>Product</h4>
             <Link to="/explore">Your feed</Link>
-            <a href="/#how">How matching works</a>
-            <a href="/#recruiters">For recruiters</a>
+            <Link to="/#how">How matching works</Link>
+            <Link to="/#recruiters">For recruiters</Link>
           </div>
           <div>
             <h4>Trust</h4>
@@ -69,7 +69,7 @@ export function Footer() {
           </div>
           <div>
             <h4>Company</h4>
-            <a href="/#how">About</a>
+            <Link to="/#how">About</Link>
             <a href="mailto:hello@jobify.in">Contact</a>
             <Link to="/trust">DPDP &amp; your rights</Link>
           </div>
