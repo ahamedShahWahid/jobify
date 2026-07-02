@@ -15,13 +15,14 @@ from datetime import datetime
 import structlog
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import func, select, update
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from jobify.db.models import Employer, EmployerUser, User, UserRole
+from jobify.db.models import Employer, EmployerUser, User
 from jobify_api.auth.dependencies import _require_recruiter, current_user
 from jobify_api.dependencies import get_session
+from jobify_api.employers.membership import flip_to_recruiter
 
 _log = structlog.get_logger(__name__)
 router = APIRouter(prefix="/v1", tags=["employers"])
@@ -81,13 +82,10 @@ async def create_employer(
 
     session.add(EmployerUser(employer_id=emp.id, user_id=user.id, role="owner"))
 
-    # Role flip: APPLICANT → RECRUITER. Bounded; never demotes ADMIN.
-    # No-op for an existing recruiter.
-    await session.execute(
-        update(User)
-        .where(User.id == user.id, User.role == UserRole.APPLICANT)
-        .values(role=UserRole.RECRUITER, updated_at=func.now())
-    )
+    # Role flip: APPLICANT → RECRUITER. Delegates to the shared helper so this
+    # stays the only inline copy of the flip (see api/CLAUDE.md's `require_applicant`
+    # war story for what happens when it's re-inlined instead).
+    await flip_to_recruiter(session, user.id)
     await session.commit()
     await session.refresh(emp)
 
