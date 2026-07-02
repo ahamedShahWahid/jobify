@@ -26,6 +26,7 @@ from sqlalchemy.orm import aliased
 from jobify.db.models import (
     Applicant,
     ApplicantEmbedding,
+    ApplicantPreferences,
     Employer,
     EmployerInvite,
     EmployerUser,
@@ -176,6 +177,14 @@ async def delete_user_data(
         )
         counts["saved_jobs"] = r.rowcount or 0
 
+        # 7b. Preferences row — hard-delete (same pattern as saved_jobs /
+        # applicant_embeddings; nothing here is an anonymized aggregate
+        # worth keeping once the applicant is scrubbed).
+        r = await session.execute(  # type: ignore[assignment]
+            delete(ApplicantPreferences).where(ApplicantPreferences.applicant_id == applicant_id)
+        )
+        counts["applicant_preferences"] = r.rowcount or 0
+
         # 8. Embedding row.
         r = await session.execute(  # type: ignore[assignment]
             delete(ApplicantEmbedding).where(ApplicantEmbedding.applicant_id == applicant_id)
@@ -221,10 +230,8 @@ async def delete_user_data(
             .where(Applicant.id == applicant_id)
             .values(
                 full_name=None,
-                locations=None,
                 notice_period_days=None,
                 current_ctc=None,
-                expected_ctc=None,
                 years_experience=None,
                 deleted_at=now,
                 updated_at=now,
@@ -234,6 +241,7 @@ async def delete_user_data(
     else:
         now = datetime.now(UTC)
         counts["saved_jobs"] = 0
+        counts["applicant_preferences"] = 0
         counts["applicant_embeddings"] = 0
         counts["resumes_scrubbed"] = 0
         counts["applicant_tombstoned"] = 0

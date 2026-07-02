@@ -138,8 +138,10 @@ async def test_delete_missing_confirmation_returns_422(
 async def test_applicant_happy_path_tombstones_and_clears(
     async_client: AsyncClient, session: AsyncSession, tmp_path
 ) -> None:
+    from jobify.db.models import ApplicantPreferences
+
     user, applicant, token = await _make_applicant_with_dependencies(session)
-    applicant.expected_ctc = Decimal("1500000")
+    session.add(ApplicantPreferences(applicant_id=applicant.id, expected_ctc=Decimal("1500000")))
     applicant.years_experience = Decimal("4.5")
     resume = Resume(
         applicant_id=applicant.id,
@@ -172,6 +174,7 @@ async def test_applicant_happy_path_tombstones_and_clears(
     assert body["section_counts"]["user_tombstoned"] == 1
     assert body["section_counts"]["applicant_tombstoned"] == 1
     assert body["section_counts"]["resumes_scrubbed"] == 1
+    assert body["section_counts"]["applicant_preferences"] == 1
     assert body["warnings"] == []
 
     # User row is tombstoned (still exists) with PII scrubbed.
@@ -186,8 +189,14 @@ async def test_applicant_happy_path_tombstones_and_clears(
     ).scalar_one()
     assert refetched_applicant.deleted_at is not None
     assert refetched_applicant.full_name is None
-    assert refetched_applicant.expected_ctc is None
     assert refetched_applicant.years_experience is None
+
+    refetched_prefs = (
+        await session.execute(
+            select(ApplicantPreferences).where(ApplicantPreferences.applicant_id == applicant.id)
+        )
+    ).scalar_one_or_none()
+    assert refetched_prefs is None
 
     refetched_resume = (
         await session.execute(select(Resume).where(Resume.id == resume.id))
