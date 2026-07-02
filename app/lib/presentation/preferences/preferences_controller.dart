@@ -7,7 +7,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'preferences_controller.g.dart';
 
-@riverpod
+@Riverpod(keepAlive: true)
 class PreferencesController extends _$PreferencesController {
   @override
   Future<PreferencesDto> build() async =>
