@@ -6,21 +6,22 @@ import 'package:jobify_app/data/me/me_dto.dart';
 import 'package:jobify_app/data/me/me_repository.dart';
 import 'package:jobify_app/data/me/me_repository_impl.dart';
 import 'package:jobify_app/data/me/profile_update_dto.dart';
+import 'package:jobify_app/data/preferences/preferences_dto.dart';
+import 'package:jobify_app/data/preferences/preferences_repository.dart';
+import 'package:jobify_app/data/preferences/preferences_repository_impl.dart';
+import 'package:jobify_app/data/preferences/preferences_update_dto.dart';
+import 'package:jobify_app/presentation/preferences/preferences_controller.dart';
 import 'package:jobify_app/presentation/profile/edit_profile_screen.dart';
 import 'package:jobify_app/presentation/profile/me_controller.dart';
 
-class _CapturingRepo implements MeRepository {
+class _CapturingMeRepo implements MeRepository {
   ProfileUpdateDto? captured;
   @override
   Future<MeDto> fetch() async => const MeDto(
         id: 'u1',
         email: 'e@e.com',
         role: 'applicant',
-        applicant: ApplicantSummaryDto(
-          id: 'a1',
-          fullName: 'Alice',
-          locations: ['Pune'],
-        ),
+        applicant: ApplicantSummaryDto(id: 'a1', fullName: 'Alice'),
       );
   @override
   Future<MeDto> updateProfile(ProfileUpdateDto update) async {
@@ -29,14 +30,35 @@ class _CapturingRepo implements MeRepository {
   }
 }
 
+class _CapturingPrefsRepo implements PreferencesRepository {
+  PreferencesUpdateDto? captured;
+  @override
+  Future<PreferencesDto> fetch() async => const PreferencesDto(
+        desiredRole: null,
+        locations: ['Pune'],
+        expectedCtc: null,
+      );
+  @override
+  Future<PreferencesDto> update(PreferencesUpdateDto update) async {
+    captured = update;
+    return fetch();
+  }
+}
+
 void main() {
-  testWidgets('renders seeded values, adds a chip, saves', (tester) async {
-    final repo = _CapturingRepo();
+  testWidgets('renders seeded values, adds a chip, saves both endpoints',
+      (tester) async {
+    final meRepo = _CapturingMeRepo();
+    final prefsRepo = _CapturingPrefsRepo();
     final container = ProviderContainer(
-      overrides: [meRepositoryProvider.overrideWithValue(repo)],
+      overrides: [
+        meRepositoryProvider.overrideWithValue(meRepo),
+        preferencesRepositoryProvider.overrideWithValue(prefsRepo),
+      ],
     );
     addTearDown(container.dispose);
-    await container.read(meControllerProvider.future); // warm the me cache
+    await container.read(meControllerProvider.future);
+    await container.read(preferencesControllerProvider.future);
 
     final router = GoRouter(
       routes: [
@@ -65,18 +87,24 @@ void main() {
     await tester.tap(find.widgetWithText(TextButton, 'Save'));
     await tester.pumpAndSettle();
 
-    expect(repo.captured, isNotNull);
-    expect(repo.captured!.fullName, 'Alice');
-    expect(repo.captured!.locations, ['Pune', 'Mumbai']);
+    expect(meRepo.captured, isNotNull);
+    expect(meRepo.captured!.fullName, 'Alice');
+    expect(prefsRepo.captured, isNotNull);
+    expect(prefsRepo.captured!.locations, ['Pune', 'Mumbai']);
   });
 
   testWidgets('out-of-range experience blocks save', (tester) async {
-    final repo = _CapturingRepo();
+    final meRepo = _CapturingMeRepo();
+    final prefsRepo = _CapturingPrefsRepo();
     final container = ProviderContainer(
-      overrides: [meRepositoryProvider.overrideWithValue(repo)],
+      overrides: [
+        meRepositoryProvider.overrideWithValue(meRepo),
+        preferencesRepositoryProvider.overrideWithValue(prefsRepo),
+      ],
     );
     addTearDown(container.dispose);
     await container.read(meControllerProvider.future);
+    await container.read(preferencesControllerProvider.future);
 
     final router = GoRouter(
       routes: [
@@ -99,6 +127,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Must be between 0 and 60'), findsOneWidget);
-    expect(repo.captured, isNull); // save was blocked by validation
+    expect(meRepo.captured, isNull); // save was blocked by validation
+    expect(prefsRepo.captured, isNull);
   });
 }

@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:jobify_app/data/me/profile_update_dto.dart';
+import 'package:jobify_app/data/preferences/desired_role.dart';
+import 'package:jobify_app/data/preferences/preferences_update_dto.dart';
+import 'package:jobify_app/presentation/preferences/preferences_controller.dart';
 import 'package:jobify_app/presentation/profile/me_controller.dart';
 import 'package:jobify_app/presentation/profile/profile_edit_controller.dart';
 import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
@@ -22,18 +25,21 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late final TextEditingController _expectedCtc;
   final _locationInput = TextEditingController();
   late List<String> _locations;
+  DesiredRole? _desiredRole;
 
   @override
   void initState() {
     super.initState();
     final a = ref.read(meControllerProvider).value?.applicant;
+    final prefs = ref.read(preferencesControllerProvider).value;
     _fullName = TextEditingController(text: a?.fullName ?? '');
     _experience = TextEditingController(text: a?.yearsExperience ?? '');
     _notice =
         TextEditingController(text: a?.noticePeriodDays?.toString() ?? '');
     _currentCtc = TextEditingController(text: a?.currentCtc ?? '');
-    _expectedCtc = TextEditingController(text: a?.expectedCtc ?? '');
-    _locations = List<String>.from(a?.locations ?? const []);
+    _expectedCtc = TextEditingController(text: prefs?.expectedCtc ?? '');
+    _locations = List<String>.from(prefs?.locations ?? const []);
+    _desiredRole = prefs?.desiredRole;
   }
 
   @override
@@ -71,18 +77,25 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    final update = ProfileUpdateDto(
+    final profileUpdate = ProfileUpdateDto(
       fullName: _fullName.text.trim(),
-      locations: _locations,
       noticePeriodDays: int.tryParse(_notice.text.trim()),
       currentCtc: num.tryParse(_currentCtc.text.trim()),
-      expectedCtc: num.tryParse(_expectedCtc.text.trim()),
       yearsExperience: num.tryParse(_experience.text.trim()),
     );
-    final ok =
-        await ref.read(profileEditControllerProvider.notifier).submit(update);
+    final preferencesUpdate = PreferencesUpdateDto(
+      desiredRole: _desiredRole,
+      locations: _locations,
+      expectedCtc: num.tryParse(_expectedCtc.text.trim()),
+    );
+    final profileOk = await ref
+        .read(profileEditControllerProvider.notifier)
+        .submit(profileUpdate);
+    final prefsOk = await ref
+        .read(preferencesControllerProvider.notifier)
+        .submit(preferencesUpdate);
     if (!mounted) return;
-    if (ok) {
+    if (profileOk && prefsOk) {
       if (context.canPop()) context.pop();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -93,7 +106,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final saving = ref.watch(profileEditControllerProvider).isLoading;
+    final saving = ref.watch(profileEditControllerProvider).isLoading ||
+        ref.watch(preferencesControllerProvider).isLoading;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Profile'),
@@ -118,6 +132,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 if (t.length > 200) return 'Too long (max 200)';
                 return null;
               },
+            ),
+            const SizedBox(height: JobifySpacing.lg),
+            DropdownButtonFormField<DesiredRole>(
+              initialValue: _desiredRole,
+              decoration: const InputDecoration(labelText: 'Desired role'),
+              items: [
+                for (final role in DesiredRole.values
+                    .where((r) => r != DesiredRole.unknown))
+                  DropdownMenuItem(value: role, child: Text(role.label)),
+              ],
+              onChanged: (role) => setState(() => _desiredRole = role),
             ),
             const SizedBox(height: JobifySpacing.lg),
             Text('Locations', style: Theme.of(context).textTheme.labelLarge),
