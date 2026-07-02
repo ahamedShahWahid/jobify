@@ -4,6 +4,7 @@ no worker-runtime signals, no provider singletons (those live in jobify_worker).
 from __future__ import annotations
 
 from celery import Celery
+from celery.schedules import schedule as celery_schedule
 
 from jobify.settings import Settings
 
@@ -27,6 +28,12 @@ celery_app.conf.update(
         "jobify.sweep_notifications": {"queue": "notify"},
     },
 )
+celery_app.conf.beat_schedule = {
+    "sweep-notifications": {
+        "task": "jobify.sweep_notifications",
+        "schedule": celery_schedule(run_every=settings.notify_sweep_interval_seconds),
+    },
+}
 
 
 def enqueue(name: str, *args: object) -> None:
