@@ -50,5 +50,8 @@ class; per-surface CSS is scoped inside that selector to prevent cross-surface b
 
 ## Design tokens
 
-Each surface owns its own CSS-variable token system in `src/sites/<surface>/styles/`.
+Tokens are global, not per-surface: `src/shared/styles/tokens.css` defines every
+color/spacing/font variable once on `:root` (light) and `:root[data-theme="dark"]`
+(dark). Surfaces consume `var(--token)` — they must not redefine tokens on
+`.surface-*`. See `frontend/CLAUDE.md` for the full design-system rules.
 The static `frontend/styleguide/` is a hand-maintained snapshot of those tokens.

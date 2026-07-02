@@ -1,6 +1,6 @@
 /**
  * Wire types mirroring the FastAPI Pydantic response models verbatim.
- * Source of truth: api/src/jobify/routes/{admin,jobs,employers,me}.py.
+ * Source of truth: api/src/jobify_api/routes/{admin,jobs,employers,me}.py.
  * Decimal fields (ctc_*) serialize as JSON numbers (schemas declare float).
  */
 
