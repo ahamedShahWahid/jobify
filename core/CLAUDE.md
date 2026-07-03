@@ -50,7 +50,7 @@ The explainer modules live here (`jobify` integrations); they are invoked inline
 
 ## Seeding — spec `2026-05-20-p2.0-jobs-and-seeding-design.md`
 
-CLI entrypoint `jobify-seed-jobs` lives in the `api` package's scripts; the data + loader logic are here.
+CLI entrypoint `jobify-seed-jobs` AND its loader logic live in `api/src/jobify_api/scripts/seed_jobs.py`; only the 44-line data fixture (`core/data/sample_jobs.json`) lives here.
 
 - **`employers`/`jobs` via CLI** (`uv run jobify-seed-jobs` reads `core/data/sample_jobs.json`, upserts), not migrations. Idempotency: `employers.name_norm` (DB partial-UNIQUE) + `(jobs.employer_id, lower(jobs.title))` (script-only). JSON uses `posted_days_ago: int` (→ `now() - timedelta`) so it doesn't age.
 - **Updates preserve human state:** `employers.name` never overwritten; `verified_at` set only when `NULL`.

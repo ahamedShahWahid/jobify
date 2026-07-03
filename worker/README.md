@@ -11,9 +11,11 @@ the Celery app config lives in `core` (`jobify.celery_app`). Task code is here.
 - `--pool=solo`: single-concurrency for MVP. Switch to `--pool=prefork` when load justifies parallelism.
 - `-Q parse,embed,score,notify`: consume from all queues. Pin a second worker to a single queue for isolation.
 
-## Beat (scheduler) — INERT today
+## Beat (scheduler)
 
-No periodic tasks are scheduled yet (no beat_schedule). When one is added:
+`sweep_notifications` runs every `JOBIFY_NOTIFY_SWEEP_INTERVAL_SECONDS` seconds
+(default 60) via `celery_app.conf.beat_schedule`. Beat must run as its own
+process alongside the worker — it only enqueues, it doesn't execute:
 
     uv run --env-file=.env celery -A jobify_worker.worker_app beat --loglevel=info
 

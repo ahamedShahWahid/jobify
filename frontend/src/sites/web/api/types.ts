@@ -1,6 +1,6 @@
 /**
  * Wire types mirroring the FastAPI applicant-facing response models verbatim.
- * Source of truth: api/src/jobify/routes/{schemas,feed,jobs,applications,saved_jobs,me}.py.
+ * Source of truth: api/src/jobify_api/routes/{schemas,feed,jobs,applications,saved_jobs,me}.py.
  * Note: the feed/jobs EmployerRead carries `verified: bool` (NOT verified_at/gst —
  * that's the recruiter shape). ctc_* serialize as JSON numbers.
  */

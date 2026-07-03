@@ -25,9 +25,9 @@ export function Landing() {
             <a className="btn btn-primary" href={CONSOLE_URL} target="_blank" rel="noreferrer">
               Open the console <span className="arrow" aria-hidden="true">→</span>
             </a>
-            <a className="textlink" href="#how">
+            <Link className="textlink" to="/employers#how">
               See how it works
-            </a>
+            </Link>
           </div>
           <div className="ledger-wrap rise d4">
             <Ledger />

@@ -171,6 +171,13 @@ class Settings(BaseSettings):
         alias="JOBIFY_NOTIFY_BATCH_SIZE",
         description="Max notifications the sweeper claims in one pass.",
     )
+    notify_sweep_interval_seconds: int = Field(
+        default=60,
+        ge=5,
+        le=3600,
+        alias="JOBIFY_NOTIFY_SWEEP_INTERVAL_SECONDS",
+        description="How often Celery beat dispatches sweep_notifications.",
+    )
 
     # --- Employer team management ---
     employer_invite_ttl_days: int = Field(

@@ -229,6 +229,7 @@ All settings are read from environment variables prefixed `JOBIFY_`. The `.env` 
 | `JOBIFY_EMBEDDING_DIM` | no     | `1536`  | Matryoshka output dim — must match migration's Vector(N) |
 | `JOBIFY_EMAIL_CHANNEL` | no     | `logging` | Email adapter: `logging` (stdout stub) or `ses` |
 | `JOBIFY_NOTIFY_BATCH_SIZE` | no | `50`   | Max notifications claimed per sweep run |
+| `JOBIFY_NOTIFY_SWEEP_INTERVAL_SECONDS` | no | `60` | How often Celery beat dispatches `sweep_notifications` |
 
 The service refuses to boot if required variables are missing or invalid.
 
