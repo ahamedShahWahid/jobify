@@ -7,9 +7,10 @@ compute → UPSERT. No external API call so there's no need for the embed
 worker's three-transaction shape.
 
 surfaced_at semantics: set on first run that crosses threshold; preserved on
-subsequent rescores even if total later drops below threshold. The UPSERT's
-``set_`` clause uses ``coalesce(surfaced_at, CASE WHEN crosses THEN now() ELSE NULL END)``
-so once non-null, the value is never overwritten.
+subsequent rescores even if total later drops below threshold. The compute,
+explain, and UPSERT (including the coalesce-guarded ``surfaced_at``) are
+shared with score_job via ``jobify_worker.tasks._scoring_common`` — see that
+module's ``match_upsert_statement`` for the actual UPSERT clause.
 """
 
 from __future__ import annotations
