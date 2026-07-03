@@ -22,10 +22,10 @@ export function Masthead({ onLanding = false }: { onLanding?: boolean }) {
         <nav className="mast-nav" aria-label="Primary">
           {onLanding ? (
             <>
-              <a href="#how">How it works</a>
-              <a href="#verified">Why verified</a>
-              <a href="#pricing">Pricing</a>
-              <a href="#faq">FAQ</a>
+              <Link to="/employers#how">How it works</Link>
+              <Link to="/employers#verified">Why verified</Link>
+              <Link to="/employers#pricing">Pricing</Link>
+              <Link to="/employers#faq">FAQ</Link>
             </>
           ) : (
             <>
