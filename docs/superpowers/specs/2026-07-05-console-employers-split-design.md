@@ -109,6 +109,24 @@ in" / "Get started"). Since the target is now same-surface, these become
 plain `<Link>` (no `target="_blank"`/`rel="noreferrer"`, no `CONSOLE_URL`
 constant — same pattern as every other internal nav link on this surface).
 
+### 4. Subdomain readiness (future `console.jobify.com`, `www.jobify.com/employers`, `/applicants`)
+
+Roadmap: console eventually moves to its own subdomain, separate from
+`www.jobify.com/employers` (and a future `/applicants`, out of scope here).
+To make that a DNS/hostname change later rather than a code migration:
+
+- Console's remaining internal paths (`ConsoleRoutes.tsx`, `Shell.tsx`,
+  `pages/admin/UserActions.tsx` — the only 3 files left in console with
+  hardcoded `/console/...` strings once the recruiter pages move out) switch
+  to **relative** routes/links (nested `<Route>`, `<Link to="admin/audit">`
+  instead of `<Link to="/console/admin/audit">`). This lets the whole
+  console route subtree remount at a different base with a one-line change.
+- `App.tsx` gains a hostname check: if `window.location.hostname` starts
+  with `console.`, mount `<ConsoleRoutes />` at `/` (root); otherwise mount
+  the employers surfaces as today, with `/console/*` still reachable as a
+  path prefix during the transition period before DNS cutover. No build or
+  deploy changes — same static bundle serves both hostnames.
+
 ## Error handling
 
 - Wrong-role sign-in (recruiter → console, or applicant/admin → employers)
@@ -125,3 +143,7 @@ constant — same pattern as every other internal nav link on this surface).
   in as the seeded admin account at `/console/signin`, confirm audit/
   verification/users still work and recruiter nav is gone; confirm a
   recruiter hitting `/console/signin` gets the admin-only no-access page.
+- Manual: simulate the `console.` hostname (e.g. edit `/etc/hosts` or check
+  `window.location.hostname` logic directly) and confirm console mounts at
+  `/` with all internal links resolving correctly (no leftover absolute
+  `/console/...` hrefs).
