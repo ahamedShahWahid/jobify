@@ -1,4 +1,4 @@
-import type { ConsoleClient } from "./client";
+import type { EmployerClient } from "./client";
 import type { RecruiterJobRow } from "./types";
 
 /**
@@ -13,7 +13,7 @@ export const MAX_JOB_PAGES = 50;
 
 /** Walk every page of one status into a single array. */
 export async function drainJobs(
-  client: ConsoleClient,
+  client: EmployerClient,
   status: "open" | "closed",
 ): Promise<RecruiterJobRow[]> {
   const all: RecruiterJobRow[] = [];
@@ -35,7 +35,7 @@ export async function drainJobs(
  * editor; normal edits hand the row over via router state.
  */
 export async function findMyJob(
-  client: ConsoleClient,
+  client: EmployerClient,
   jobId: string,
 ): Promise<RecruiterJobRow | null> {
   for (const status of ["open", "closed"] as const) {
