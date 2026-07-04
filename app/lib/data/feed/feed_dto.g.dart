@@ -83,13 +83,13 @@ JobSummaryDto _$JobSummaryDtoFromJson(Map<String, dynamic> json) =>
     JobSummaryDto(
       id: json['id'] as String,
       title: json['title'] as String,
+      status: $enumDecode(_$JobStatusEnumMap, json['status'],
+          unknownValue: JobStatus.unknown),
+      postedAt: DateTime.parse(json['posted_at'] as String),
       locations: (json['locations'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
-      status: $enumDecode(_$JobStatusEnumMap, json['status'],
-          unknownValue: JobStatus.unknown),
-      postedAt: DateTime.parse(json['posted_at'] as String),
       description: json['description'] as String?,
     );
 
