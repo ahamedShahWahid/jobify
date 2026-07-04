@@ -78,13 +78,6 @@ export function Footer() {
             <Link to="/employers#pricing">Pricing</Link>
           </div>
           <div className="col">
-            <h4>For applicants</h4>
-            <a href="#/" target="_blank" rel="noreferrer">
-              Jobify for candidates
-            </a>
-            <span className="faint">Find roles that fit, explained</span>
-          </div>
-          <div className="col">
             <h4>Access</h4>
             <a href={CONSOLE_URL} target="_blank" rel="noreferrer">
               Console sign-in

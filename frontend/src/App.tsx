@@ -1,7 +1,6 @@
-import { HashRouter, Routes } from "react-router-dom";
+import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { EmployersRoutes } from "./sites/employers/EmployersRoutes";
 import { ConsoleRoutes } from "./sites/console/ConsoleRoutes";
-import { WebRoutes } from "./sites/web/WebRoutes";
 
 export function App() {
   return (
@@ -10,7 +9,9 @@ export function App() {
       <Routes>
         {EmployersRoutes()}
         {ConsoleRoutes()}
-        {WebRoutes()}
+        {/* Applicant-facing web surface removed — the Flutter app is the applicant client.
+            This app now serves employers/recruiters (marketing) and console (recruiter ops + admin) only. */}
+        <Route path="/" element={<Navigate to="/employers" replace />} />
       </Routes>
     </HashRouter>
   );

@@ -9,7 +9,7 @@ Guidance for Claude Code working in this repo. **This root file is intentionally
 | `worker/CLAUDE.md` | `jobify_worker` Celery — parse, embed, score, notifications-sweep tasks + runtime |
 | `tests/CLAUDE.md` | test harness — conftests, markers, savepoint isolation, the three HTTP clients |
 | `app/CLAUDE.md` | Flutter client (iOS/Android/web) |
-| `frontend/CLAUDE.md` | unified Vite + React web app (three HashRouter surfaces) |
+| `frontend/CLAUDE.md` | unified Vite + React web app (two HashRouter surfaces — employers + console) |
 
 When working across packages, read the relevant package file(s) — a single session loads every file whose subtree it touches.
 
@@ -26,8 +26,8 @@ Jobify — an early-stage placement platform.
 - `IMPLEMENTATION_SPEC.md` — **how** we build it (engineering spec, v0.2 MVP-first).
 - `docs/prd/KPA_Enhanced_BRD_v1_1.pdf` — **what** we build (product BRD; scope source of truth).
 - `docs/superpowers/specs/` — per-slice design docs (the **why** behind each invariant). Their spent step-by-step build plans were removed once shipped — recoverable from git history if ever needed.
-- `app/` — Flutter mobile + web client. The spec overrides the BRD's React Native + Next.js stack.
-- `frontend/` — unified Vite + React + TS web app; three route-prefixed surfaces under one HashRouter (`/` applicant/public, `/employers` recruiter marketing, `/console` admin + recruiter ops). `npm run build` = `tsc -b && vite build`. See `frontend/README.md` for the surface→route/file map. Static `frontend/styleguide/` has no build step.
+- `app/` — Flutter mobile + web client. The spec overrides the BRD's React Native + Next.js stack. This is the applicant client (iOS/Android/web) — the frontend's applicant web surface was removed in favor of it.
+- `frontend/` — unified Vite + React + TS web app; two route-prefixed surfaces under one HashRouter (`/employers` recruiter marketing, `/console` admin + recruiter ops; `/` redirects to `/employers`). `npm run build` = `tsc -b && vite build`. See `frontend/README.md` for the surface→route/file map. Static `frontend/styleguide/` has no build step.
 
 Scope vs "how" conflict: BRD wins on product behavior; spec wins on tech.
 
