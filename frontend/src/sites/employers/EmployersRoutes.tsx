@@ -39,7 +39,8 @@ function RequireSession({ children }: { children: ReactNode }) {
  *  to check here, so no per-route repetition is needed). */
 function RequireRecruiter() {
   const { session } = useSessionStore();
-  if (session && session.identity.role !== "recruiter") {
+  if (!session) return <Navigate to="/employers/signin" replace />;
+  if (session.identity.role !== "recruiter") {
     return <Navigate to="/employers/no-access" replace />;
   }
   return <Outlet />;

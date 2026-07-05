@@ -23,7 +23,8 @@ function RequireSession({ children }: { children: ReactNode }) {
  *  redirect to /employers (recruiters have their own workspace already). */
 function RequireAdmin() {
   const { session } = useSessionStore();
-  if (session && areasForRole(session.identity.role).length === 0) {
+  if (!session) return <Navigate to={`${CONSOLE_BASE}/signin`} replace />;
+  if (areasForRole(session.identity.role).length === 0) {
     return <Navigate to={`${CONSOLE_BASE}/no-access`} replace />;
   }
   return <Outlet />;
