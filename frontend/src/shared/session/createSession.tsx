@@ -20,7 +20,7 @@ function problemDetail(body: unknown, status: number): string {
  */
 export function createSession<TClient extends { me: () => Promise<TIdentity> }, TIdentity>(config: {
   makeLive: (store: TokenStore, onSignOut: () => void) => TClient;
-  makeDemo: (role?: string) => TClient;
+  makeDemo?: (role?: string) => TClient;
 }) {
   interface Session {
     client: TClient;
@@ -33,6 +33,9 @@ export function createSession<TClient extends { me: () => Promise<TIdentity> }, 
     connectLive: (baseUrl: string, token: string) => Promise<TIdentity>;
     connectGoogle: (idToken: string, baseUrl: string) => Promise<TIdentity>;
     connectDemo: (role?: string) => Promise<TIdentity>;
+    /** Re-fetches identity on the CURRENT client (no new client, no new token) —
+     *  for when a mutation flips the caller's role server-side mid-session. */
+    refreshIdentity: () => Promise<TIdentity>;
     signOut: () => void;
   }
 
@@ -97,19 +100,30 @@ export function createSession<TClient extends { me: () => Promise<TIdentity> }, 
       [connect, makeLiveClient],
     );
 
+    const refreshIdentity = useCallback(async () => {
+      if (!session) throw new Error("refreshIdentity called without an active session");
+      const identity = await session.client.me();
+      setSession((s) => (s ? { ...s, identity } : s));
+      return identity;
+    }, [session]);
+
     const store = useMemo<SessionStore>(
       () => ({
         session,
         expired,
         connectLive,
         connectGoogle,
-        connectDemo: (role?: string) => connect(config.makeDemo(role)),
+        connectDemo: (role?: string) => {
+          if (!config.makeDemo) throw new Error("Demo mode is not available on this surface");
+          return connect(config.makeDemo(role));
+        },
+        refreshIdentity,
         signOut: () => {
           setSession(null);
           setExpired(false);
         },
       }),
-      [session, expired, connect, connectLive, connectGoogle],
+      [session, expired, connect, connectLive, connectGoogle, refreshIdentity],
     );
 
     return <SessionContext.Provider value={store}>{children}</SessionContext.Provider>;
