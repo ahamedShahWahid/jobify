@@ -14,7 +14,7 @@ import type {
   RecruiterJobsPage,
 } from "./types";
 
-/** One interface, two impls: HttpClient (live API) and DemoClient (fixtures). */
+/** Employer API client interface. */
 export interface EmployerClient {
   readonly mode: "live" | "demo";
 
