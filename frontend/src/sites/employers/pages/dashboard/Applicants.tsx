@@ -26,7 +26,7 @@ export function Applicants() {
         </h1>
         <div className="sub">
           <span className="flavor">People, not rows — but the scores help you start somewhere.</span>
-          <Link className="btn ghost sm" to="/console/recruiter/jobs">
+          <Link className="btn ghost sm" to="/employers/jobs">
             ← Back to postings
           </Link>
         </div>

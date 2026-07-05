@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { CONSOLE_URL } from "../EmployersRoutes";
 import { ThemeToggle } from "../../../shared/theme/ThemeToggle";
 
 // The brand lockup (mark + JOBIFY + "Job will find you") lives in the SVG asset;
@@ -38,14 +37,9 @@ export function Masthead({ onLanding = false }: { onLanding?: boolean }) {
         </nav>
         <div className="mast-cta">
           <ThemeToggle />
-          <a
-            className="btn btn-primary btn-sm"
-            href={CONSOLE_URL}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Open the console <span className="arrow" aria-hidden="true">→</span>
-          </a>
+          <Link className="btn btn-primary btn-sm" to="/employers/signin">
+            Sign in <span className="arrow" aria-hidden="true">→</span>
+          </Link>
         </div>
       </div>
     </header>
@@ -79,9 +73,7 @@ export function Footer() {
           </div>
           <div className="col">
             <h4>Access</h4>
-            <a href={CONSOLE_URL} target="_blank" rel="noreferrer">
-              Console sign-in
-            </a>
+            <Link to="/employers/signin">Sign in</Link>
             <a href="mailto:hello@jobify.in">hello@jobify.in</a>
           </div>
         </div>

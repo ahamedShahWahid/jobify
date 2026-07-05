@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { CONSOLE_URL } from "../EmployersRoutes";
 import { Footer, Masthead } from "../components/Chrome";
 
 export function Verify() {
@@ -103,7 +102,7 @@ export function Verify() {
               <div>
                 <h3>Create your employer workspace</h3>
                 <p>
-                  Sign in to the console and set up your organisation. This makes you the
+                  Sign in and set up your organisation. This makes you the
                   owner and unlocks role posting.
                 </p>
               </div>
@@ -176,15 +175,15 @@ export function Verify() {
         <div className="wrap">
           <div className="panel">
             <p className="label on-dark">Ready when you are</p>
-            <h2>Get verified in the console.</h2>
+            <h2>Get verified.</h2>
             <p className="deck">
               Set up your workspace, submit your details, and post your first role free —
               verification runs alongside.
             </p>
             <div className="hero-cta">
-              <a className="btn btn-invert" href={CONSOLE_URL} target="_blank" rel="noreferrer">
-                Open the console <span className="arrow" aria-hidden="true">→</span>
-              </a>
+              <Link className="btn btn-invert" to="/employers/signin">
+                Sign in <span className="arrow" aria-hidden="true">→</span>
+              </Link>
               <Link to="/employers" className="btn btn-ghost on-dark-ghost">
                 Back to overview
               </Link>

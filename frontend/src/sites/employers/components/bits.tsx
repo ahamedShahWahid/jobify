@@ -1,12 +1,25 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { istClock, istDateTime } from "../../../shared/format";
+import { inrLakh, istClock, istDateTime } from "../../../shared/format";
 import {
   EmptyState as SharedEmptyState,
   ErrorNotice as SharedErrorNotice,
 } from "../../../shared/components/notices";
 
-/** Live IST clock — the control-room heartbeat in the masthead (Asia/Kolkata). */
+/** ₹ lakh formatting for a single CTC figure (null → null). Thin re-export of
+ *  the shared `inrLakh` (single source in shared/format.ts) for the employer
+ *  workspace — Postings list, composer preview, dashboard. */
+export const lakh = inrLakh;
+
+/** The "₹xL – ₹yL" / "Undisclosed" compensation band as a plain string. */
+export function ctcBandText(min: number | null, max: number | null): string {
+  const lo = lakh(min);
+  const hi = lakh(max);
+  if (!lo && !hi) return "Undisclosed";
+  return [lo, hi].filter(Boolean).join(" – ");
+}
+
+/** Live IST clock — the masthead heartbeat (Asia/Kolkata). */
 export function IstClock() {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -68,7 +81,7 @@ export function ShortId({ id, onPick }: { id: string; onPick?: (id: string) => v
   return (
     <span
       className="num clickable-id"
-      title={`${id} — click to use in user actions`}
+      title={`${id} — click to use`}
       onClick={(e) => {
         e.stopPropagation();
         onPick(id);
@@ -76,45 +89,6 @@ export function ShortId({ id, onPick }: { id: string; onPick?: (id: string) => v
     >
       {short}
     </span>
-  );
-}
-
-export function JsonView({ value }: { value: unknown }) {
-  return <pre className="json-view">{JSON.stringify(value, null, 2)}</pre>;
-}
-
-export function Drawer({
-  title,
-  onClose,
-  children,
-  foot,
-}: {
-  title: string;
-  onClose: () => void;
-  children: ReactNode;
-  foot?: ReactNode;
-}) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  return (
-    <>
-      <div className="drawer-veil" onClick={onClose} />
-      <aside className="drawer" role="dialog" aria-label={title}>
-        <div className="drawer-head">
-          <h2>{title}</h2>
-          <button className="btn ghost sm" onClick={onClose}>
-            ESC / Close
-          </button>
-        </div>
-        <div className="drawer-body">{children}</div>
-        {foot && <div className="drawer-foot">{foot}</div>}
-      </aside>
-    </>
   );
 }
 
@@ -127,5 +101,17 @@ export function EmptyState({ children }: { children: ReactNode }) {
     <SharedEmptyState as="div" innerClassName="flavor">
       {children}
     </SharedEmptyState>
+  );
+}
+
+export function ScoreBar({ score }: { score: number | null }) {
+  if (score === null) return <span className="dim">—</span>;
+  return (
+    <span className="scorebar">
+      <span className="track">
+        <span className="fill" style={{ width: `${Math.round(score * 100)}%` }} />
+      </span>
+      <span className="num">{score.toFixed(2)}</span>
+    </span>
   );
 }

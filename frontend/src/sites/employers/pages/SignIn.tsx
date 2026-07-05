@@ -4,13 +4,14 @@ import { ApiError, errorMessage } from "../api/client";
 import { GoogleButton } from "../auth/GoogleButton";
 import { ErrorNotice, Field, IstClock } from "../components/bits";
 import { API_BASE_URL, GOOGLE_CLIENT_ID } from "../env";
-import { landingFor, useSessionStore } from "../session";
+import { landingFor } from "../landing";
+import { useSessionStore } from "../session";
 import { ThemeToggle } from "../../../shared/theme/ThemeToggle";
 
 export function SignIn() {
-  const { connectLive, connectGoogle, connectDemo, expired } = useSessionStore();
+  const { connectLive, connectGoogle, expired } = useSessionStore();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"demo" | "live">("demo");
+  const [showManual, setShowManual] = useState(false);
   const [baseUrl, setBaseUrl] = useState(API_BASE_URL);
   const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
@@ -20,12 +21,11 @@ export function SignIn() {
     return e instanceof ApiError ? `${e.status || "network"}: ${e.detail}` : errorMessage(e);
   }
 
-  async function connect() {
+  async function connectManual() {
     setBusy(true);
     setError(null);
     try {
-      const identity =
-        mode === "demo" ? await connectDemo() : await connectLive(baseUrl, token.trim());
+      const identity = await connectLive(baseUrl, token.trim());
       navigate(landingFor(identity.role));
     } catch (e) {
       setError(asMessage(e));
@@ -53,10 +53,10 @@ export function SignIn() {
   const onGoogleLoadError = useCallback((message: string) => setError(message), []);
 
   return (
-    <div className="gate">
+    <div className="dash gate">
       <div className="gate-left">
         <div className="spread">
-          <span className="k">jobify internal · restricted</span>
+          <span className="k">jobify for employers</span>
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
             <ThemeToggle />
             <IstClock />
@@ -65,29 +65,23 @@ export function SignIn() {
 
         <img src="/jobify-mark.svg" alt="Jobify" className="gate-mark rise" />
         <h1 className="gate-title rise">
-          OPERATIONS
-          <span className="line2">CONSOLE</span>
+          EMPLOYER
+          <span className="line2">WORKSPACE</span>
         </h1>
 
         <div className="stack">
           <p className="flavor rise" style={{ maxWidth: 520 }}>
-            Moderation operations for the Jobify placement platform — the audit trail, the
-            suspend lever, and the employer verification queue, in one instrument panel.
+            Post roles, review your ranked applicant stack, and manage your team — the job desk
+            for hiring on Jobify.
           </p>
           <div className="gate-meta rise">
-            <div className="cell">
-              <span className="k">access</span>
-              <span>
-                <span style={{ color: "#ffb000" }}>■</span> jobify staff only
-              </span>
-            </div>
             <div className="cell">
               <span className="k">api</span>
               <span className="num">/v1 · problem+json</span>
             </div>
             <div className="cell">
               <span className="k">build</span>
-              <span className="num">console v0.1</span>
+              <span className="num">employers v0.1</span>
             </div>
           </div>
         </div>
@@ -108,22 +102,9 @@ export function SignIn() {
             </p>
           )}
           <p className="k google-note">
-            jobify staff only — recruiters sign in at the employers workspace instead. New Google
-            users provision as applicants and see the no-access page.
+            New here? Sign in with Google and we&apos;ll walk you through setting up your company
+            — your first posting is free. Already set up? Sign in the same way.
           </p>
-        </div>
-
-        <div className="google-divider rise">
-          <span>or use a manual session</span>
-        </div>
-
-        <div className="mode-tabs rise">
-          <button className={mode === "demo" ? "on" : ""} onClick={() => setMode("demo")}>
-            Demo data
-          </button>
-          <button className={mode === "live" ? "on" : ""} onClick={() => setMode("live")}>
-            Live API
-          </button>
         </div>
 
         {expired && !error && (
@@ -135,8 +116,17 @@ export function SignIn() {
 
         <ErrorNotice error={error} />
 
-        {mode === "live" ? (
-          <div className="rise">
+        <button
+          type="button"
+          className="btn ghost sm rise"
+          onClick={() => setShowManual((v) => !v)}
+          style={{ marginTop: 18 }}
+        >
+          {showManual ? "Hide manual token entry" : "Paste an access token instead"}
+        </button>
+
+        {showManual && (
+          <div className="rise" style={{ marginTop: 14 }}>
             <Field label="API base URL">
               <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} />
             </Field>
@@ -151,27 +141,15 @@ export function SignIn() {
                 spellCheck={false}
               />
             </Field>
-          </div>
-        ) : (
-          <div className="rise" style={{ marginBottom: 22 }}>
-            <p className="dim" style={{ marginBottom: 14 }}>
-              Explore the full console against seeded in-memory fixtures — every table, drawer and
-              action works; nothing leaves the browser.
-            </p>
+            <button
+              className="btn primary rise"
+              onClick={connectManual}
+              disabled={busy || !token.trim()}
+            >
+              {busy ? "Connecting…" : "Connect"}
+            </button>
           </div>
         )}
-
-        <button
-          className="btn primary rise"
-          onClick={connect}
-          disabled={busy || (mode === "live" && !token.trim())}
-        >
-          {busy ? "Connecting…" : mode === "demo" ? "Enter demo console" : "Connect"}
-        </button>
-
-        <p className="k" style={{ marginTop: 26 }}>
-          jobify staff only — your role decides what you can reach
-        </p>
       </div>
     </div>
   );
