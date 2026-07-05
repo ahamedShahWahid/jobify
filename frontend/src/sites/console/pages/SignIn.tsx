@@ -11,7 +11,6 @@ export function SignIn() {
   const { connectLive, connectGoogle, connectDemo, expired } = useSessionStore();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"demo" | "live">("demo");
-  const [demoRole, setDemoRole] = useState<"admin" | "recruiter">("admin");
   const [baseUrl, setBaseUrl] = useState(API_BASE_URL);
   const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
@@ -26,7 +25,7 @@ export function SignIn() {
     setError(null);
     try {
       const identity =
-        mode === "demo" ? await connectDemo(demoRole) : await connectLive(baseUrl, token.trim());
+        mode === "demo" ? await connectDemo() : await connectLive(baseUrl, token.trim());
       navigate(landingFor(identity.role));
     } catch (e) {
       setError(asMessage(e));
@@ -35,8 +34,6 @@ export function SignIn() {
     }
   }
 
-  // GIS hands back the Google ID token here → exchange for an access token
-  // against VITE_API_BASE_URL → connectLive → role-based landing.
   const onGoogleCredential = useCallback(
     async (idToken: string) => {
       setBusy(true);
@@ -56,7 +53,7 @@ export function SignIn() {
   const onGoogleLoadError = useCallback((message: string) => setError(message), []);
 
   return (
-    <div className="gate" data-area="admin">
+    <div className="gate">
       <div className="gate-left">
         <div className="spread">
           <span className="k">jobify internal · restricted</span>
@@ -74,15 +71,14 @@ export function SignIn() {
 
         <div className="stack">
           <p className="flavor rise" style={{ maxWidth: 520 }}>
-            Moderation and recruiting operations for the Jobify placement platform — the audit
-            trail, the suspend lever, the job desk, and the team roster, in one instrument panel.
+            Moderation operations for the Jobify placement platform — the audit trail, the
+            suspend lever, and the employer verification queue, in one instrument panel.
           </p>
           <div className="gate-meta rise">
             <div className="cell">
-              <span className="k">areas</span>
+              <span className="k">access</span>
               <span>
-                <span style={{ color: "#ffb000" }}>■</span> admin&nbsp;&nbsp;
-                <span style={{ color: "#4fe3c1" }}>■</span> recruiter
+                <span style={{ color: "#ffb000" }}>■</span> jobify staff only
               </span>
             </div>
             <div className="cell">
@@ -112,8 +108,8 @@ export function SignIn() {
             </p>
           )}
           <p className="k google-note">
-            recruiters &amp; admins only — your DB role decides where you land. New Google users
-            provision as applicants and see the no-access page.
+            jobify staff only — recruiters sign in at the employers workspace instead. New Google
+            users provision as applicants and see the no-access page.
           </p>
         </div>
 
@@ -162,21 +158,6 @@ export function SignIn() {
               Explore the full console against seeded in-memory fixtures — every table, drawer and
               action works; nothing leaves the browser.
             </p>
-            <span className="k">enter as</span>
-            <div className="mode-tabs" style={{ marginTop: 6 }}>
-              <button
-                className={demoRole === "admin" ? "on" : ""}
-                onClick={() => setDemoRole("admin")}
-              >
-                Admin
-              </button>
-              <button
-                className={demoRole === "recruiter" ? "on" : ""}
-                onClick={() => setDemoRole("recruiter")}
-              >
-                Recruiter
-              </button>
-            </div>
           </div>
         )}
 
@@ -189,8 +170,7 @@ export function SignIn() {
         </button>
 
         <p className="k" style={{ marginTop: 26 }}>
-          your role decides what you can reach — admins land in moderation, recruiters at the job
-          desk
+          jobify staff only — your role decides what you can reach
         </p>
       </div>
     </div>
