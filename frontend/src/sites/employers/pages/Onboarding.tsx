@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiError, errorMessage } from "../api/client";
+import type { EmployerRead } from "../api/types";
 import { ErrorNotice, Field } from "../components/bits";
 import { useSession, useSessionStore } from "../session";
 
@@ -30,12 +31,25 @@ export function Onboarding() {
   async function submit() {
     setBusy(true);
     setError(null);
+    let created: EmployerRead;
     try {
-      await client.createEmployer({ name: name.trim(), gst: gst.trim() || undefined });
-      await refreshIdentity();
-      navigate("/employers/jobs/new");
+      created = await client.createEmployer({ name: name.trim(), gst: gst.trim() || undefined });
     } catch (e) {
       setError(asMessage(e));
+      setBusy(false);
+      return;
+    }
+    try {
+      await refreshIdentity();
+      navigate("/employers/jobs/new");
+    } catch {
+      // createEmployer already committed (employer + role flip are atomic server-side) —
+      // this is a refresh failure, not a creation failure. Retrying the form would just
+      // hit a 409 on the now-existing company name, so point at the one safe recovery
+      // path instead of inviting an immediate resubmit.
+      setError(
+        `"${created.name}" was created — we just couldn't refresh your session. Use "Log out" in the sidebar and sign back in to continue.`,
+      );
     } finally {
       setBusy(false);
     }
