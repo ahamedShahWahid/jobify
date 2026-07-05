@@ -13,6 +13,8 @@ import { Jobs } from "./pages/dashboard/Jobs";
 import { JobComposer } from "./pages/dashboard/JobComposer";
 import { Applicants } from "./pages/dashboard/Applicants";
 import { Team } from "./pages/dashboard/Team";
+import { Onboarding } from "./pages/Onboarding";
+import { landingFor } from "./landing";
 import { SessionProvider, useSessionStore } from "./session";
 
 /** CSS-scope + title wrapper for the employers marketing surface (mounted at "/employers"). */
@@ -41,7 +43,7 @@ function RequireRecruiter() {
   const { session } = useSessionStore();
   if (!session) return <Navigate to="/employers/signin" replace />;
   if (session.identity.role !== "recruiter") {
-    return <Navigate to="/employers/no-access" replace />;
+    return <Navigate to={landingFor(session.identity.role)} replace />;
   }
   return <Outlet />;
 }
@@ -96,6 +98,7 @@ export function EmployersRoutes() {
           {/* Account & settings — any signed-in recruiter, not role-gated further. */}
           <Route path="/employers/settings" element={<Settings />} />
           <Route path="/employers/no-access" element={<NoAccess />} />
+          <Route path="/employers/onboarding" element={<Onboarding />} />
           <Route element={<RequireRecruiter />}>
             <Route path="/employers/dashboard" element={<Dashboard />} />
             <Route path="/employers/jobs" element={<Jobs />} />
