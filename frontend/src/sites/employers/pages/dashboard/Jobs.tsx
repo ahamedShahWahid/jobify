@@ -85,7 +85,7 @@ export function Jobs() {
         </div>
         <button
           className="btn primary"
-          onClick={() => navigate("/console/recruiter/jobs/new")}
+          onClick={() => navigate("/employers/jobs/new")}
           disabled={employers.length === 0}
           title={employers.length === 0 ? "Create an employer first" : undefined}
         >
@@ -112,7 +112,7 @@ export function Jobs() {
             {rows.map((job) => (
               <tr key={job.id}>
                 <td style={{ maxWidth: 320 }}>
-                  <Link to={`/console/recruiter/jobs/${job.id}/applicants`}>{job.title}</Link>
+                  <Link to={`/employers/jobs/${job.id}/applicants`}>{job.title}</Link>
                   <div className="k" style={{ marginTop: 2 }}>
                     {job.locations.join(" · ")}
                     {!job.employer_verified && (
@@ -130,13 +130,13 @@ export function Jobs() {
                   <Stamp iso={job.posted_at} />
                 </td>
                 <td className="r num">
-                  <Link to={`/console/recruiter/jobs/${job.id}/applicants`}>{job.applicant_count}</Link>
+                  <Link to={`/employers/jobs/${job.id}/applicants`}>{job.applicant_count}</Link>
                 </td>
                 <td className="r num">{job.surfaced_match_count}</td>
                 <td className="r" style={{ whiteSpace: "nowrap" }}>
                   <button
                     className="btn ghost sm"
-                    onClick={() => navigate(`/console/recruiter/jobs/${job.id}/edit`, { state: { job } })}
+                    onClick={() => navigate(`/employers/jobs/${job.id}/edit`, { state: { job } })}
                   >
                     Edit
                   </button>{" "}
