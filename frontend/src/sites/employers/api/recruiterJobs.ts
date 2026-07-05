@@ -29,10 +29,11 @@ export async function drainJobs(
 
 /**
  * Find a posting by id across the recruiter's full list, stopping at the first
- * hit (no need to drain everything once found). The live backend's "closed"
- * filter returns open+closed, but the demo client returns only the named status
- * — so we walk BOTH and exit early. Only reached on a cold deep-link to the
- * editor; normal edits hand the row over via router state.
+ * hit (no need to drain everything once found). Walks both "open" and "closed"
+ * explicitly rather than relying on a single ?status=closed call (which already
+ * returns the full open+closed view) so this doesn't depend on that filter
+ * detail. Only reached on a cold deep-link to the editor; normal edits hand the
+ * row over via router state.
  */
 export async function findMyJob(
   client: EmployerClient,

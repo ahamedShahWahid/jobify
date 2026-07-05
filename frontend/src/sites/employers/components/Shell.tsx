@@ -15,7 +15,7 @@ const NAV = [
  *  "dash" class (alongside "shell") scopes dashboard.css above site.css's
  *  same-named classes — see styles/dashboard.css's header comment. */
 export function Shell() {
-  const { identity, client } = useSession();
+  const { identity } = useSession();
   const { signOut } = useSessionStore();
   const { pathname } = useLocation();
   const crumb = pathname.split("/").filter(Boolean).join(" / ");
@@ -55,8 +55,8 @@ export function Shell() {
 
         <div className="rail-foot">
           <div className="row">
-            <span className={`led ${client.mode === "live" ? "live" : "amber"}`} />
-            <span className="k">{client.mode === "live" ? "live api" : "demo data"}</span>
+            <span className="led live" />
+            <span className="k">live api</span>
           </div>
           <div className="dim" style={{ fontSize: 11, wordBreak: "break-all" }}>
             {identity.email ?? identity.id}

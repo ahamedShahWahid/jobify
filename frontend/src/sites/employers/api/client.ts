@@ -16,7 +16,7 @@ import type {
 
 /** Employer API client interface. */
 export interface EmployerClient {
-  readonly mode: "live" | "demo";
+  readonly mode: "live";
 
   me(): Promise<MeResponse>;
 
