@@ -80,6 +80,11 @@ export interface ApplicantsOfJobPage {
 
 // ---- /v1/employers ---------------------------------------------
 
+export interface EmployerCreate {
+  name: string;
+  gst?: string | null;
+}
+
 export interface EmployerRead {
   id: string;
   name: string;
