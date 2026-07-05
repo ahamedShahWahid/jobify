@@ -1,8 +1,10 @@
 # CLAUDE.md — frontend (unified Vite + React + TS web app)
 
-Load-bearing invariants for the web app: two route-prefixed surfaces under one HashRouter — `/employers` (recruiter marketing, `src/sites/employers`), `/console` (admin + recruiter ops, `src/sites/console`); shared transport/session/auth/env in `src/shared`. `/` redirects to `/employers`. Auto-loaded when working under `frontend/`. Dev/build/env reference is in `frontend/README.md`.
+Load-bearing invariants for the web app: two route-prefixed surfaces under one HashRouter — `/employers` (recruiter marketing + authenticated recruiter workspace, `src/sites/employers`), `/console` (jobify-internal admin ops only, `src/sites/console`); shared transport/session/auth/env in `src/shared`. `/` redirects to `/employers`. Auto-loaded when working under `frontend/`. Dev/build/env reference is in `frontend/README.md`.
 
 **The applicant web surface (`src/sites/web`) was removed 2026-07** — the Flutter app (`app/`) is the applicant client. If a future task needs an applicant browser surface again, it's recoverable from git history, not to be rebuilt from scratch speculatively.
+
+**Recruiter ops moved from `/console` to `/employers` (2026-07)** — console is jobify-internal (admin) only now; a recruiter should never reach it. Recruiter pages live at `src/sites/employers/pages/dashboard/`, with their own `session.tsx`/`api/client.ts`/`api/demo.ts` independent from console's. Console's routes/links are built from `CONSOLE_BASE` (`src/sites/console/base.ts`) rather than hardcoded `/console/...` strings, so it's ready to move to its own subdomain later.
 
 > These are the shared-HashRouter pitfalls — things that silently send users to the wrong surface or leak styles across surfaces.
 
