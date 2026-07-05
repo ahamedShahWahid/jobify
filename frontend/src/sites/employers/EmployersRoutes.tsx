@@ -35,10 +35,9 @@ function RequireSession({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-/** This surface only ever serves recruiters — an applicant or admin who signs
- *  in here lands on /no-access rather than the job desk. Wraps the whole
- *  recruiter-ops route group at once (unlike console, there's only one role
- *  to check here, so no per-route repetition is needed). */
+/** Gates the recruiter-ops route group at once (unlike console, there's only
+ *  one role to check here). A non-recruiter is redirected via landingFor: an
+ *  applicant lands on /onboarding, anyone else (e.g. admin) on /no-access. */
 function RequireRecruiter() {
   const { session } = useSessionStore();
   if (!session) return <Navigate to="/employers/signin" replace />;
