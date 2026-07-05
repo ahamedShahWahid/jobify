@@ -108,7 +108,7 @@
 
 /* ---- shell layout -------------------------------------------- */
 
-.surface-employers .dash .shell {
+.surface-employers .dash.shell {
   position: relative;
   z-index: 1;
   display: grid;
@@ -703,7 +703,7 @@
 
 /* ---- sign-in gate ---------------------------------------------- */
 
-.surface-employers .dash .gate {
+.surface-employers .dash.gate {
   position: relative;
   z-index: 1;
   min-height: 100vh;
@@ -824,7 +824,7 @@
 }
 
 @media (max-width: 900px) {
-  .surface-employers .dash .shell {
+  .surface-employers .dash.shell {
     grid-template-columns: 1fr;
   }
   .surface-employers .dash .rail {
@@ -840,7 +840,7 @@
   .surface-employers .dash .rail-foot {
     margin-top: 0;
   }
-  .surface-employers .dash .gate {
+  .surface-employers .dash.gate {
     grid-template-columns: 1fr;
   }
   .surface-employers .dash .gate-left {
