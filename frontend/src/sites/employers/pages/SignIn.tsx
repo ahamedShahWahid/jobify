@@ -4,13 +4,14 @@ import { ApiError, errorMessage } from "../api/client";
 import { GoogleButton } from "../auth/GoogleButton";
 import { ErrorNotice, Field, IstClock } from "../components/bits";
 import { API_BASE_URL, GOOGLE_CLIENT_ID } from "../env";
+import { landingFor } from "../landing";
 import { useSessionStore } from "../session";
 import { ThemeToggle } from "../../../shared/theme/ThemeToggle";
 
 export function SignIn() {
-  const { connectLive, connectGoogle, connectDemo, expired } = useSessionStore();
+  const { connectLive, connectGoogle, expired } = useSessionStore();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"demo" | "live">("demo");
+  const [showManual, setShowManual] = useState(false);
   const [baseUrl, setBaseUrl] = useState(API_BASE_URL);
   const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
@@ -20,16 +21,11 @@ export function SignIn() {
     return e instanceof ApiError ? `${e.status || "network"}: ${e.detail}` : errorMessage(e);
   }
 
-  function landingFor(role: string): string {
-    return role === "recruiter" ? "/employers/dashboard" : "/employers/no-access";
-  }
-
-  async function connect() {
+  async function connectManual() {
     setBusy(true);
     setError(null);
     try {
-      const identity =
-        mode === "demo" ? await connectDemo() : await connectLive(baseUrl, token.trim());
+      const identity = await connectLive(baseUrl, token.trim());
       navigate(landingFor(identity.role));
     } catch (e) {
       setError(asMessage(e));
@@ -106,22 +102,9 @@ export function SignIn() {
             </p>
           )}
           <p className="k google-note">
-            recruiters only — new Google users provision as applicants and see the no-access
-            page. Reach out to <a href="mailto:hello@jobify.in">hello@jobify.in</a> to get set up.
+            New here? Sign in with Google and we&apos;ll walk you through setting up your company
+            — your first posting is free. Already set up? Sign in the same way.
           </p>
-        </div>
-
-        <div className="google-divider rise">
-          <span>or use a manual session</span>
-        </div>
-
-        <div className="mode-tabs rise">
-          <button className={mode === "demo" ? "on" : ""} onClick={() => setMode("demo")}>
-            Demo data
-          </button>
-          <button className={mode === "live" ? "on" : ""} onClick={() => setMode("live")}>
-            Live API
-          </button>
         </div>
 
         {expired && !error && (
@@ -133,8 +116,17 @@ export function SignIn() {
 
         <ErrorNotice error={error} />
 
-        {mode === "live" ? (
-          <div className="rise">
+        <button
+          type="button"
+          className="btn ghost sm rise"
+          onClick={() => setShowManual((v) => !v)}
+          style={{ marginTop: 18 }}
+        >
+          {showManual ? "Hide manual token entry" : "Paste an access token instead"}
+        </button>
+
+        {showManual && (
+          <div className="rise" style={{ marginTop: 14 }}>
             <Field label="API base URL">
               <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} />
             </Field>
@@ -149,23 +141,15 @@ export function SignIn() {
                 spellCheck={false}
               />
             </Field>
-          </div>
-        ) : (
-          <div className="rise" style={{ marginBottom: 22 }}>
-            <p className="dim" style={{ marginBottom: 14 }}>
-              Explore the full employer workspace against seeded in-memory fixtures — every table
-              and action works; nothing leaves the browser.
-            </p>
+            <button
+              className="btn primary rise"
+              onClick={connectManual}
+              disabled={busy || !token.trim()}
+            >
+              {busy ? "Connecting…" : "Connect"}
+            </button>
           </div>
         )}
-
-        <button
-          className="btn primary rise"
-          onClick={connect}
-          disabled={busy || (mode === "live" && !token.trim())}
-        >
-          {busy ? "Connecting…" : mode === "demo" ? "Enter demo workspace" : "Connect"}
-        </button>
       </div>
     </div>
   );
