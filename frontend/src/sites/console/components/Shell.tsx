@@ -1,49 +1,24 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import type { Area } from "../session";
-import { areasForRole, useSession, useSessionStore } from "../session";
+import { useSession, useSessionStore } from "../session";
 import { ThemeToggle } from "../../../shared/theme/ThemeToggle";
 import { IstClock } from "./bits";
+import { CONSOLE_BASE } from "../base";
 
-const NAV: Array<{
-  area: Area;
-  label: string;
-  links: Array<{ to: string; idx: string; label: string; end?: boolean }>;
-}> = [
-  {
-    area: "admin",
-    label: "Moderation",
-    links: [
-      { to: "/console/admin/analytics", idx: "00", label: "Analytics" },
-      { to: "/console/admin/audit", idx: "01", label: "Audit explorer" },
-      { to: "/console/admin/users", idx: "02", label: "User actions" },
-      { to: "/console/admin/verification", idx: "03", label: "Verification" },
-    ],
-  },
-  {
-    area: "recruiter",
-    label: "Recruiting",
-    links: [
-      { to: "/console/recruiter", idx: "04", label: "Dashboard", end: true },
-      { to: "/console/recruiter/jobs", idx: "05", label: "Jobs" },
-      { to: "/console/recruiter/team", idx: "06", label: "Team & invites" },
-    ],
-  },
+const NAV = [
+  { to: `${CONSOLE_BASE}/admin/analytics`, idx: "00", label: "Analytics" },
+  { to: `${CONSOLE_BASE}/admin/audit`, idx: "01", label: "Audit explorer" },
+  { to: `${CONSOLE_BASE}/admin/users`, idx: "02", label: "User actions" },
+  { to: `${CONSOLE_BASE}/admin/verification`, idx: "03", label: "Verification" },
 ];
 
 export function Shell() {
   const { identity, client } = useSession();
   const { signOut } = useSessionStore();
   const { pathname } = useLocation();
-  const area = pathname.startsWith("/console/admin") ? "admin" : "recruiter";
   const crumb = pathname.split("/").filter(Boolean).join(" / ");
 
-  // Only surface nav for areas this role can actually reach — otherwise every
-  // out-of-area link is a guaranteed 403 on click.
-  const allowed = areasForRole(identity.role);
-  const sections = NAV.filter((section) => allowed.includes(section.area));
-
   return (
-    <div className="shell" data-area={area}>
+    <div className="shell">
       <nav className="rail">
         <div className="rail-brand">
           <div className="rail-lockup">
@@ -62,22 +37,19 @@ export function Shell() {
           </div>
         </div>
 
-        {sections.map((section) => (
-          <div className="rail-section" key={section.area} data-area={section.area}>
-            <span className="k">{section.label}</span>
-            {section.links.map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                end={link.end ?? false}
-                className={({ isActive }) => `rail-link${isActive ? " active" : ""}`}
-              >
-                <span className="idx num">{link.idx}</span>
-                {link.label}
-              </NavLink>
-            ))}
-          </div>
-        ))}
+        <div className="rail-section">
+          <span className="k">Moderation</span>
+          {NAV.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              className={({ isActive }) => `rail-link${isActive ? " active" : ""}`}
+            >
+              <span className="idx num">{link.idx}</span>
+              {link.label}
+            </NavLink>
+          ))}
+        </div>
 
         <div className="rail-foot">
           <div className="row">
@@ -92,7 +64,7 @@ export function Shell() {
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <NavLink
-              to="/console/settings"
+              to={`${CONSOLE_BASE}/settings`}
               className={({ isActive }) => `btn sm ghost${isActive ? " active" : ""}`}
               style={{ flex: 1, justifyContent: "center" }}
             >
