@@ -7,34 +7,26 @@ import { Analytics } from "./pages/admin/Analytics";
 import { AuditExplorer } from "./pages/admin/AuditExplorer";
 import { UserActions } from "./pages/admin/UserActions";
 import { Verification } from "./pages/admin/Verification";
-import { Applicants } from "./pages/recruiter/Applicants";
-import { Dashboard } from "./pages/recruiter/Dashboard";
-import { JobComposer } from "./pages/recruiter/JobComposer";
-import { Jobs } from "./pages/recruiter/Jobs";
-import { Team } from "./pages/recruiter/Team";
 import { Settings } from "./pages/Settings";
 import { SignIn } from "./pages/SignIn";
-import type { Area } from "./session";
-import { areasForRole, landingFor, SessionProvider, useSessionStore } from "./session";
+import { CONSOLE_BASE } from "./base";
+import { areasForRole, SessionProvider, useSessionStore } from "./session";
 
 function RequireSession({ children }: { children: ReactNode }) {
   const { session } = useSessionStore();
-  if (!session) return <Navigate to="/console/signin" replace />;
+  if (!session) return <Navigate to={`${CONSOLE_BASE}/signin`} replace />;
   return <>{children}</>;
 }
 
-/**
- * Gate a route on the operator's area. A recruiter reaching /console/admin/* (or an admin
- * reaching /console/recruiter/*) is redirected to their own landing page rather than
- * shown a page whose every API call 403s. Role→area mapping lives in area.ts.
- */
-function RequireArea({ area, children }: { area: Area; children: ReactNode }) {
+/** Gate the admin subtree on role. Console is jobify-internal now — a
+ *  recruiter or applicant who signs in here sees /no-access, never a
+ *  redirect to /employers (recruiters have their own workspace already). */
+function RequireAdmin() {
   const { session } = useSessionStore();
-  if (!session) return <Navigate to="/console/signin" replace />;
-  if (!areasForRole(session.identity.role).includes(area)) {
-    return <Navigate to={landingFor(session.identity.role)} replace />;
+  if (session && areasForRole(session.identity.role).length === 0) {
+    return <Navigate to={`${CONSOLE_BASE}/no-access`} replace />;
   }
-  return <>{children}</>;
+  return <Outlet />;
 }
 
 function NoAccess() {
@@ -47,8 +39,8 @@ function NoAccess() {
         </h1>
         <div className="sub">
           <span className="flavor">
-            This console is for admins and recruiters. Your account
-            {session ? ` (role: ${session.identity.role})` : ""} can't reach either area.
+            This console is for jobify staff only. Your account
+            {session ? ` (role: ${session.identity.role})` : ""} can&apos;t reach it.
           </span>
         </div>
       </div>
@@ -56,7 +48,7 @@ function NoAccess() {
   );
 }
 
-/** Session + CSS-scope wrapper for the console surface (mounted at "/console/*"). */
+/** Session + CSS-scope wrapper for the console surface. */
 function ConsoleLayout() {
   useEffect(() => {
     document.title = "JOBIFY // CONSOLE";
@@ -71,11 +63,14 @@ function ConsoleLayout() {
   );
 }
 
-/** Console (admin + recruiter ops) routes, prefixed at /console. Returned into the top <Routes>. */
+/** Console (jobify-internal admin ops) routes. Returned into the top <Routes>.
+ *  Every path is built from CONSOLE_BASE so the whole subtree can remount at a
+ *  different base (empty string, once served from console.jobify.com) with
+ *  no other code changes — see base.ts. */
 export function ConsoleRoutes() {
   return (
     <Route element={<ConsoleLayout />}>
-      <Route path="/console/signin" element={<SignIn />} />
+      <Route path={`${CONSOLE_BASE}/signin`} element={<SignIn />} />
       <Route
         element={
           <RequireSession>
@@ -83,91 +78,17 @@ export function ConsoleRoutes() {
           </RequireSession>
         }
       >
-        {/* Account & settings — any signed-in operator (admin or recruiter), not area-gated. */}
-        <Route path="/console/settings" element={<Settings />} />
-        <Route
-          path="/console/admin/analytics"
-          element={
-            <RequireArea area="admin">
-              <Analytics />
-            </RequireArea>
-          }
-        />
-        <Route
-          path="/console/admin/audit"
-          element={
-            <RequireArea area="admin">
-              <AuditExplorer />
-            </RequireArea>
-          }
-        />
-        <Route
-          path="/console/admin/users"
-          element={
-            <RequireArea area="admin">
-              <UserActions />
-            </RequireArea>
-          }
-        />
-        <Route
-          path="/console/admin/verification"
-          element={
-            <RequireArea area="admin">
-              <Verification />
-            </RequireArea>
-          }
-        />
-        <Route
-          path="/console/recruiter"
-          element={
-            <RequireArea area="recruiter">
-              <Dashboard />
-            </RequireArea>
-          }
-        />
-        <Route
-          path="/console/recruiter/jobs"
-          element={
-            <RequireArea area="recruiter">
-              <Jobs />
-            </RequireArea>
-          }
-        />
-        <Route
-          path="/console/recruiter/jobs/new"
-          element={
-            <RequireArea area="recruiter">
-              <JobComposer />
-            </RequireArea>
-          }
-        />
-        <Route
-          path="/console/recruiter/jobs/:jobId/edit"
-          element={
-            <RequireArea area="recruiter">
-              <JobComposer />
-            </RequireArea>
-          }
-        />
-        <Route
-          path="/console/recruiter/jobs/:jobId/applicants"
-          element={
-            <RequireArea area="recruiter">
-              <Applicants />
-            </RequireArea>
-          }
-        />
-        <Route
-          path="/console/recruiter/team"
-          element={
-            <RequireArea area="recruiter">
-              <Team />
-            </RequireArea>
-          }
-        />
-        <Route path="/console/no-access" element={<NoAccess />} />
+        {/* Account & settings — any signed-in admin, not further gated. */}
+        <Route path={`${CONSOLE_BASE}/settings`} element={<Settings />} />
+        <Route path={`${CONSOLE_BASE}/no-access`} element={<NoAccess />} />
+        <Route element={<RequireAdmin />}>
+          <Route path={`${CONSOLE_BASE}/admin/analytics`} element={<Analytics />} />
+          <Route path={`${CONSOLE_BASE}/admin/audit`} element={<AuditExplorer />} />
+          <Route path={`${CONSOLE_BASE}/admin/users`} element={<UserActions />} />
+          <Route path={`${CONSOLE_BASE}/admin/verification`} element={<Verification />} />
+        </Route>
       </Route>
-      <Route path="/console/*" element={<Navigate to="/console/signin" replace />} />
+      <Route path={`${CONSOLE_BASE}/*`} element={<Navigate to={`${CONSOLE_BASE}/signin`} replace />} />
     </Route>
   );
 }
