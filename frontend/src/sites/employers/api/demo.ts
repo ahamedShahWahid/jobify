@@ -3,6 +3,7 @@ import { ApiError } from "./client";
 import type {
   ApplicantOfJobRow,
   ApplicantsOfJobPage,
+  EmployerCreate,
   EmployerRead,
   InviteRead,
   JobCreate,
@@ -408,6 +409,19 @@ export class DemoClient implements EmployerClient {
   async myEmployers(): Promise<EmployerRead[]> {
     await delay();
     return employers;
+  }
+
+  async createEmployer(payload: EmployerCreate): Promise<EmployerRead> {
+    await delay();
+    const employer: EmployerRead = {
+      id: uuid(),
+      name: payload.name,
+      gst: payload.gst ?? null,
+      verified_at: null,
+      created_at: new Date().toISOString(),
+    };
+    employers.push(employer);
+    return employer;
   }
 
   async listMembers(employerId: string): Promise<MemberRead[]> {

@@ -3,6 +3,7 @@ export { ApiError, errorMessage, TokenStore } from "../../../shared/api/transpor
 
 import type {
   ApplicantsOfJobPage,
+  EmployerCreate,
   EmployerRead,
   InviteRead,
   JobCreate,
@@ -26,6 +27,7 @@ export interface EmployerClient {
   listJobApplicants(jobId: string, cursor?: string): Promise<ApplicantsOfJobPage>;
 
   myEmployers(): Promise<EmployerRead[]>;
+  createEmployer(payload: EmployerCreate): Promise<EmployerRead>;
   listMembers(employerId: string): Promise<MemberRead[]>;
   addMember(employerId: string, email: string, role: "owner" | "member"): Promise<MemberRead>;
   changeMemberRole(
@@ -69,6 +71,10 @@ export class HttpClient extends BaseHttpClient implements EmployerClient {
 
   myEmployers(): Promise<EmployerRead[]> {
     return this.request("GET", "/v1/employers/me");
+  }
+
+  createEmployer(payload: EmployerCreate): Promise<EmployerRead> {
+    return this.request("POST", "/v1/employers", payload);
   }
 
   listMembers(employerId: string): Promise<MemberRead[]> {
