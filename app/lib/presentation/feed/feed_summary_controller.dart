@@ -1,4 +1,5 @@
 import 'package:jobify_app/data/jobs/applications_repository_impl.dart';
+import 'package:jobify_app/data/jobs/jobs_dto.dart';
 import 'package:jobify_app/data/jobs/saved_jobs_repository_impl.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -28,12 +29,12 @@ class FeedSummary {
 class FeedSummaryController extends _$FeedSummaryController {
   @override
   Future<FeedSummary> build() async {
-    final applicationsFuture =
-        ref.read(applicationsRepositoryProvider).fetchPage(limit: 100);
-    final savedFuture =
-        ref.read(savedJobsRepositoryProvider).fetchPage(limit: 100);
-    final applications = await applicationsFuture;
-    final saved = await savedFuture;
+    final results = await Future.wait<Object?>([
+      ref.read(applicationsRepositoryProvider).fetchPage(limit: 100),
+      ref.read(savedJobsRepositoryProvider).fetchPage(limit: 100),
+    ]);
+    final applications = results[0]! as ApplicationsPageDto;
+    final saved = results[1]! as SavedJobsPageDto;
     return FeedSummary(
       applicationsCount: applications.items.length,
       applicationsApprox: applications.nextCursor != null,

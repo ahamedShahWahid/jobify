@@ -35,6 +35,7 @@ class FeedSummaryRow extends ConsumerWidget {
             ),
             isError: summary.hasError,
             onTap: () => context.go(Routes.applications),
+            onRetry: () => ref.invalidate(feedSummaryControllerProvider),
           ),
         ),
         const SizedBox(width: JobifySpacing.sm),
@@ -48,6 +49,7 @@ class FeedSummaryRow extends ConsumerWidget {
             ),
             isError: summary.hasError,
             onTap: () => context.go(Routes.saved),
+            onRetry: () => ref.invalidate(feedSummaryControllerProvider),
           ),
         ),
         const SizedBox(width: JobifySpacing.sm),
@@ -64,6 +66,7 @@ class _CountTile extends StatelessWidget {
     required this.value,
     required this.isError,
     required this.onTap,
+    required this.onRetry,
   });
 
   final IconData icon;
@@ -71,12 +74,13 @@ class _CountTile extends StatelessWidget {
   final String? value;
   final bool isError;
   final VoidCallback onTap;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return InkWell(
-      onTap: onTap,
+      onTap: isError ? onRetry : onTap,
       borderRadius: JobifyRadii.borderRadiusXl,
       child: Card(
         child: Padding(
