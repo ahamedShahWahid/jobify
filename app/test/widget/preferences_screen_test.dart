@@ -99,7 +99,13 @@ void main() {
     await tester.pump();
     expect(find.text('Pune'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    final saveButton = find.widgetWithText(FilledButton, 'Save');
+    await tester.scrollUntilVisible(
+      saveButton,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(saveButton);
     await tester.pumpAndSettle();
 
     expect(repo.captured, isNotNull);

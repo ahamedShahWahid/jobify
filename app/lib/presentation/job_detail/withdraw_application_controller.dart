@@ -1,6 +1,7 @@
 import 'package:jobify_app/data/jobs/applications_repository_impl.dart';
 import 'package:jobify_app/data/jobs/jobs_dto.dart';
 import 'package:jobify_app/presentation/applications/applications_controller.dart';
+import 'package:jobify_app/presentation/feed/feed_summary_controller.dart';
 import 'package:jobify_app/presentation/job_detail/job_detail_controller.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -19,7 +20,10 @@ class WithdrawApplicationController extends _$WithdrawApplicationController {
           .withdraw(applicationId);
       ref
         ..invalidate(applicationsControllerProvider)
-        ..invalidate(jobDetailControllerProvider(jobId));
+        ..invalidate(jobDetailControllerProvider(jobId))
+        // See apply_to_job_controller.dart for why the Feed home-summary
+        // needs its own explicit invalidation here.
+        ..invalidate(feedSummaryControllerProvider);
       return app;
     });
   }
