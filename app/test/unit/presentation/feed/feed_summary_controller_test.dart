@@ -36,6 +36,25 @@ class _FakeSavedJobsRepo implements SavedJobsRepository {
       _page;
 }
 
+class _ThrowingApplicationsRepo implements ApplicationsRepository {
+  @override
+  Future<ApplicationsPageDto> fetchPage({
+    String? cursor,
+    int limit = 20,
+  }) async =>
+      throw Exception('applications boom');
+
+  @override
+  Future<ApplicationDto> withdraw(String applicationId) async =>
+      throw UnimplementedError();
+}
+
+class _ThrowingSavedJobsRepo implements SavedJobsRepository {
+  @override
+  Future<SavedJobsPageDto> fetchPage({String? cursor, int limit = 20}) async =>
+      throw Exception('saved jobs boom');
+}
+
 final _job = JobSummaryDto(
   id: 'j1',
   title: 'Engineer',
@@ -133,5 +152,37 @@ void main() {
     final summary = await container.read(feedSummaryControllerProvider.future);
     expect(summary.applicationsCount, 0);
     expect(summary.savedCount, 0);
+  });
+
+  test(
+      'both repos rejecting completes with a single clean error '
+      '(no hang, no separate unhandled-rejection zone error)', () async {
+    final container = ProviderContainer(
+      // Riverpod's default automatic retry (up to 10 retries, 200ms-6.4s
+      // backoff — riverpod's `defaultRetry`) would otherwise keep this
+      // provider in a `AsyncLoading(retrying: true)` state for ~30+ seconds
+      // before finally giving up; disabling it here isolates what this test
+      // targets — that a single rejection (not a hang, not an unrelated
+      // unhandled-rejection zone error) surfaces promptly.
+      retry: (_, __) => null,
+      overrides: [
+        applicationsRepositoryProvider
+            .overrideWithValue(_ThrowingApplicationsRepo()),
+        savedJobsRepositoryProvider.overrideWithValue(_ThrowingSavedJobsRepo()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    // Future.wait attaches a listener to BOTH futures synchronously when
+    // called, so even though both the applications and saved-jobs fetches
+    // reject, neither rejection is ever left unobserved — this used to be a
+    // real hazard under the old sequential-await implementation.
+    Object? caught;
+    try {
+      await container.read(feedSummaryControllerProvider.future);
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught, isA<Exception>());
   });
 }

@@ -41,14 +41,15 @@ class _FakeSavedJobsRepo implements SavedJobsRepository {
 /// degradation (a quiet retry icon, per the design spec's "never blocks
 /// the match-profile tile or the job list beneath" requirement).
 ///
-/// Only ONE repo throws (not both): `FeedSummaryController.build()` kicks
-/// off both `fetchPage` calls before awaiting either, so making both
-/// futures reject would leave the second rejection with no listener ever
-/// attached (build() exits via the first `await` before reaching the
-/// second) — an unrelated unhandled-Future-rejection hazard, not the
-/// `isError` degradation this test targets. One throwing repo is enough:
-/// `FeedSummary` is a single combined async value, so either fetch
-/// failing puts BOTH count tiles into their shared error state.
+/// Both this repo and `_ThrowingSavedJobsRepo` below can safely be made to
+/// throw together: `FeedSummaryController.build()` uses `Future.wait`, which
+/// attaches a listener to every future in the list synchronously when it's
+/// called — so neither rejection is ever left unobserved, even when both
+/// fetches reject. (Previously, with sequential awaits, a first-fetch
+/// rejection could leave the second in-flight future with no listener
+/// attached — an unhandled-rejection hazard, since fixed.) `FeedSummary` is
+/// a single combined async value, so either fetch failing puts BOTH count
+/// tiles into their shared error state.
 class _ThrowingApplicationsRepo implements ApplicationsRepository {
   @override
   Future<ApplicationsPageDto> fetchPage({
@@ -59,6 +60,45 @@ class _ThrowingApplicationsRepo implements ApplicationsRepository {
   @override
   Future<ApplicationDto> withdraw(String applicationId) async =>
       throw UnimplementedError();
+}
+
+/// See `_ThrowingApplicationsRepo` above — safe to combine with it now that
+/// `FeedSummaryController.build()` uses `Future.wait`.
+class _ThrowingSavedJobsRepo implements SavedJobsRepository {
+  @override
+  Future<SavedJobsPageDto> fetchPage({String? cursor, int limit = 20}) async =>
+      throw Exception('boom');
+}
+
+/// Fails its first `fetchPage` call, then succeeds — lets a test drive the
+/// error tile's retry path (tap → `ref.invalidate` → re-fetch → recovery)
+/// without needing new shared test infrastructure.
+class _FlakyApplicationsRepo implements ApplicationsRepository {
+  int callCount = 0;
+  @override
+  Future<ApplicationsPageDto> fetchPage({
+    String? cursor,
+    int limit = 20,
+  }) async {
+    callCount++;
+    if (callCount == 1) throw Exception('boom');
+    return const ApplicationsPageDto(items: []);
+  }
+
+  @override
+  Future<ApplicationDto> withdraw(String applicationId) async =>
+      throw UnimplementedError();
+}
+
+/// See `_FlakyApplicationsRepo` above.
+class _FlakySavedJobsRepo implements SavedJobsRepository {
+  int callCount = 0;
+  @override
+  Future<SavedJobsPageDto> fetchPage({String? cursor, int limit = 20}) async {
+    callCount++;
+    if (callCount == 1) throw Exception('boom');
+    return const SavedJobsPageDto(items: []);
+  }
 }
 
 class _FakeResumeRepo implements ResumeRepository {
@@ -193,15 +233,18 @@ void main() {
   });
 
   testWidgets(
-      'shows a retry icon on both count tiles when the summary fetch '
-      'throws, without blocking the match-profile tile', (tester) async {
+      'shows a retry icon on both count tiles when BOTH repos throw, '
+      'without blocking the match-profile tile', (tester) async {
     await _pump(
       tester,
       resume: _resume,
       applicationsRepo: _ThrowingApplicationsRepo(),
+      savedJobsRepo: _ThrowingSavedJobsRepo(),
     );
 
-    // Applications + Saved tiles degrade to a quiet retry icon, not a crash.
+    // Applications + Saved tiles degrade to a quiet retry icon, not a crash
+    // — proven safe for both repos rejecting together by the Future.wait fix
+    // (see _ThrowingApplicationsRepo's doc comment).
     expect(find.byIcon(Icons.refresh), findsNWidgets(2));
     // Value text ('—' placeholder or a count) never renders for either
     // errored tile.
@@ -212,5 +255,36 @@ void main() {
     expect(find.text('Saved'), findsOneWidget);
     expect(find.text('Profile complete'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'tapping an errored count tile retries (not navigates) and recovers '
+      'to a real count', (tester) async {
+    final applicationsRepo = _FlakyApplicationsRepo();
+    final savedJobsRepo = _FlakySavedJobsRepo();
+    await _pump(
+      tester,
+      resume: _resume,
+      applicationsRepo: applicationsRepo,
+      savedJobsRepo: savedJobsRepo,
+    );
+
+    // Both repos rejected on the first fetch — both tiles start errored.
+    expect(find.byIcon(Icons.refresh), findsNWidgets(2));
+
+    await tester.tap(find.byIcon(Icons.refresh).first);
+    await tester.pumpAndSettle();
+
+    // Tapping an errored tile invoked `onRetry` (ref.invalidate), not
+    // `onTap` (navigation): we're still on the Feed row (no push to
+    // /applications or /saved), and the provider's re-fetch — this time
+    // succeeding — recovered both tiles to a real count instead of leaving
+    // them on the retry icon.
+    expect(find.text('Applications'), findsOneWidget);
+    expect(find.text('Saved'), findsOneWidget);
+    expect(find.byIcon(Icons.refresh), findsNothing);
+    expect(find.text('0'), findsNWidgets(2));
+    expect(applicationsRepo.callCount, 2);
+    expect(savedJobsRepo.callCount, 2);
   });
 }
