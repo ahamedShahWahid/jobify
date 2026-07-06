@@ -2,11 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:jobify_app/data/jobs/application_source.dart';
-import 'package:jobify_app/data/jobs/application_status.dart';
 import 'package:jobify_app/data/jobs/applications_repository.dart';
 import 'package:jobify_app/data/jobs/applications_repository_impl.dart';
-import 'package:jobify_app/data/jobs/job_status.dart';
 import 'package:jobify_app/data/jobs/jobs_dto.dart';
 import 'package:jobify_app/data/jobs/saved_jobs_repository.dart';
 import 'package:jobify_app/data/jobs/saved_jobs_repository_impl.dart';
@@ -90,7 +87,7 @@ Future<void> _pump(
     routes: [
       GoRoute(
         path: '/',
-        builder: (_, __) => Scaffold(body: const FeedSummaryRow()),
+        builder: (_, __) => const Scaffold(body: FeedSummaryRow()),
       ),
       GoRoute(path: '/applications', builder: (_, __) => const Text('Apps')),
       GoRoute(path: '/saved', builder: (_, __) => const Text('Saved')),
@@ -126,7 +123,7 @@ Future<void> _pump(
 
 void main() {
   testWidgets('shows upload-résumé prompt when no résumé', (tester) async {
-    await _pump(tester, resume: null);
+    await _pump(tester);
     expect(find.text('Upload résumé'), findsOneWidget);
   });
 
@@ -139,7 +136,7 @@ void main() {
 
   testWidgets('shows complete state when résumé and prefs are complete',
       (tester) async {
-    await _pump(tester, resume: _resume, prefs: _completePrefs);
+    await _pump(tester, resume: _resume);
     expect(find.text('Profile complete'), findsOneWidget);
   });
 
@@ -160,7 +157,7 @@ void main() {
 
   testWidgets('tapping upload-résumé prompt navigates to /profile/resume',
       (tester) async {
-    await _pump(tester, resume: null);
+    await _pump(tester);
     await tester.tap(find.text('Upload résumé'));
     await tester.pumpAndSettle();
     expect(find.text('Resume'), findsOneWidget);
