@@ -15,7 +15,7 @@ class PreferencesController extends _$PreferencesController {
 
   Future<bool> submit(PreferencesUpdateDto update) async {
     // Preserve the loaded value across the submit: this provider is
-    // keepAlive and shared (ProfileScreen, FeedNudgeBanner,
+    // keepAlive and shared (ProfileScreen, FeedSummaryRow,
     // EditProfileScreen), so a bare AsyncLoading/AsyncError here would
     // radiate a data-less state to every watcher.
     final previous = state;
