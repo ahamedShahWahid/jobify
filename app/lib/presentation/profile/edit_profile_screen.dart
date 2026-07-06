@@ -11,6 +11,8 @@ import 'package:jobify_app/presentation/preferences/preferences_controller.dart'
 import 'package:jobify_app/presentation/profile/me_controller.dart';
 import 'package:jobify_app/presentation/profile/profile_edit_controller.dart';
 import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/theme/jobify_typography.dart';
+import 'package:jobify_app/presentation/widgets/jobify_match_chip.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -157,6 +159,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       }
     }
 
+    final theme = Theme.of(context);
     final saving =
         ref.watch(profileEditControllerProvider).isLoading || prefs.isLoading;
     return Scaffold(
@@ -174,104 +177,172 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         child: ListView(
           padding: const EdgeInsets.all(JobifySpacing.lg),
           children: [
-            TextFormField(
-              controller: _fullName,
-              decoration: const InputDecoration(labelText: 'Full name'),
-              validator: (v) {
-                final t = v?.trim() ?? '';
-                if (t.isEmpty) return 'Required';
-                if (t.length > 200) return 'Too long (max 200)';
-                return null;
-              },
-            ),
-            const SizedBox(height: JobifySpacing.lg),
-            DropdownButtonFormField<DesiredRole>(
-              // `unknown` (unrecognised server value) has no menu item;
-              // show it as no selection. `_desiredRole` keeps the raw
-              // `unknown` until the user picks something, so an untouched
-              // save omits the key and preserves the server value.
-              initialValue:
-                  _desiredRole == DesiredRole.unknown ? null : _desiredRole,
-              decoration: const InputDecoration(labelText: 'Desired role'),
-              items: [
-                // A null item so a previously set role can be CLEARED.
-                const DropdownMenuItem<DesiredRole>(
-                  child: Text('No preference'),
+            Text('About you', style: theme.textTheme.titleMedium),
+            const SizedBox(height: JobifySpacing.sm),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(JobifySpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextFormField(
+                      controller: _fullName,
+                      decoration: const InputDecoration(labelText: 'Full name'),
+                      validator: (v) {
+                        final t = v?.trim() ?? '';
+                        if (t.isEmpty) return 'Required';
+                        if (t.length > 200) return 'Too long (max 200)';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: JobifySpacing.lg),
+                    DropdownButtonFormField<DesiredRole>(
+                      // `unknown` (unrecognised server value) has no menu
+                      // item; show it as no selection. `_desiredRole` keeps
+                      // the raw `unknown` until the user picks something, so
+                      // an untouched save omits the key and preserves the
+                      // server value.
+                      initialValue: _desiredRole == DesiredRole.unknown
+                          ? null
+                          : _desiredRole,
+                      decoration:
+                          const InputDecoration(labelText: 'Desired role'),
+                      items: [
+                        // A null item so a previously set role can be
+                        // CLEARED.
+                        const DropdownMenuItem<DesiredRole>(
+                          child: Text('No preference'),
+                        ),
+                        for (final role in DesiredRole.values
+                            .where((r) => r != DesiredRole.unknown))
+                          DropdownMenuItem(
+                            value: role,
+                            child: Text(role.label),
+                          ),
+                      ],
+                      onChanged: (role) => setState(() => _desiredRole = role),
+                    ),
+                    const SizedBox(height: JobifySpacing.lg),
+                    Text('Locations', style: theme.textTheme.labelLarge),
+                    const SizedBox(height: JobifySpacing.sm),
+                    if (_locations.isNotEmpty) ...[
+                      Wrap(
+                        spacing: JobifySpacing.sm,
+                        runSpacing: JobifySpacing.sm,
+                        children: [
+                          for (final loc in _locations)
+                            JobifyMatchChip(
+                              label: loc,
+                              onDeleted: () =>
+                                  setState(() => _locations.remove(loc)),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: JobifySpacing.sm),
+                    ],
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _locationInput,
+                            decoration: const InputDecoration(
+                              labelText: 'Add location',
+                            ),
+                            onSubmitted: (_) => _addLocation(),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: _addLocation,
+                          icon: const Icon(Icons.add),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                for (final role in DesiredRole.values
-                    .where((r) => r != DesiredRole.unknown))
-                  DropdownMenuItem(value: role, child: Text(role.label)),
-              ],
-              onChanged: (role) => setState(() => _desiredRole = role),
-            ),
-            const SizedBox(height: JobifySpacing.lg),
-            Text('Locations', style: Theme.of(context).textTheme.labelLarge),
-            Wrap(
-              spacing: JobifySpacing.sm,
-              children: [
-                for (final loc in _locations)
-                  Chip(
-                    label: Text(loc),
-                    onDeleted: () => setState(() => _locations.remove(loc)),
-                  ),
-              ],
-            ),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _locationInput,
-                    decoration:
-                        const InputDecoration(labelText: 'Add location'),
-                    onSubmitted: (_) => _addLocation(),
-                  ),
-                ),
-                IconButton(
-                  onPressed: _addLocation,
-                  icon: const Icon(Icons.add),
-                ),
-              ],
-            ),
-            const SizedBox(height: JobifySpacing.lg),
-            TextFormField(
-              controller: _experience,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              decoration:
-                  const InputDecoration(labelText: 'Years of experience'),
-              validator: (v) =>
-                  _validateOptionalNumber(v, min: 0, max: 60, maxDecimals: 1),
-            ),
-            TextFormField(
-              controller: _notice,
-              keyboardType: TextInputType.number,
-              decoration:
-                  const InputDecoration(labelText: 'Notice period (days)'),
-              validator: (v) =>
-                  _validateOptionalNumber(v, min: 0, max: 365, maxDecimals: 0),
-            ),
-            TextFormField(
-              controller: _currentCtc,
-              keyboardType: TextInputType.number,
-              decoration:
-                  const InputDecoration(labelText: 'Current CTC (₹/yr)'),
-              validator: (v) => _validateOptionalNumber(
-                v,
-                min: 0,
-                max: 9999999999.99,
-                maxDecimals: 2,
               ),
             ),
-            TextFormField(
-              controller: _expectedCtc,
-              keyboardType: TextInputType.number,
-              decoration:
-                  const InputDecoration(labelText: 'Expected CTC (₹/yr)'),
-              validator: (v) => _validateOptionalNumber(
-                v,
-                min: 0,
-                max: 9999999999.99,
-                maxDecimals: 2,
+            const SizedBox(height: JobifySpacing.xl),
+            Text('The numbers', style: theme.textTheme.titleMedium),
+            const SizedBox(height: JobifySpacing.sm),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(JobifySpacing.lg),
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: _experience,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      style: JobifyTypography.mono(
+                        fontSize: 16,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Years of experience',
+                      ),
+                      validator: (v) => _validateOptionalNumber(
+                        v,
+                        min: 0,
+                        max: 60,
+                        maxDecimals: 1,
+                      ),
+                    ),
+                    const SizedBox(height: JobifySpacing.lg),
+                    TextFormField(
+                      controller: _notice,
+                      keyboardType: TextInputType.number,
+                      style: JobifyTypography.mono(
+                        fontSize: 16,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Notice period (days)',
+                      ),
+                      validator: (v) => _validateOptionalNumber(
+                        v,
+                        min: 0,
+                        max: 365,
+                        maxDecimals: 0,
+                      ),
+                    ),
+                    const SizedBox(height: JobifySpacing.lg),
+                    TextFormField(
+                      controller: _currentCtc,
+                      keyboardType: TextInputType.number,
+                      style: JobifyTypography.mono(
+                        fontSize: 16,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Current CTC (₹/yr)',
+                      ),
+                      validator: (v) => _validateOptionalNumber(
+                        v,
+                        min: 0,
+                        max: 9999999999.99,
+                        maxDecimals: 2,
+                      ),
+                    ),
+                    const SizedBox(height: JobifySpacing.lg),
+                    TextFormField(
+                      controller: _expectedCtc,
+                      keyboardType: TextInputType.number,
+                      style: JobifyTypography.mono(
+                        fontSize: 16,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Expected CTC (₹/yr)',
+                      ),
+                      validator: (v) => _validateOptionalNumber(
+                        v,
+                        min: 0,
+                        max: 9999999999.99,
+                        maxDecimals: 2,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

@@ -7,7 +7,11 @@ import 'package:jobify_app/data/preferences/preferences_dto.dart';
 import 'package:jobify_app/data/preferences/preferences_update_dto.dart';
 import 'package:jobify_app/data/resume/resume_dto.dart';
 import 'package:jobify_app/presentation/preferences/preferences_controller.dart';
+import 'package:jobify_app/presentation/theme/jobify_colors.dart';
+import 'package:jobify_app/presentation/theme/jobify_radii.dart';
 import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
+import 'package:jobify_app/presentation/theme/jobify_typography.dart';
+import 'package:jobify_app/presentation/widgets/jobify_match_chip.dart';
 
 class PreferencesScreen extends ConsumerStatefulWidget {
   const PreferencesScreen({super.key, this.resume});
@@ -122,6 +126,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
       );
     }
 
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('What are you looking for?'),
@@ -136,59 +141,90 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
           children: [
             _ResumeSummaryCard(resume: widget.resume),
             const SizedBox(height: JobifySpacing.xl),
-            DropdownButtonFormField<DesiredRole>(
-              // `unknown` (unrecognised server value) has no menu item;
-              // show it as no selection. `_desiredRole` keeps the raw
-              // `unknown` until the user picks something, so an untouched
-              // save omits the key and preserves the server value.
-              initialValue:
-                  _desiredRole == DesiredRole.unknown ? null : _desiredRole,
-              decoration: const InputDecoration(labelText: 'Desired role'),
-              items: [
-                // A null item so a previously set role can be CLEARED.
-                const DropdownMenuItem<DesiredRole>(
-                  child: Text('No preference'),
+            Text('Your preferences', style: theme.textTheme.titleMedium),
+            const SizedBox(height: JobifySpacing.sm),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(JobifySpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    DropdownButtonFormField<DesiredRole>(
+                      // `unknown` (unrecognised server value) has no menu
+                      // item; show it as no selection. `_desiredRole` keeps
+                      // the raw `unknown` until the user picks something, so
+                      // an untouched save omits the key and preserves the
+                      // server value.
+                      initialValue: _desiredRole == DesiredRole.unknown
+                          ? null
+                          : _desiredRole,
+                      decoration:
+                          const InputDecoration(labelText: 'Desired role'),
+                      items: [
+                        // A null item so a previously set role can be
+                        // CLEARED.
+                        const DropdownMenuItem<DesiredRole>(
+                          child: Text('No preference'),
+                        ),
+                        for (final role in DesiredRole.values
+                            .where((r) => r != DesiredRole.unknown))
+                          DropdownMenuItem(
+                            value: role,
+                            child: Text(role.label),
+                          ),
+                      ],
+                      onChanged: (role) => setState(() => _desiredRole = role),
+                    ),
+                    const SizedBox(height: JobifySpacing.lg),
+                    Text('Locations', style: theme.textTheme.labelLarge),
+                    const SizedBox(height: JobifySpacing.sm),
+                    if (_locations.isNotEmpty) ...[
+                      Wrap(
+                        spacing: JobifySpacing.sm,
+                        runSpacing: JobifySpacing.sm,
+                        children: [
+                          for (final loc in _locations)
+                            JobifyMatchChip(
+                              label: loc,
+                              onDeleted: () =>
+                                  setState(() => _locations.remove(loc)),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: JobifySpacing.sm),
+                    ],
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _locationInput,
+                            decoration: const InputDecoration(
+                              labelText: 'Add location',
+                            ),
+                            onSubmitted: (_) => _addLocation(),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: _addLocation,
+                          icon: const Icon(Icons.add),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: JobifySpacing.lg),
+                    TextFormField(
+                      controller: _expectedCtc,
+                      keyboardType: TextInputType.number,
+                      style: JobifyTypography.mono(
+                        fontSize: 16,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Expected CTC (₹/yr)',
+                      ),
+                    ),
+                  ],
                 ),
-                for (final role in DesiredRole.values
-                    .where((r) => r != DesiredRole.unknown))
-                  DropdownMenuItem(value: role, child: Text(role.label)),
-              ],
-              onChanged: (role) => setState(() => _desiredRole = role),
-            ),
-            const SizedBox(height: JobifySpacing.lg),
-            Text('Locations', style: Theme.of(context).textTheme.labelLarge),
-            Wrap(
-              spacing: JobifySpacing.sm,
-              children: [
-                for (final loc in _locations)
-                  Chip(
-                    label: Text(loc),
-                    onDeleted: () => setState(() => _locations.remove(loc)),
-                  ),
-              ],
-            ),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _locationInput,
-                    decoration:
-                        const InputDecoration(labelText: 'Add location'),
-                    onSubmitted: (_) => _addLocation(),
-                  ),
-                ),
-                IconButton(
-                  onPressed: _addLocation,
-                  icon: const Icon(Icons.add),
-                ),
-              ],
-            ),
-            const SizedBox(height: JobifySpacing.lg),
-            TextFormField(
-              controller: _expectedCtc,
-              keyboardType: TextInputType.number,
-              decoration:
-                  const InputDecoration(labelText: 'Expected CTC (₹/yr)'),
+              ),
             ),
             const SizedBox(height: JobifySpacing.xl),
             FilledButton(
@@ -237,13 +273,38 @@ class _ResumeSummaryCard extends StatelessWidget {
               const SizedBox(height: JobifySpacing.sm),
               Wrap(
                 spacing: JobifySpacing.sm,
+                runSpacing: JobifySpacing.sm,
                 children: [
-                  for (final s in skills.take(10)) Chip(label: Text(s)),
+                  for (final s in skills.take(10)) _SkillChip(label: s),
                 ],
               ),
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// A skill read off the résumé — informational only (not editable, doesn't
+/// feed the match directly), so it stays a quiet neutral chip.
+class _SkillChip extends StatelessWidget {
+  const _SkillChip({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final surface = isDark ? JobifyColors.paper2Dark : JobifyColors.paper2Light;
+    final ink = isDark ? JobifyColors.inkSoftDark : JobifyColors.inkSoftLight;
+    return Chip(
+      label: Text(label),
+      labelStyle: TextStyle(color: ink),
+      backgroundColor: surface,
+      side: BorderSide.none,
+      shape: const RoundedRectangleBorder(
+        borderRadius: JobifyRadii.borderRadiusPill,
       ),
     );
   }
