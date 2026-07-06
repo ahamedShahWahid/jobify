@@ -8,6 +8,7 @@ import 'package:jobify_app/data/feed/feed_dto.dart';
 import 'package:jobify_app/data/feed/feed_visit_repository_impl.dart';
 import 'package:jobify_app/presentation/feed/feed_controller.dart';
 import 'package:jobify_app/presentation/feed/feed_item_card.dart';
+import 'package:jobify_app/presentation/feed/feed_summary_controller.dart';
 import 'package:jobify_app/presentation/feed/feed_summary_row.dart';
 import 'package:jobify_app/presentation/routing/routes.dart';
 import 'package:jobify_app/presentation/theme/jobify_colors.dart';
@@ -50,6 +51,18 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     await repo.setLastSeenAt(DateTime.now());
   }
 
+  /// Refreshes the job list AND the home-summary tiles together — both the
+  /// header refresh button and pull-to-refresh previously only called
+  /// FeedController.refresh(), leaving the Applications/Saved summary tiles
+  /// stale until a mutation elsewhere (apply/save/unsave/withdraw)
+  /// invalidated feedSummaryControllerProvider on its own.
+  Future<void> _refreshAll() async {
+    await Future.wait([
+      ref.read(feedControllerProvider.notifier).refresh(),
+      ref.read(feedSummaryControllerProvider.notifier).refresh(),
+    ]);
+  }
+
   /// Only counts matches within whatever FeedController has currently
   /// loaded (first page, ordered by match score, not recency) — a
   /// documented MVP approximation, not a global truth.
@@ -79,7 +92,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         trailing: IconButton(
           icon: const Icon(Icons.refresh),
           tooltip: 'Refresh',
-          onPressed: () => ref.read(feedControllerProvider.notifier).refresh(),
+          onPressed: () => unawaited(_refreshAll()),
         ),
       ),
       child: Column(
@@ -117,8 +130,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                 icon: Icons.search_off,
               ),
               data: (s) => RefreshIndicator(
-                onRefresh: () =>
-                    ref.read(feedControllerProvider.notifier).refresh(),
+                onRefresh: _refreshAll,
                 child: ListView.separated(
                   controller: _scroll,
                   padding: const EdgeInsets.all(JobifySpacing.lg),

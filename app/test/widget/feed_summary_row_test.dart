@@ -36,6 +36,31 @@ class _FakeSavedJobsRepo implements SavedJobsRepository {
       const SavedJobsPageDto(items: []);
 }
 
+/// Mirrors the `_ThrowingResumeRepo`/`_PendingResumeRepo` pattern in
+/// feed_screen_test.dart — used to exercise the count tiles' `isError`
+/// degradation (a quiet retry icon, per the design spec's "never blocks
+/// the match-profile tile or the job list beneath" requirement).
+///
+/// Only ONE repo throws (not both): `FeedSummaryController.build()` kicks
+/// off both `fetchPage` calls before awaiting either, so making both
+/// futures reject would leave the second rejection with no listener ever
+/// attached (build() exits via the first `await` before reaching the
+/// second) — an unrelated unhandled-Future-rejection hazard, not the
+/// `isError` degradation this test targets. One throwing repo is enough:
+/// `FeedSummary` is a single combined async value, so either fetch
+/// failing puts BOTH count tiles into their shared error state.
+class _ThrowingApplicationsRepo implements ApplicationsRepository {
+  @override
+  Future<ApplicationsPageDto> fetchPage({
+    String? cursor,
+    int limit = 20,
+  }) async =>
+      throw Exception('boom');
+  @override
+  Future<ApplicationDto> withdraw(String applicationId) async =>
+      throw UnimplementedError();
+}
+
 class _FakeResumeRepo implements ResumeRepository {
   _FakeResumeRepo(this._current);
   final ResumeDto? _current;
@@ -82,6 +107,8 @@ Future<void> _pump(
   WidgetTester tester, {
   ResumeDto? resume,
   PreferencesDto prefs = _completePrefs,
+  ApplicationsRepository? applicationsRepo,
+  SavedJobsRepository? savedJobsRepo,
 }) async {
   final router = GoRouter(
     routes: [
@@ -106,9 +133,11 @@ Future<void> _pump(
     ProviderScope(
       overrides: [
         applicationsRepositoryProvider.overrideWithValue(
-          _FakeApplicationsRepo(),
+          applicationsRepo ?? _FakeApplicationsRepo(),
         ),
-        savedJobsRepositoryProvider.overrideWithValue(_FakeSavedJobsRepo()),
+        savedJobsRepositoryProvider.overrideWithValue(
+          savedJobsRepo ?? _FakeSavedJobsRepo(),
+        ),
         resumeRepositoryProvider.overrideWithValue(_FakeResumeRepo(resume)),
         preferencesRepositoryProvider.overrideWithValue(_FakePrefsRepo(prefs)),
       ],
@@ -161,5 +190,27 @@ void main() {
     await tester.tap(find.text('Upload résumé'));
     await tester.pumpAndSettle();
     expect(find.text('Resume'), findsOneWidget);
+  });
+
+  testWidgets(
+      'shows a retry icon on both count tiles when the summary fetch '
+      'throws, without blocking the match-profile tile', (tester) async {
+    await _pump(
+      tester,
+      resume: _resume,
+      applicationsRepo: _ThrowingApplicationsRepo(),
+    );
+
+    // Applications + Saved tiles degrade to a quiet retry icon, not a crash.
+    expect(find.byIcon(Icons.refresh), findsNWidgets(2));
+    // Value text ('—' placeholder or a count) never renders for either
+    // errored tile.
+    expect(find.text('—'), findsNothing);
+
+    // The row itself, and the independent match-profile tile, still build.
+    expect(find.text('Applications'), findsOneWidget);
+    expect(find.text('Saved'), findsOneWidget);
+    expect(find.text('Profile complete'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
