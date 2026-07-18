@@ -19,10 +19,11 @@ every URL lives under `/#/`. Per surface:
 | Surface | Dev entry URL | Route module | Mount root |
 | --- | --- | --- | --- |
 | **employers** (recruiter marketing) | `http://localhost:5173/#/employers` | `src/sites/employers/EmployersRoutes.tsx` | `/employers` |
-| **console** (internal admin + recruiter ops) | `http://localhost:5173/#/console/signin` | `src/sites/console/ConsoleRoutes.tsx` | `/console` |
+| **console** (jobify-internal admin ops) | `http://localhost:5173/#/console/signin` | `src/sites/console/ConsoleRoutes.tsx` | `/console` |
 
 - **employers** — `/employers` (landing) and `/employers/verify`.
-- **console** — entered at `/console/signin`; after sign-in, role-aware routing sends admins to `/console/admin/audit` and recruiters to `/console/recruiter`.
+- **console** — entered at `/console/signin`; jobify-internal admin ops only (audit trail, employer verification, user actions).
+- **employers** (in addition to the marketing pages) — an authenticated recruiter workspace entered at `/employers/signin`; signed-in recruiters land on `/employers/dashboard` (jobs, applicants, team & invites, settings).
 
 Each surface mounts its own `SessionProvider` (from `src/shared/session`) inside its
 route fragment, so sessions are independent per surface. In production both ship

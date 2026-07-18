@@ -2,35 +2,36 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useSession, useSessionStore } from "../session";
 import { ThemeToggle } from "../../../shared/theme/ThemeToggle";
 import { IstClock } from "./bits";
-import { CONSOLE_BASE } from "../base";
 
 const NAV = [
-  { to: `${CONSOLE_BASE}/admin/analytics`, idx: "00", label: "Analytics" },
-  { to: `${CONSOLE_BASE}/admin/audit`, idx: "01", label: "Audit explorer" },
-  { to: `${CONSOLE_BASE}/admin/users`, idx: "02", label: "User actions" },
-  { to: `${CONSOLE_BASE}/admin/verification`, idx: "03", label: "Verification" },
+  { to: "/employers/dashboard", idx: "00", label: "Dashboard", end: true },
+  { to: "/employers/jobs", idx: "01", label: "Jobs" },
+  { to: "/employers/team", idx: "02", label: "Team & invites" },
 ];
 
+/** Nav shell for the authenticated recruiter zone (mounted under /employers/*
+ *  once signed in). Adapted from console's Shell — single nav section since
+ *  this surface only ever serves recruiters, no area-switching needed. The
+ *  "dash" class (alongside "shell") scopes dashboard.css above site.css's
+ *  same-named classes — see styles/dashboard.css's header comment. */
 export function Shell() {
-  const { identity, client } = useSession();
+  const { identity } = useSession();
   const { signOut } = useSessionStore();
   const { pathname } = useLocation();
   const crumb = pathname.split("/").filter(Boolean).join(" / ");
 
   return (
-    <div className="shell">
+    <div className="dash shell">
       <nav className="rail">
         <div className="rail-brand">
           <div className="rail-lockup">
-            {/* J-person mark only — the wordmark's letter counters would read as
-                light fills on this dark rail; the solid mark stays crisp. */}
             <img src="/jobify-mark.svg" alt="Jobify" className="rail-mark" />
             <div className="wordmark">
-              JOBIFY<em>//</em>CONSOLE
+              JOBIFY<em>//</em>EMPLOYERS
             </div>
           </div>
           <div className="k" style={{ marginTop: 4 }}>
-            internal operations
+            employer workspace
           </div>
           <div style={{ marginTop: 8 }}>
             <ThemeToggle />
@@ -38,11 +39,12 @@ export function Shell() {
         </div>
 
         <div className="rail-section">
-          <span className="k">Moderation</span>
+          <span className="k">Recruiting</span>
           {NAV.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
+              end={link.end ?? false}
               className={({ isActive }) => `rail-link${isActive ? " active" : ""}`}
             >
               <span className="idx num">{link.idx}</span>
@@ -53,8 +55,8 @@ export function Shell() {
 
         <div className="rail-foot">
           <div className="row">
-            <span className={`led ${client.mode === "live" ? "live" : "amber"}`} />
-            <span className="k">{client.mode === "live" ? "live api" : "demo data"}</span>
+            <span className="led live" />
+            <span className="k">live api</span>
           </div>
           <div className="dim" style={{ fontSize: 11, wordBreak: "break-all" }}>
             {identity.email ?? identity.id}
@@ -64,7 +66,7 @@ export function Shell() {
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <NavLink
-              to={`${CONSOLE_BASE}/settings`}
+              to="/employers/settings"
               className={({ isActive }) => `btn sm ghost${isActive ? " active" : ""}`}
               style={{ flex: 1, justifyContent: "center" }}
             >
@@ -80,7 +82,7 @@ export function Shell() {
       <div className="main">
         <header className="masthead">
           <span className="crumbs">
-            console / <b>{crumb || "home"}</b>
+            employers / <b>{crumb || "home"}</b>
           </span>
           <IstClock />
         </header>

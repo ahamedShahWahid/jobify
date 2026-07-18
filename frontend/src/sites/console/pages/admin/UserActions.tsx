@@ -4,6 +4,7 @@ import { errorMessage } from "../../api/client";
 import type { AdminUserRead } from "../../api/types";
 import { ErrorNotice, Field, Stamp } from "../../components/bits";
 import { useSession } from "../../session";
+import { CONSOLE_BASE } from "../../base";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -51,7 +52,7 @@ export function UserActions() {
 
       <div className="notice rise">
         The API exposes no user search — moderation is keyed by user UUID. Find subjects in the{" "}
-        <Link to="/console/admin/audit">audit trail</Link> (any actor or user-resource id is clickable and
+        <Link to={`${CONSOLE_BASE}/admin/audit`}>audit trail</Link> (any actor or user-resource id is clickable and
         lands here pre-filled). Every action below writes an <span>admin.user.*</span>{" "}
         audit row.
       </div>
@@ -147,7 +148,7 @@ export function UserActions() {
               </>
             )}
             <div className="row">
-              <Link className="btn ghost sm" to={`/console/admin/audit?actor=${result.id}`}>
+              <Link className="btn ghost sm" to={`${CONSOLE_BASE}/admin/audit?actor=${result.id}`}>
                 View their actions in the trail →
               </Link>
             </div>

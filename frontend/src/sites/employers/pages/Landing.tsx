@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { CONSOLE_URL } from "../EmployersRoutes";
 import { Footer, Masthead } from "../components/Chrome";
 import { Ledger } from "../components/Ledger";
 
@@ -22,9 +21,9 @@ export function Landing() {
             each applicant ranked — with a one-line reason and an honest caveat.
           </p>
           <div className="hero-cta rise d3">
-            <a className="btn btn-primary" href={CONSOLE_URL} target="_blank" rel="noreferrer">
-              Open the console <span className="arrow" aria-hidden="true">→</span>
-            </a>
+            <Link className="btn btn-primary" to="/employers/signin">
+              Sign in <span className="arrow" aria-hidden="true">→</span>
+            </Link>
             <Link className="textlink" to="/employers#how">
               See how it works
             </Link>
@@ -261,9 +260,9 @@ export function Landing() {
                 <li className="off"><span className="mk">–</span> Single seat</li>
                 <li className="off"><span className="mk">–</span> Verified badge</li>
               </ul>
-              <a className="btn btn-ghost" href={CONSOLE_URL} target="_blank" rel="noreferrer">
+              <Link className="btn btn-ghost" to="/employers/signin">
                 Start free
-              </a>
+              </Link>
             </article>
             <article className="plan featured rise d2">
               <div className="tier">
@@ -280,9 +279,9 @@ export function Landing() {
                 <li><span className="mk">+</span> Full audit trail export</li>
                 <li><span className="mk">+</span> Team &amp; invite management</li>
               </ul>
-              <a className="btn btn-primary" href={CONSOLE_URL} target="_blank" rel="noreferrer">
+              <Link className="btn btn-primary" to="/employers/signin">
                 Choose Team <span className="arrow" aria-hidden="true">→</span>
-              </a>
+              </Link>
             </article>
             <article className="plan rise d3">
               <div className="tier">Scale</div>
@@ -372,7 +371,7 @@ export function Landing() {
                 <span className="q">Q6</span>How do we get started?
               </dt>
               <dd>
-                Open the console, create your employer workspace, and post your first role.
+                Sign in, create your employer workspace, and post your first role.
                 The first role is free — you&apos;ll see the ranked stack before you commit
                 to a plan.
               </dd>
@@ -389,12 +388,12 @@ export function Landing() {
             <h2>Read reasons, not résumé piles.</h2>
             <p className="deck">
               Post your first role free and see ranked applicants with a score and a
-              reason on each. The console is one click away.
+              reason on each. Sign-in is one click away.
             </p>
             <div className="hero-cta">
-              <a className="btn btn-invert" href={CONSOLE_URL} target="_blank" rel="noreferrer">
-                Open the console <span className="arrow" aria-hidden="true">→</span>
-              </a>
+              <Link className="btn btn-invert" to="/employers/signin">
+                Sign in <span className="arrow" aria-hidden="true">→</span>
+              </Link>
               <Link to="/employers/verify" className="btn btn-ghost on-dark-ghost">
                 Get verified first
               </Link>

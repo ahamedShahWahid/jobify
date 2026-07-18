@@ -5,6 +5,7 @@ import type { AuditLogFilters } from "../../api/types";
 import { EmptyState, ErrorNotice, JsonView, ShortId, Stamp } from "../../components/bits";
 import { usePagedFetch } from "../../paging/usePagedFetch";
 import { useSession } from "../../session";
+import { CONSOLE_BASE } from "../../base";
 
 const EMPTY_FILTERS: AuditLogFilters = {};
 
@@ -46,7 +47,7 @@ export function AuditExplorer() {
   const set = (key: keyof AuditLogFilters) => (value: string) =>
     setDraft((d) => ({ ...d, [key]: value || undefined }));
 
-  const pickUser = (id: string) => navigate(`/console/admin/users?user=${id}`);
+  const pickUser = (id: string) => navigate(`${CONSOLE_BASE}/admin/users?user=${id}`);
 
   return (
     <>
