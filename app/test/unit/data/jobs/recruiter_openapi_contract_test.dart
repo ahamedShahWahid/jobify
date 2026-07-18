@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('Flutter recruiter DTO fields match the backend OpenAPI snapshot', () {
+  test('backend recruiter schemas pin the expected wire fields', () {
     final snapshot = jsonDecode(
       File('../tests/unit/openapi_snapshot.json').readAsStringSync(),
     ) as Map<String, dynamic>;
