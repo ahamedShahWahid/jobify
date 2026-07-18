@@ -6,7 +6,16 @@ const snapshotPath = fileURLToPath(
 );
 const schemas = JSON.parse(readFileSync(snapshotPath, "utf8")).components.schemas;
 
-const recruiterContract = {
+const clientContract = {
+  AuditAnalyticsRead: [
+    "action_counts", "activity", "distinct_actors", "last_24h", "role_counts",
+    "span_end", "span_start", "system_events", "total_events",
+  ],
+  AdminEmployerRead: [
+    "created_at", "gst", "id", "name", "reason", "reviewed_at", "status",
+  ],
+  CountBucketRead: ["count", "key"],
+  DayBucketRead: ["count", "day"],
   JobRead: [
     "ctc_max", "ctc_min", "description", "employer_verified", "id",
     "locations", "max_exp_years", "min_exp_years", "posted_at", "status", "title",
@@ -28,7 +37,7 @@ const recruiterContract = {
   ],
 };
 
-for (const [schemaName, expected] of Object.entries(recruiterContract)) {
+for (const [schemaName, expected] of Object.entries(clientContract)) {
   const schema = schemas[schemaName];
   if (!schema) throw new Error(`OpenAPI schema missing: ${schemaName}`);
   const actual = Object.keys(schema.properties ?? {}).sort();
@@ -40,4 +49,4 @@ for (const [schemaName, expected] of Object.entries(recruiterContract)) {
   }
 }
 
-console.log("Recruiter OpenAPI contract matches the React client.");
+console.log("OpenAPI contract matches the React clients.");

@@ -3,6 +3,7 @@ import { errorMessage } from "../../api/client";
 import type { AdminAnalyticsSummary } from "../../api/types";
 import { EmptyState, ErrorNotice } from "../../components/bits";
 import { useSession } from "../../session";
+import { analyticsRequestState } from "./analyticsState";
 
 const DAY_MS = 86_400_000;
 
@@ -154,7 +155,8 @@ export function Analytics() {
     };
   }, [client]);
 
-  const loading = summary === null;
+  const requestState = analyticsRequestState(summary, error);
+  const loading = requestState === "loading";
 
   const stats = useMemo(() => {
     const total = summary?.total_events ?? 0;
@@ -242,7 +244,11 @@ export function Analytics() {
         </div>
       </div>
 
-      <ErrorNotice error={error} />
+      {requestState === "error" && (
+        <div role="alert" aria-label="Unable to load analytics">
+          <ErrorNotice error={error} />
+        </div>
+      )}
 
       {!loading && stats.total === 0 && !error ? (
         <EmptyState>The audit trail is empty — nothing to chart yet.</EmptyState>
