@@ -14,6 +14,16 @@ def test_sweep_notifications_is_beat_scheduled() -> None:
     assert entry["schedule"].run_every.total_seconds() > 0
 
 
+def test_cleanup_outbox_is_beat_scheduled() -> None:
+    entry = celery_app.conf.beat_schedule["cleanup-outbox"]
+    assert entry["task"] == "jobify.cleanup_outbox"
+    assert entry["schedule"].run_every.total_seconds() == 86400
+
+
+def test_cleanup_outbox_routes_to_outbox_queue() -> None:
+    assert celery_app.conf.task_routes["jobify.cleanup_outbox"] == {"queue": "outbox"}
+
+
 def test_every_beat_scheduled_task_has_a_queue_route() -> None:
     """beat_schedule and task_routes are two independent dicts in this module
     (arch review finding) -- a periodic task with no matching task_routes

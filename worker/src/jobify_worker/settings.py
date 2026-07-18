@@ -65,6 +65,8 @@ class WorkerSettings(BaseSettings):
     outbox_sweep_interval_seconds: int = Field(default=5, ge=1, le=300)
     outbox_lease_seconds: int = Field(default=300, ge=10, le=3600)
     outbox_max_attempts: int = Field(default=10, ge=1, le=100)
+    outbox_retention_days: int = Field(default=30, ge=1, le=3650)
+    outbox_cleanup_batch_size: int = Field(default=1000, ge=1, le=10_000)
 
     provider_connect_timeout_seconds: float = Field(default=5.0, gt=0, le=60)
     provider_read_timeout_seconds: float = Field(default=30.0, gt=0, le=300)

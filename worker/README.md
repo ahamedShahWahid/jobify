@@ -27,6 +27,10 @@ After fixing the cause of terminal failures, requeue them with:
     uv run --env-file=.env jobify-requeue-outbox --dry-run
     uv run --env-file=.env jobify-requeue-outbox --limit 100
 
+`cleanup_outbox` runs every 86400 seconds. Each run physically deletes at most
+`JOBIFY_OUTBOX_CLEANUP_BATCH_SIZE` live `completed` or `failed` rows older than
+`JOBIFY_OUTBOX_RETENTION_DAYS` (defaults: 1000 rows and 30 days).
+
 ## Queues
 
 | Queue    | Tasks                                          |
@@ -35,7 +39,7 @@ After fixing the cause of terminal failures, requeue them with:
 | `embed`  | `jobify.embed_applicant`, `jobify.embed_job`   |
 | `score`  | `jobify.score_applicant`, `jobify.score_job`   |
 | `notify` | `jobify.sweep_notifications`                   |
-| `outbox` | `jobify.sweep_outbox`                         |
+| `outbox` | `jobify.sweep_outbox`, `jobify.cleanup_outbox` |
 
 The API and pipeline tasks persist task-name + args in `outbox_events` in the
 same database transaction as the business change. `sweep_outbox` publishes the
@@ -65,6 +69,8 @@ In addition to database, Redis, storage, and logging variables in `.env`:
 | `JOBIFY_OUTBOX_SWEEP_INTERVAL_SECONDS` | `5` | Durable outbox beat interval |
 | `JOBIFY_OUTBOX_LEASE_SECONDS` | `300` | Outbox processing lease |
 | `JOBIFY_OUTBOX_MAX_ATTEMPTS` | `10` | Outbox terminal-failure threshold |
+| `JOBIFY_OUTBOX_RETENTION_DAYS` | `30` | Terminal outbox retention before cleanup |
+| `JOBIFY_OUTBOX_CLEANUP_BATCH_SIZE` | `1000` | Terminal rows physically deleted per cleanup run |
 | `JOBIFY_SCORE_BATCH_SIZE` | `100` | Applicant/job pairs processed per task batch |
 
 `JOBIFY_GEMINI_API_KEY` is required for Gemini embeddings or the LLM explainer.

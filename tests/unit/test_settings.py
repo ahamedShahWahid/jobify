@@ -458,6 +458,38 @@ def test_notify_batch_size_out_of_range_rejected(monkeypatch: pytest.MonkeyPatch
 
 
 # ---------------------------------------------------------------------------
+# Durable outbox settings
+# ---------------------------------------------------------------------------
+
+
+def test_outbox_cleanup_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    _set_minimum_env(monkeypatch)
+    settings = WorkerSettings()
+    assert settings.outbox_retention_days == 30
+    assert settings.outbox_cleanup_batch_size == 1000
+
+
+@pytest.mark.parametrize(
+    ("name", "value"),
+    [
+        ("JOBIFY_OUTBOX_RETENTION_DAYS", "0"),
+        ("JOBIFY_OUTBOX_RETENTION_DAYS", "3651"),
+        ("JOBIFY_OUTBOX_CLEANUP_BATCH_SIZE", "0"),
+        ("JOBIFY_OUTBOX_CLEANUP_BATCH_SIZE", "10001"),
+    ],
+)
+def test_outbox_cleanup_settings_reject_out_of_range_values(
+    monkeypatch: pytest.MonkeyPatch,
+    name: str,
+    value: str,
+) -> None:
+    _set_minimum_env(monkeypatch)
+    monkeypatch.setenv(name, value)
+    with pytest.raises(ValidationError):
+        WorkerSettings()
+
+
+# ---------------------------------------------------------------------------
 # Match-explainer settings (from sub-project G)
 # ---------------------------------------------------------------------------
 
