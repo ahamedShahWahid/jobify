@@ -14,14 +14,27 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from structlog.testing import capture_logs
 
-from jobify.db.models import Notification, NotificationChannel, NotificationStatus, User, UserRole
+from jobify.db.models import (
+    ConsentScope,
+    Notification,
+    NotificationChannel,
+    NotificationStatus,
+    User,
+    UserConsent,
+    UserRole,
+)
 from jobify.integrations.notifications.base import ChannelResult
-from jobify_worker.tasks.sweep_notifications import _sweep_notifications_async
+from jobify_worker.tasks.sweep_notifications import (
+    _sweep_notifications_async,
+    _worker_settings,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -263,3 +276,82 @@ async def test_sweep_batch_size_respected(session: AsyncSession) -> None:
     pending = [r for r in rows if r.status == NotificationStatus.PENDING]
     assert len(sent) == 10
     assert len(pending) == 90
+
+
+@pytest.mark.integration
+async def test_sweep_does_not_complete_stale_claim_after_dispatch(
+    session: AsyncSession,
+) -> None:
+    user = await _seed_user(session, email="stale@example.com")
+    notification = await _seed_notification(session, user)
+    await session.commit()
+    sm = _make_sm(session)
+
+    class _TokenStealingChannel:
+        async def send(self, row: Notification, *, recipient: str) -> ChannelResult:
+            async with sm() as claim_session:
+                current = await claim_session.get(Notification, row.id, with_for_update=True)
+                assert current is not None
+                current.dispatch_token = uuid4()
+                current.locked_until = datetime.now(UTC) + timedelta(minutes=1)
+                await claim_session.commit()
+            return ChannelResult.success()
+
+    await _sweep_notifications_async(
+        sm=sm,
+        email_channel=_TokenStealingChannel(),
+        batch_size=10,
+    )
+    await session.refresh(notification)
+    assert notification.status == NotificationStatus.DISPATCHING
+    assert notification.sent_at is None
+
+
+@pytest.mark.integration
+async def test_sweep_cancels_when_transactional_email_consent_is_revoked(
+    session: AsyncSession,
+) -> None:
+    user = await _seed_user(session, email="revoked@example.com")
+    notification = await _seed_notification(session, user)
+    session.add(
+        UserConsent(
+            user_id=user.id,
+            scope=ConsentScope.EMAIL_TRANSACTIONAL.value,
+            granted=False,
+        )
+    )
+    await session.commit()
+    await _sweep_notifications_async(sm=_make_sm(session), batch_size=10)
+    await session.refresh(notification)
+    assert notification.status == NotificationStatus.CANCELLED
+    assert notification.last_error == "consent_revoked:email_transactional"
+
+
+@pytest.mark.integration
+async def test_sweep_fails_when_recipient_email_is_missing(session: AsyncSession) -> None:
+    user = User(email=None, role=UserRole.APPLICANT)
+    session.add(user)
+    await session.flush()
+    notification = await _seed_notification(session, user)
+    await session.commit()
+    await _sweep_notifications_async(sm=_make_sm(session), batch_size=10)
+    await session.refresh(notification)
+    assert notification.status == NotificationStatus.FAILED
+    assert notification.last_error == "user_missing_or_no_email"
+
+
+@pytest.mark.integration
+async def test_sweep_logs_claim_exhaustion(session: AsyncSession) -> None:
+    user = await _seed_user(session, email="exhausted@example.com")
+    notification = await _seed_notification(
+        session,
+        user,
+        status=NotificationStatus.DISPATCHING,
+        attempts=_worker_settings.notify_max_attempts,
+    )
+    notification.dispatch_token = uuid4()
+    notification.locked_until = datetime.now(UTC) - timedelta(seconds=1)
+    await session.commit()
+    with capture_logs() as logs:
+        await _sweep_notifications_async(sm=_make_sm(session), batch_size=10)
+    assert any(row["event"] == "sweep.claim-exhausted" for row in logs)

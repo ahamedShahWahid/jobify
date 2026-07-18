@@ -158,6 +158,11 @@ async def _claim_notifications(
         rows = (await session.execute(stmt)).scalars().all()
         for notification in rows:
             if notification.attempts >= _worker_settings.notify_max_attempts:
+                _log.warning(
+                    "sweep.claim-exhausted",
+                    notification_id=str(notification.id),
+                    attempts=notification.attempts,
+                )
                 notification.status = NotificationStatus.FAILED
                 notification.last_error = notification.last_error or "dispatch_lease_expired"
                 notification.dispatch_token = None
