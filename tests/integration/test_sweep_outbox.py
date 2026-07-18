@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
@@ -44,24 +45,34 @@ def _make_sm(session: AsyncSession) -> async_sessionmaker[AsyncSession]:
     return async_sessionmaker(bind=session.bind, expire_on_commit=False)
 
 
+@pytest.mark.parametrize(
+    "locked_until",
+    [None, datetime(2000, 1, 1, tzinfo=UTC)],
+    ids=["null-lock", "expired-lock"],
+)
 @pytest.mark.asyncio
-async def test_claim_reclaims_processing_event_with_null_lock(
+async def test_claim_reclaims_processing_event_with_future_available_at(
     session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+    locked_until: datetime | None,
 ) -> None:
     event = OutboxEvent(
         kind=OutboxEventKind.TASK_DISPATCH,
         status=OutboxEventStatus.PROCESSING,
-        locked_until=None,
+        available_at=datetime.now(UTC) + timedelta(days=1),
+        locked_until=locked_until,
+        created_at=datetime(1990, 1, 1, tzinfo=UTC),
         payload={"task_name": "jobify.parse_resume", "args": ["id"]},
     )
     session.add(event)
     await session.commit()
+    monkeypatch.setattr(settings, "outbox_batch_size", 1)
 
     claims = await _claim(_make_sm(session))
 
     await session.refresh(event)
-    assert (event.id, event.dispatch_token) in claims
     assert event.dispatch_token is not None
+    assert claims == [(event.id, event.dispatch_token)]
 
 
 @pytest.mark.asyncio
@@ -222,6 +233,34 @@ async def test_concurrent_claimers_claim_event_once(
     engine = create_async_engine(migrated_db, poolclass=NullPool)
     sm = async_sessionmaker(engine, expire_on_commit=False)
     event_id: UUID | None = None
+    first_selected = asyncio.Event()
+    second_selected = asyncio.Event()
+    sequence_lock = asyncio.Lock()
+    execute_count = 0
+
+    class CoordinatedClaimSession(AsyncSession):
+        async def execute(self, *args: Any, **kwargs: Any) -> Any:
+            nonlocal execute_count
+            async with sequence_lock:
+                execute_count += 1
+                sequence = execute_count
+
+            if sequence == 2:
+                await first_selected.wait()
+
+            result = await super().execute(*args, **kwargs)
+            if sequence == 1:
+                first_selected.set()
+                await second_selected.wait()
+            elif sequence == 2:
+                second_selected.set()
+            return result
+
+    claim_sm = async_sessionmaker(
+        engine,
+        class_=CoordinatedClaimSession,
+        expire_on_commit=False,
+    )
     monkeypatch.setattr(settings, "outbox_batch_size", 1)
     try:
         async with sm() as seed_session:
@@ -245,9 +284,16 @@ async def test_concurrent_claimers_claim_event_once(
                 await isolation_session.execute(
                     select(OutboxEvent.id).where(OutboxEvent.id != event_id).with_for_update()
                 )
-                first, second = await asyncio.gather(_claim(sm), _claim(sm))
+                async with asyncio.timeout(5):
+                    first, second = await asyncio.gather(
+                        _claim(claim_sm),
+                        _claim(claim_sm),
+                    )
 
         claims = first + second
+        assert first_selected.is_set()
+        assert second_selected.is_set()
+        assert execute_count == 2
         assert len(claims) == 1
         assert claims[0][0] == event_id
     finally:

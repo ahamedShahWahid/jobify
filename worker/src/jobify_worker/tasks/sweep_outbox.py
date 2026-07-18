@@ -68,9 +68,11 @@ async def _claim(sm: async_sessionmaker[AsyncSession]) -> list[tuple[UUID, UUID]
                     select(OutboxEvent)
                     .where(
                         OutboxEvent.deleted_at.is_(None),
-                        OutboxEvent.available_at <= now,
                         or_(
-                            OutboxEvent.status == OutboxEventStatus.PENDING,
+                            (
+                                (OutboxEvent.status == OutboxEventStatus.PENDING)
+                                & (OutboxEvent.available_at <= now)
+                            ),
                             (
                                 (OutboxEvent.status == OutboxEventStatus.PROCESSING)
                                 & or_(
