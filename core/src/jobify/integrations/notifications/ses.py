@@ -37,7 +37,9 @@ class SesEmailChannel:
                 config=Config(
                     connect_timeout=connect_timeout_seconds,
                     read_timeout=read_timeout_seconds,
-                    retries={"mode": "standard", "max_attempts": 3},
+                    # SES sends are non-idempotent. One total attempt keeps the
+                    # dispatch lease bound equal to one connect/read window.
+                    retries={"mode": "standard", "total_max_attempts": 1},
                 ),
             )
         self._client = client

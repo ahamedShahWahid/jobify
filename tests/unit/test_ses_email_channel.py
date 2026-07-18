@@ -3,9 +3,36 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import boto3
 import pytest
 
 from jobify.integrations.notifications.ses import SesEmailChannel
+
+
+def test_ses_client_disables_sdk_retries_for_non_idempotent_send(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    def _client(service_name: str, **kwargs: object) -> MagicMock:
+        captured["service_name"] = service_name
+        captured.update(kwargs)
+        return MagicMock()
+
+    monkeypatch.setattr(boto3, "client", _client)
+
+    SesEmailChannel(
+        from_address="notify@jobify.test",
+        region="ap-south-1",
+        connect_timeout_seconds=7.0,
+        read_timeout_seconds=41.0,
+    )
+
+    config = captured["config"]
+    assert captured["service_name"] == "sesv2"
+    assert config.connect_timeout == 7.0
+    assert config.read_timeout == 41.0
+    assert config.retries == {"total_max_attempts": 1, "mode": "standard"}
 
 
 @pytest.mark.asyncio
