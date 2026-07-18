@@ -36,6 +36,17 @@ async def test_outbox_migration_has_claim_index(session: AsyncSession) -> None:
 
 
 @pytest.mark.integration
+async def test_outbox_has_dispatch_token_column(session: AsyncSession) -> None:
+    columns = await session.execute(
+        text("""
+        SELECT column_name FROM information_schema.columns
+        WHERE table_schema = 'jobify' AND table_name = 'outbox_events'
+    """)
+    )
+    assert "dispatch_token" in {row[0] for row in columns}
+
+
+@pytest.mark.integration
 async def test_users_has_partial_indexes(session: AsyncSession) -> None:
     result = await session.execute(
         text("""
