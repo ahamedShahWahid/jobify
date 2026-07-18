@@ -7,10 +7,43 @@ import asyncio
 from datetime import UTC, datetime
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from jobify.db.models import OutboxEvent, OutboxEventStatus
 from jobify.db.session import create_engine_from_settings, make_sessionmaker
 from jobify_worker.settings import WorkerSettings
+
+
+async def _requeue_rows(sm: async_sessionmaker[AsyncSession], *, limit: int, dry_run: bool) -> int:
+    async with sm() as session:
+        rows = (
+            (
+                await session.execute(
+                    select(OutboxEvent)
+                    .where(
+                        OutboxEvent.status == OutboxEventStatus.FAILED,
+                        OutboxEvent.deleted_at.is_(None),
+                    )
+                    .order_by(OutboxEvent.created_at, OutboxEvent.id)
+                    .limit(limit)
+                    .with_for_update(skip_locked=True)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        if dry_run:
+            await session.rollback()
+            return len(rows)
+        for event in rows:
+            event.status = OutboxEventStatus.PENDING
+            event.available_at = datetime.now(UTC)
+            event.dispatch_token = None
+            event.locked_until = None
+            event.attempts = 0
+            event.last_error = None
+        await session.commit()
+        return len(rows)
 
 
 async def _requeue(*, limit: int, dry_run: bool) -> int:
@@ -18,34 +51,7 @@ async def _requeue(*, limit: int, dry_run: bool) -> int:
     engine = create_engine_from_settings(settings)
     sm = make_sessionmaker(engine)
     try:
-        async with sm() as session:
-            rows = (
-                (
-                    await session.execute(
-                        select(OutboxEvent)
-                        .where(
-                            OutboxEvent.status == OutboxEventStatus.FAILED,
-                            OutboxEvent.deleted_at.is_(None),
-                        )
-                        .order_by(OutboxEvent.created_at, OutboxEvent.id)
-                        .limit(limit)
-                        .with_for_update(skip_locked=True)
-                    )
-                )
-                .scalars()
-                .all()
-            )
-            if dry_run:
-                await session.rollback()
-                return len(rows)
-            for event in rows:
-                event.status = OutboxEventStatus.PENDING
-                event.available_at = datetime.now(UTC)
-                event.locked_until = None
-                event.attempts = 0
-                event.last_error = None
-            await session.commit()
-            return len(rows)
+        return await _requeue_rows(sm, limit=limit, dry_run=dry_run)
     finally:
         await engine.dispose()
 
