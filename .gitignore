@@ -20,6 +20,7 @@ working
 
 # Project-local Git worktrees used for isolated implementation sessions.
 .worktrees/
+.superpowers/
 
 # Python
 __pycache__/
