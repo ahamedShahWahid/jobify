@@ -6,7 +6,7 @@ import asyncio
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import structlog
 from sqlalchemy import or_, select
@@ -44,15 +44,21 @@ async def _sweep_outbox_async(
     storage = storage or get_storage()
     dispatch = dispatch or _dispatch_task
 
-    event_ids = await _claim(sm)
-    for event_id in event_ids:
+    claims = await _claim(sm)
+    for event_id, dispatch_token in claims:
         try:
-            await _process_one(sm, event_id, storage=storage, dispatch=dispatch)
+            await _process_one(
+                sm,
+                event_id,
+                dispatch_token,
+                storage=storage,
+                dispatch=dispatch,
+            )
         except Exception as exc:
-            await _record_failure(sm, event_id, exc)
+            await _record_failure(sm, event_id, dispatch_token, exc)
 
 
-async def _claim(sm: async_sessionmaker[AsyncSession]) -> list[UUID]:
+async def _claim(sm: async_sessionmaker[AsyncSession]) -> list[tuple[UUID, UUID]]:
     now = datetime.now(UTC)
     lease_until = now + timedelta(seconds=settings.outbox_lease_seconds)
     async with sm() as session:
@@ -67,7 +73,10 @@ async def _claim(sm: async_sessionmaker[AsyncSession]) -> list[UUID]:
                             OutboxEvent.status == OutboxEventStatus.PENDING,
                             (
                                 (OutboxEvent.status == OutboxEventStatus.PROCESSING)
-                                & (OutboxEvent.locked_until < now)
+                                & or_(
+                                    OutboxEvent.locked_until.is_(None),
+                                    OutboxEvent.locked_until < now,
+                                )
                             ),
                         ),
                     )
@@ -79,17 +88,24 @@ async def _claim(sm: async_sessionmaker[AsyncSession]) -> list[UUID]:
             .scalars()
             .all()
         )
-        claimed: list[UUID] = []
+        claimed: list[tuple[UUID, UUID]] = []
         for event in rows:
             if event.attempts >= settings.outbox_max_attempts:
                 event.status = OutboxEventStatus.FAILED
-                event.locked_until = None
                 event.last_error = event.last_error or "processing_lease_expired"
+                _clear_claim(event)
+                _log.warning(
+                    "outbox.claim-exhausted",
+                    event_id=str(event.id),
+                    attempts=event.attempts,
+                )
                 continue
+            token = uuid4()
             event.status = OutboxEventStatus.PROCESSING
+            event.dispatch_token = token
             event.locked_until = lease_until
             event.attempts += 1
-            claimed.append(event.id)
+            claimed.append((event.id, token))
         await session.commit()
         return claimed
 
@@ -97,13 +113,14 @@ async def _claim(sm: async_sessionmaker[AsyncSession]) -> list[UUID]:
 async def _process_one(
     sm: async_sessionmaker[AsyncSession],
     event_id: UUID,
+    dispatch_token: UUID,
     *,
     storage: Storage,
     dispatch: Dispatch,
 ) -> None:
     async with sm() as session:
         event = await session.get(OutboxEvent, event_id)
-        if event is None or event.status != OutboxEventStatus.PROCESSING:
+        if event is None or not _owns_claim(event, dispatch_token):
             return
         kind = event.kind
         payload = event.payload
@@ -116,14 +133,20 @@ async def _process_one(
     else:  # pragma: no cover - enum constrains persisted values
         raise ValueError(f"unsupported outbox event kind: {kind}")
 
+    await _complete(sm, event_id, dispatch_token)
+
+
+async def _complete(
+    sm: async_sessionmaker[AsyncSession], event_id: UUID, dispatch_token: UUID
+) -> None:
     async with sm() as session:
         event = await session.get(OutboxEvent, event_id, with_for_update=True)
-        if event is None or event.status != OutboxEventStatus.PROCESSING:
+        if event is None or not _owns_claim(event, dispatch_token):
             return
         event.status = OutboxEventStatus.COMPLETED
         event.completed_at = datetime.now(UTC)
-        event.locked_until = None
         event.last_error = None
+        _clear_claim(event)
         # Task args and storage keys may be user-linked. Once the side effect
         # succeeds they are no longer needed for recovery, so do not retain them.
         event.payload = {}
@@ -131,19 +154,22 @@ async def _process_one(
 
 
 async def _record_failure(
-    sm: async_sessionmaker[AsyncSession], event_id: UUID, exc: Exception
+    sm: async_sessionmaker[AsyncSession],
+    event_id: UUID,
+    dispatch_token: UUID,
+    exc: Exception,
 ) -> None:
     async with sm() as session:
         event = await session.get(OutboxEvent, event_id, with_for_update=True)
-        if event is None or event.status != OutboxEventStatus.PROCESSING:
+        if event is None or not _owns_claim(event, dispatch_token):
             return
         terminal = event.attempts >= settings.outbox_max_attempts
         event.status = OutboxEventStatus.FAILED if terminal else OutboxEventStatus.PENDING
         event.available_at = datetime.now(UTC) + timedelta(
             seconds=min(2 ** max(event.attempts, 1), 300)
         )
-        event.locked_until = None
         event.last_error = f"{type(exc).__name__}: {exc}"[:2000]
+        _clear_claim(event)
         await session.commit()
         _log.warning(
             "outbox.event-failed",
@@ -151,5 +177,13 @@ async def _record_failure(
             attempts=event.attempts,
             terminal=terminal,
             error_type=type(exc).__name__,
-            exc_info=True,
         )
+
+
+def _owns_claim(event: OutboxEvent, dispatch_token: UUID) -> bool:
+    return event.status == OutboxEventStatus.PROCESSING and event.dispatch_token == dispatch_token
+
+
+def _clear_claim(event: OutboxEvent) -> None:
+    event.dispatch_token = None
+    event.locked_until = None
