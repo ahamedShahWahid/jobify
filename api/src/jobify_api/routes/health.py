@@ -1,7 +1,7 @@
 """Health endpoint.
 
-This is a liveness check only — no downstream dependency probes.
-DB/Redis readiness probes land in a later plan.
+This is a liveness check only — no downstream dependency probes. ``/ready``
+checks PostgreSQL and Redis.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from jobify import __version__
 from jobify.settings import Environment
 
 if TYPE_CHECKING:
-    from jobify.settings import Settings
+    from jobify_api.settings import Settings
 
 router = APIRouter()
 

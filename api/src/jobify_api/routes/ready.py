@@ -40,6 +40,13 @@ async def ready(request: Request) -> JSONResponse:
         checks["db"] = f"error: {type(exc).__name__}"
         overall_ok = False
 
+    try:
+        await request.app.state.redis.ping()
+        checks["redis"] = "ok"
+    except Exception as exc:
+        checks["redis"] = f"error: {type(exc).__name__}"
+        overall_ok = False
+
     body: dict[str, Any] = {
         "status": "ready" if overall_ok else "not_ready",
         "checks": checks,

@@ -13,6 +13,8 @@ series reflects unhandled failures, not just clean error responses.
 
 from __future__ import annotations
 
+from time import perf_counter
+
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from jobify_api.metrics import record_request
@@ -30,7 +32,13 @@ class MetricsMiddleware:
             return
 
         method = scope.get("method", "")
+        started_at = perf_counter()
         started_status: int | None = None
+
+        def _route_template() -> str:
+            route = scope.get("route")
+            path = getattr(route, "path", None)
+            return path if isinstance(path, str) else "__unmatched__"
 
         async def _send_with_metrics(message: Message) -> None:
             nonlocal started_status
@@ -45,10 +53,20 @@ class MetricsMiddleware:
             # that status; otherwise ServerErrorMiddleware will emit a 500.
             # (CancelledError and other BaseExceptions — e.g. a client disconnect
             # — are intentionally not caught here, so they're not miscounted as 5xx.)
-            record_request(method, started_status if started_status is not None else 500)
+            record_request(
+                method,
+                started_status if started_status is not None else 500,
+                route=_route_template(),
+                duration_seconds=perf_counter() - started_at,
+            )
             raise
         else:
             # Count the status actually emitted. A clean return with no response
             # (pathological) is left uncounted rather than booked as a phantom 500.
             if started_status is not None:
-                record_request(method, started_status)
+                record_request(
+                    method,
+                    started_status,
+                    route=_route_template(),
+                    duration_seconds=perf_counter() - started_at,
+                )

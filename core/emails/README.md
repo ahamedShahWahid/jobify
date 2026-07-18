@@ -6,9 +6,9 @@ Production-grade HTML email templates for the Jobify **notifications outbox**.
 > "verified". Same brand language as the applicant web surface (`frontend/src/sites/web/styles/site.css`).
 
 These are **real transactional emails**. Today the outbox's email channel is the
-`LoggingEmailChannel` stub (it logs `email.sent`); real SES is deferred. When a real
-`EmailChannel` ships, these templates are the markup it renders — so they're a genuine
-deliverable, not a mock.
+`LoggingEmailChannel` logs local deliveries; `SesEmailChannel` sends production
+email when configured. These static templates remain the visual source material;
+the current SES adapter emits a compact production-safe HTML/text rendering.
 
 ## No build step
 

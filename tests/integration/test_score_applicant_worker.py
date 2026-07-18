@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from uuid import uuid4
 
 import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-import jobify_worker.tasks.score_applicant as score_applicant_task
 from jobify.db.models import (
     Applicant,
     ApplicantEmbedding,
@@ -21,8 +19,8 @@ from jobify.db.models import (
     User,
     UserRole,
 )
-from jobify.scoring.match import TransientScoringError
 from jobify_worker.tasks.score_applicant import _score_applicant_async
+from tests.integration.outbox_helpers import task_event_args
 
 pytestmark = pytest.mark.integration
 
@@ -123,19 +121,12 @@ async def test_score_applicant_writes_rows_for_all_open_jobs(session: AsyncSessi
 
 @pytest.mark.integration
 async def test_score_applicant_batches_and_dispatches_cursor(
-    session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+    session: AsyncSession,
 ) -> None:
     applicant = await _seed_applicant(session)
     j1 = await _seed_job(session, title="A", embedding=[1.0] * 1536)
     j2 = await _seed_job(session, title="B", employer_name="Beta", embedding=[1.0] * 1536)
     await session.commit()
-
-    dispatched: list[tuple[object, object]] = []
-    monkeypatch.setattr(
-        score_applicant_task,
-        "_dispatch_next_batch",
-        lambda applicant_id, after_job_id: dispatched.append((applicant_id, after_job_id)),
-    )
 
     await _score_applicant_async(applicant.id, sm=_make_sm(session), batch_size=1)
 
@@ -150,19 +141,9 @@ async def test_score_applicant_batches_and_dispatches_cursor(
         .all()
     )
     assert [row.job_id for row in rows] == [ordered_job_ids[0]]
-    assert dispatched == [(applicant.id, ordered_job_ids[0])]
-
-
-def test_score_applicant_next_batch_dispatch_failure_is_transient(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    def fail_delay(*_args: object) -> None:
-        raise RuntimeError("broker down")
-
-    monkeypatch.setattr(score_applicant_task.score_applicant, "delay", fail_delay)
-
-    with pytest.raises(TransientScoringError):
-        score_applicant_task._dispatch_next_batch(uuid4(), uuid4())
+    assert [str(applicant.id), str(ordered_job_ids[0])] in await task_event_args(
+        session, "jobify.score_applicant"
+    )
 
 
 @pytest.mark.integration

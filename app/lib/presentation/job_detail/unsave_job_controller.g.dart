@@ -51,7 +51,7 @@ final class UnsaveJobControllerProvider
 }
 
 String _$unsaveJobControllerHash() =>
-    r'96c1fbdfbf123c6e1758f373f9b83b571b316768';
+    r'06acec1d8a52e758106451f5d6598d04bd68ba48';
 
 final class UnsaveJobControllerFamily extends $Family
     with

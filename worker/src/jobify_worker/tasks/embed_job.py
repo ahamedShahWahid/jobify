@@ -13,10 +13,7 @@ TransientEmbeddingError → autoretry.
 
 from __future__ import annotations
 
-import asyncio
-import concurrent.futures
-from collections.abc import Callable, Coroutine
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 import structlog
@@ -24,7 +21,6 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.sql import func
 
-from jobify.celery_app import celery_app
 from jobify.db.models import Employer, Job, JobEmbedding
 from jobify.integrations.embeddings.base import (
     EmbeddingProvider,
@@ -33,6 +29,9 @@ from jobify.integrations.embeddings.base import (
     TransientEmbeddingError,
 )
 from jobify.integrations.embeddings.canonicalize_job import canonicalize_job
+from jobify.outbox import enqueue_task
+from jobify_worker.async_bridge import run_async
+from jobify_worker.celery_app import celery_app
 from jobify_worker.runtime import get_embedding_provider, get_session_maker
 
 if TYPE_CHECKING:
@@ -63,19 +62,7 @@ def embed_job(self, job_id_str: str) -> None:  # type: ignore[no-untyped-def]
     to a fresh thread so the inner ``asyncio.run()`` gets a clean loop.
     """
 
-    def _run(coro_factory: Callable[[], Coroutine[Any, Any, None]]) -> None:
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-        if loop is not None and loop.is_running():
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                fut = pool.submit(asyncio.run, coro_factory())
-                fut.result()
-        else:
-            asyncio.run(coro_factory())
-
-    _run(lambda: _embed_job_async(UUID(job_id_str)))
+    run_async(lambda: _embed_job_async(UUID(job_id_str)))
 
 
 # --- Async body ---
@@ -170,6 +157,7 @@ async def _embed_job_async(
             )
         )
         await session.execute(stmt)
+        enqueue_task(session, "jobify.score_job", str(job_id))
         await session.commit()
 
     _log.info(
@@ -178,17 +166,6 @@ async def _embed_job_async(
         model_name=result.model_name,
         input_tokens=result.input_tokens,
     )
-    _dispatch_score(job_id)
-
-
-def _dispatch_score(job_id: UUID) -> None:
-    """Fire score_job.delay(...) post-embed, fire-and-forget."""
-    from jobify_worker.tasks.score_job import score_job
-
-    try:
-        score_job.delay(str(job_id))
-    except Exception:
-        _log.warning("score.dispatch-failed", job_id=str(job_id), exc_info=True)
 
 
 async def _load_job_with_employer(session: AsyncSession, job_id: UUID) -> tuple[Job, str] | None:

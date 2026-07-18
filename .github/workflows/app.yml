@@ -1,10 +1,10 @@
 name: app
 on:
   pull_request:
-    paths: ['app/**', '.github/workflows/app.yml']
+    paths: ['app/**', 'tests/unit/openapi_snapshot.json', '.github/workflows/app.yml']
   push:
     branches: [main]
-    paths: ['app/**', '.github/workflows/app.yml']
+    paths: ['app/**', 'tests/unit/openapi_snapshot.json', '.github/workflows/app.yml']
 
 jobs:
   test:

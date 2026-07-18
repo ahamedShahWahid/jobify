@@ -17,15 +17,11 @@ Any other unexpected exception → wrapped → retried up to max_retries.
 
 from __future__ import annotations
 
-import asyncio
-import concurrent.futures
-from collections.abc import Callable, Coroutine
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 import structlog
 
-from jobify.celery_app import celery_app, settings
 from jobify.db.models import Resume, ResumeParseStatus
 from jobify.integrations.parser.base import (
     ParsedResume,
@@ -34,8 +30,10 @@ from jobify.integrations.parser.base import (
     TransientParserError,
 )
 from jobify.integrations.parser.library import LibraryResumeParser
-from jobify.integrations.storage.local import LocalFileStorage
-from jobify_worker.runtime import get_session_maker
+from jobify.outbox import enqueue_task
+from jobify_worker.async_bridge import run_async
+from jobify_worker.celery_app import celery_app
+from jobify_worker.runtime import get_session_maker, get_storage
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -70,28 +68,15 @@ def parse_resume(self, resume_id_str: str) -> None:  # type: ignore[no-untyped-d
     to a fresh thread so the inner ``asyncio.run()`` gets a clean loop.
     """
 
-    def _run(coro_factory: Callable[[], Coroutine[Any, Any, None]]) -> None:
-        """Run a coroutine, dispatching to a thread if a loop is running."""
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-        if loop is not None and loop.is_running():
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                fut = pool.submit(asyncio.run, coro_factory())
-                fut.result()
-        else:
-            asyncio.run(coro_factory())
-
     try:
-        _run(lambda: _parse_resume_async(UUID(resume_id_str)))
+        run_async(lambda: _parse_resume_async(UUID(resume_id_str)))
     except TransientParserError as exc:
         if self.request.retries >= self.max_retries:
             # Capture the reason string before the except-clause variable goes
             # out of scope in Python 3, so the helper lambda captures a str
             # (not the exception object itself).
             reason = f"max_retries_exceeded: {exc}"
-            _run(
+            run_async(
                 lambda: _mark_failed(
                     get_session_maker(),
                     UUID(resume_id_str),
@@ -114,10 +99,10 @@ async def _parse_resume_async(
     """Async body — split out for unit testing with injected fakes.
 
     Production callers (the Celery task) pass nothing; this resolves the real
-    sessionmaker, LocalFileStorage, and LibraryResumeParser.
+    sessionmaker, configured storage adapter, and LibraryResumeParser.
     """
     sm = sm or get_session_maker()
-    storage = storage or LocalFileStorage(root=settings.storage_root)
+    storage = storage or get_storage()
     parser = parser or LibraryResumeParser()
 
     # --- Transaction 1: load + gate + mark parsing ---
@@ -178,29 +163,8 @@ async def _parse_resume_async(
         resume.parsed_json = parsed.model_dump(mode="json")
         resume.parse_status = ResumeParseStatus.PARSED
         resume.parse_error = None
+        enqueue_task(session, "jobify.embed_applicant", str(resume.applicant_id))
         await session.commit()
-
-    # Dispatch async embedding — broker outages MUST NOT fail the parse
-    # because parsed_json is already durable. Admin tooling can replay
-    # missing applicant_embeddings rows after the broker recovers.
-    #
-    # Lazy import: jobify_worker.tasks.embed is autodiscovered by Celery but
-    # we keep the import deferred to dispatch time so that import-time
-    # failures in test collection (where env vars aren't yet set) don't
-    # cascade through this module.
-    try:
-        from jobify_worker.tasks.embed import embed_applicant
-
-        embed_applicant.delay(str(resume.applicant_id))
-    except Exception as exc:
-        _log.warning(
-            "embed.dispatch-failed",
-            applicant_id=str(resume.applicant_id),
-            resume_id=str(resume_id),
-            error_type=type(exc).__name__,
-            error_message=str(exc),
-            exc_info=True,
-        )
 
     _log.info(
         "parse.complete",

@@ -16,9 +16,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobify.db.models import Applicant, EmployerUser, User, UserRole
-from jobify.settings import Settings
 from jobify_api.auth.tokens import AccessTokenError, decode_access_token
 from jobify_api.dependencies import get_session
+from jobify_api.settings import Settings
 
 _log = structlog.get_logger(__name__)
 

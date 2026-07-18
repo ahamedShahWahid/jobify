@@ -4,6 +4,7 @@ import pytest
 from sqlalchemy import select
 
 from jobify.db.models import Employer, Job
+from tests.integration.outbox_helpers import task_event_args
 
 pytestmark = pytest.mark.integration
 
@@ -103,8 +104,8 @@ async def test_create_job_invalid_exp_band_returns_422(async_client, applicant_u
     assert r.status_code == 422
 
 
-async def test_create_job_dispatches_embed(async_client, applicant_user_and_token, monkeypatch):
-    """The route must fire-and-forget embed_job.delay(job_id_str) after commit."""
+async def test_create_job_dispatches_embed(async_client, applicant_user_and_token, session):
+    """The route durably stages embed_job in the same transaction."""
     _, token = applicant_user_and_token
     r1 = await async_client.post(
         "/v1/employers",
@@ -112,16 +113,6 @@ async def test_create_job_dispatches_embed(async_client, applicant_user_and_toke
         headers={"Authorization": f"Bearer {token}"},
     )
     emp_id = r1.json()["id"]
-
-    called_with: list[str] = []
-
-    import jobify.celery_app as _celery_mod
-
-    def _spy_enqueue(name: str, *args: object) -> None:
-        if name == "jobify.embed_job":
-            called_with.extend(args)
-
-    monkeypatch.setattr(_celery_mod, "enqueue", _spy_enqueue)
 
     body = {
         "employer_id": emp_id,
@@ -133,7 +124,7 @@ async def test_create_job_dispatches_embed(async_client, applicant_user_and_toke
     }
     r = await async_client.post("/v1/jobs", json=body, headers={"Authorization": f"Bearer {token}"})
     assert r.status_code == 201
-    assert called_with == [r.json()["id"]]
+    assert [r.json()["id"]] in await task_event_args(session, "jobify.embed_job")
 
 
 async def test_create_job_employer_verified_false_by_default(

@@ -8,11 +8,17 @@ from __future__ import annotations
 
 import logging
 import sys
-from typing import Final
+from typing import Final, Protocol
 
 import structlog
 
-from jobify.settings import Settings
+from jobify.settings import CoreSettings, LogFormat, LogLevel
+
+
+class LoggingSettings(Protocol):
+    log_level: LogLevel
+    log_format: LogFormat
+
 
 _LEVEL_MAP: Final[dict[str, int]] = {
     "DEBUG": logging.DEBUG,
@@ -23,13 +29,13 @@ _LEVEL_MAP: Final[dict[str, int]] = {
 }
 
 
-def configure_logging() -> None:
+def configure_logging(settings: LoggingSettings | None = None) -> None:
     """Initialize stdlib + structlog. Idempotent: handlers do not stack.
 
     Reconfigures structlog every call so the logger factory binds to the
     current ``sys.stdout`` (important for tests that patch stdout).
     """
-    settings = Settings()
+    settings = settings or CoreSettings()
     level = _LEVEL_MAP[settings.log_level]
 
     # Stdlib root: replace any existing handlers with a single stdout handler.

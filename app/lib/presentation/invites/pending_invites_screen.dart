@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
+import 'package:jobify_app/core/format/date_formats.dart';
 import 'package:jobify_app/data/employers/team/employer_invite_dto.dart';
 import 'package:jobify_app/presentation/invites/invite_response_controller.dart';
 import 'package:jobify_app/presentation/invites/my_invites_controller.dart';
 import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
 import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
 import 'package:jobify_app/presentation/widgets/jobify_empty_state.dart';
-
-final _dateFormat = DateFormat.yMMMMd();
 
 /// Applicant-reachable list of pending employer invitations.
 ///
@@ -67,7 +65,7 @@ class _InviteCard extends ConsumerWidget {
             const SizedBox(height: JobifySpacing.xs),
             Text(
               'Invited as ${invite.role == 'owner' ? 'owner' : 'member'} · '
-              'expires ${_dateFormat.format(invite.expiresAt)}',
+              'expires ${jobifyLongDateFormat.format(invite.expiresAt)}',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

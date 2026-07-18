@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
+import 'package:jobify_app/core/format/date_formats.dart';
 import 'package:jobify_app/data/jobs/application_status.dart';
 import 'package:jobify_app/presentation/applications/applications_controller.dart';
 import 'package:jobify_app/presentation/routing/routes.dart';
@@ -12,8 +12,6 @@ import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
 import 'package:jobify_app/presentation/widgets/bold_header.dart';
 import 'package:jobify_app/presentation/widgets/jobify_empty_state.dart';
 import 'package:jobify_app/presentation/widgets/jobify_loading_view.dart';
-
-final _dateFormat = DateFormat.yMMMMd();
 
 class ApplicationsScreen extends ConsumerStatefulWidget {
   const ApplicationsScreen({super.key});
@@ -116,7 +114,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                             final whenDate = isWithdrawn
                                 ? item.application.updatedAt
                                 : item.application.createdAt;
-                            final when = _dateFormat.format(whenDate);
+                            final when = jobifyLongDateFormat.format(whenDate);
                             return isWithdrawn
                                 ? 'Withdrawn $when'
                                 : 'Applied $when';

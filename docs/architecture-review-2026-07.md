@@ -1,5 +1,12 @@
 # Jobify Architecture Review — July 2026
 
+> Historical review snapshot. Subsequent hardening replaced direct Celery
+> dispatch with a transactional outbox, made DSR blob cleanup durable, added
+> S3/SES adapters, API throttling, protected metrics, Redis readiness,
+> worker-only settings/dependencies, and recruiter OpenAPI contract gates for
+> both Flutter and React. The findings below describe the repository at review
+> time; current package documentation is authoritative.
+
 **Lens:** near-term shipping velocity (solo dev + Claude). **Scope:** whole repo — `core/`, `api/`, `worker/`, `tests/`, `app/` (Flutter), `frontend/` (React/Vite).
 **Method:** 5 rubric-driven explorer agents (one per surface) + main-session cross-cutting synthesis. Every finding below was re-read first-hand from the cited file before being included; a few explorer-reported nits with clean, specific citations were kept without a second independent read (noted inline where relevant).
 

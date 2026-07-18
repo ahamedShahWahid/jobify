@@ -7,12 +7,14 @@ rejected_at; verify and reject are mutually exclusive.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from structlog.testing import capture_logs
 
 from jobify.db.models import AuditLog, Employer, User, UserRole
 from jobify_api.auth.tokens import mint_access_token
@@ -156,6 +158,37 @@ async def test_list_filters_by_status(
 
 
 @pytest.mark.asyncio
+async def test_verification_counts_returns_all_statuses(
+    async_client: AsyncClient,
+    session: AsyncSession,
+    admin_user_and_token: tuple[User, str],
+) -> None:
+    _, token = admin_user_and_token
+    before_response = await async_client.get("/v1/admin/employers/counts", headers=_auth(token))
+    assert before_response.status_code == 200
+    before = before_response.json()
+
+    pending = await _make_employer(session, name=f"Count pending {uuid4().hex[:6]}")
+    verified = await _make_employer(session, name=f"Count verified {uuid4().hex[:6]}")
+    rejected = await _make_employer(session, name=f"Count rejected {uuid4().hex[:6]}")
+    now = datetime.now(UTC)
+    verified.verified_at = now
+    rejected.rejected_at = now
+    rejected.rejection_reason = "test"
+    await session.commit()
+
+    response = await async_client.get("/v1/admin/employers/counts", headers=_auth(token))
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "pending": before["pending"] + 1,
+        "verified": before["verified"] + 1,
+        "rejected": before["rejected"] + 1,
+    }
+    assert pending.id and verified.id and rejected.id
+
+
+@pytest.mark.asyncio
 async def test_list_pagination_cursor(
     async_client: AsyncClient,
     session: AsyncSession,
@@ -200,6 +233,37 @@ async def test_reject_requires_reason(
         f"/v1/admin/employers/{employer.id}/reject", headers=_auth(token), json={"reason": ""}
     )
     assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_rejection_reason_is_audited_but_not_logged(
+    async_client: AsyncClient,
+    session: AsyncSession,
+    admin_user_and_token: tuple[User, str],
+) -> None:
+    _, token = admin_user_and_token
+    employer = await _make_employer(session)
+    await session.commit()
+    sensitive_reason = "private verification evidence"
+
+    with capture_logs() as logs:
+        response = await async_client.post(
+            f"/v1/admin/employers/{employer.id}/reject",
+            headers=_auth(token),
+            json={"reason": sensitive_reason},
+        )
+
+    assert response.status_code == 200
+    assert sensitive_reason not in str(logs)
+    audit = (
+        await session.execute(
+            select(AuditLog).where(
+                AuditLog.action == "admin.employer.rejected",
+                AuditLog.resource_id == employer.id,
+            )
+        )
+    ).scalar_one()
+    assert audit.context["reason"] == sensitive_reason
 
 
 @pytest.mark.asyncio

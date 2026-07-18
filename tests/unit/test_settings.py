@@ -7,7 +7,20 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from jobify.settings import Settings
+from jobify_api.settings import Settings
+from jobify_worker.settings import WorkerSettings
+
+
+def test_worker_settings_do_not_require_api_secrets() -> None:
+    settings = WorkerSettings(
+        env="local",
+        service_name="jobify-worker",
+        db_url="postgresql+asyncpg://user:pass@localhost/jobify",
+        redis_url="redis://localhost:6379/0",
+    )
+    assert settings.service_name == "jobify-worker"
+    assert not hasattr(settings, "jwt_secret")
+    assert not hasattr(settings, "google_oauth_client_ids")
 
 
 def test_settings_loads_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -339,7 +352,7 @@ def test_celery_task_always_eager_defaults_false(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setenv("JOBIFY_DB_URL", "postgresql+asyncpg://u:p@h:5432/d")
     monkeypatch.setenv("JOBIFY_REDIS_URL", "redis://localhost:6379/0")
 
-    s = Settings()
+    s = WorkerSettings()
     assert s.celery_task_always_eager is False
 
 
@@ -351,21 +364,21 @@ def test_celery_task_always_eager_defaults_false(monkeypatch: pytest.MonkeyPatch
 def test_gemini_api_key_is_optional_at_settings_load(monkeypatch: pytest.MonkeyPatch) -> None:
     _set_minimum_env(monkeypatch)
     monkeypatch.delenv("JOBIFY_GEMINI_API_KEY", raising=False)
-    s = Settings()
+    s = WorkerSettings()
     assert s.gemini_api_key is None
 
 
 def test_embedding_model_default_is_gemini_2(monkeypatch: pytest.MonkeyPatch) -> None:
     _set_minimum_env(monkeypatch)
     monkeypatch.delenv("JOBIFY_EMBEDDING_MODEL", raising=False)
-    s = Settings()
+    s = WorkerSettings()
     assert s.embedding_model == "gemini-embedding-2"
 
 
 def test_embedding_dim_default_is_1536(monkeypatch: pytest.MonkeyPatch) -> None:
     _set_minimum_env(monkeypatch)
     monkeypatch.delenv("JOBIFY_EMBEDDING_DIM", raising=False)
-    s = Settings()
+    s = WorkerSettings()
     assert s.embedding_dim == 1536
 
 
@@ -373,14 +386,14 @@ def test_embedding_dim_rejects_unsupported_value(monkeypatch: pytest.MonkeyPatch
     _set_minimum_env(monkeypatch)
     monkeypatch.setenv("JOBIFY_EMBEDDING_DIM", "999")
     with pytest.raises(ValidationError, match="embedding_dim must be one of"):
-        Settings()
+        WorkerSettings()
 
 
 @pytest.mark.parametrize("dim", [128, 256, 512, 768, 1024, 1536, 3072])
 def test_embedding_dim_accepts_supported_values(monkeypatch: pytest.MonkeyPatch, dim: int) -> None:
     _set_minimum_env(monkeypatch)
     monkeypatch.setenv("JOBIFY_EMBEDDING_DIM", str(dim))
-    s = Settings()
+    s = WorkerSettings()
     assert s.embedding_dim == dim
 
 
@@ -393,19 +406,19 @@ def test_match_surface_threshold_out_of_range_rejected(monkeypatch: pytest.Monke
     _set_minimum_env(monkeypatch)
     monkeypatch.setenv("JOBIFY_MATCH_SURFACE_THRESHOLD", "1.5")
     with pytest.raises(ValidationError):
-        Settings()
+        WorkerSettings()
 
 
 def test_match_vector_weight_out_of_range_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     _set_minimum_env(monkeypatch)
     monkeypatch.setenv("JOBIFY_MATCH_VECTOR_WEIGHT", "-0.1")
     with pytest.raises(ValidationError):
-        Settings()
+        WorkerSettings()
 
 
 def test_match_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     _set_minimum_env(monkeypatch)
-    s = Settings()
+    s = WorkerSettings()
     assert s.match_surface_threshold == 0.55
     assert s.match_vector_weight == 0.6
     assert s.score_batch_size == 100
@@ -415,7 +428,7 @@ def test_score_batch_size_out_of_range_rejected(monkeypatch: pytest.MonkeyPatch)
     _set_minimum_env(monkeypatch)
     monkeypatch.setenv("JOBIFY_SCORE_BATCH_SIZE", "0")
     with pytest.raises(ValidationError):
-        Settings()
+        WorkerSettings()
 
 
 # ---------------------------------------------------------------------------
@@ -426,7 +439,7 @@ def test_score_batch_size_out_of_range_rejected(monkeypatch: pytest.MonkeyPatch)
 def test_email_channel_default_is_logging(monkeypatch: pytest.MonkeyPatch) -> None:
     _set_minimum_env(monkeypatch)
     monkeypatch.delenv("JOBIFY_EMAIL_CHANNEL", raising=False)
-    s = Settings()
+    s = WorkerSettings()
     assert s.email_channel == "logging"
 
 
@@ -434,14 +447,46 @@ def test_email_channel_invalid_value_rejected(monkeypatch: pytest.MonkeyPatch) -
     _set_minimum_env(monkeypatch)
     monkeypatch.setenv("JOBIFY_EMAIL_CHANNEL", "sendgrid")
     with pytest.raises(ValidationError, match="email_channel"):
-        Settings()
+        WorkerSettings()
 
 
 def test_notify_batch_size_out_of_range_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     _set_minimum_env(monkeypatch)
     monkeypatch.setenv("JOBIFY_NOTIFY_BATCH_SIZE", "0")
     with pytest.raises(ValidationError):
-        Settings()
+        WorkerSettings()
+
+
+# ---------------------------------------------------------------------------
+# Durable outbox settings
+# ---------------------------------------------------------------------------
+
+
+def test_outbox_cleanup_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    _set_minimum_env(monkeypatch)
+    settings = WorkerSettings()
+    assert settings.outbox_retention_days == 30
+    assert settings.outbox_cleanup_batch_size == 1000
+
+
+@pytest.mark.parametrize(
+    ("name", "value"),
+    [
+        ("JOBIFY_OUTBOX_RETENTION_DAYS", "0"),
+        ("JOBIFY_OUTBOX_RETENTION_DAYS", "3651"),
+        ("JOBIFY_OUTBOX_CLEANUP_BATCH_SIZE", "0"),
+        ("JOBIFY_OUTBOX_CLEANUP_BATCH_SIZE", "10001"),
+    ],
+)
+def test_outbox_cleanup_settings_reject_out_of_range_values(
+    monkeypatch: pytest.MonkeyPatch,
+    name: str,
+    value: str,
+) -> None:
+    _set_minimum_env(monkeypatch)
+    monkeypatch.setenv(name, value)
+    with pytest.raises(ValidationError):
+        WorkerSettings()
 
 
 # ---------------------------------------------------------------------------
@@ -452,14 +497,14 @@ def test_notify_batch_size_out_of_range_rejected(monkeypatch: pytest.MonkeyPatch
 def test_match_explainer_default_is_llm(monkeypatch: pytest.MonkeyPatch) -> None:
     _set_minimum_env(monkeypatch)
     monkeypatch.delenv("JOBIFY_MATCH_EXPLAINER", raising=False)
-    s = Settings()
+    s = WorkerSettings()
     assert s.match_explainer == "llm"
 
 
 def test_match_explainer_templated_accepted(monkeypatch: pytest.MonkeyPatch) -> None:
     _set_minimum_env(monkeypatch)
     monkeypatch.setenv("JOBIFY_MATCH_EXPLAINER", "templated")
-    s = Settings()
+    s = WorkerSettings()
     assert s.match_explainer == "templated"
 
 
@@ -467,18 +512,49 @@ def test_match_explainer_invalid_value_rejected(monkeypatch: pytest.MonkeyPatch)
     _set_minimum_env(monkeypatch)
     monkeypatch.setenv("JOBIFY_MATCH_EXPLAINER", "openai")
     with pytest.raises(ValidationError, match="match_explainer"):
-        Settings()
+        WorkerSettings()
 
 
 def test_match_explainer_model_default(monkeypatch: pytest.MonkeyPatch) -> None:
     _set_minimum_env(monkeypatch)
     monkeypatch.delenv("JOBIFY_MATCH_EXPLAINER_MODEL", raising=False)
-    s = Settings()
+    s = WorkerSettings()
     assert s.match_explainer_model == "gemini-2.5-flash"
 
 
 def test_match_explainer_model_override(monkeypatch: pytest.MonkeyPatch) -> None:
     _set_minimum_env(monkeypatch)
     monkeypatch.setenv("JOBIFY_MATCH_EXPLAINER_MODEL", "gemini-2.5-pro")
-    s = Settings()
+    s = WorkerSettings()
     assert s.match_explainer_model == "gemini-2.5-pro"
+
+
+def test_worker_hard_time_limit_must_exceed_soft_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _set_minimum_env(monkeypatch)
+    monkeypatch.setenv("JOBIFY_TASK_SOFT_TIME_LIMIT_SECONDS", "300")
+    monkeypatch.setenv("JOBIFY_TASK_TIME_LIMIT_SECONDS", "300")
+    with pytest.raises(ValidationError, match="must exceed"):
+        WorkerSettings()
+
+
+def test_notification_lease_must_cover_provider_deadline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _set_minimum_env(monkeypatch)
+    monkeypatch.setenv("JOBIFY_NOTIFY_LEASE_SECONDS", "20")
+    monkeypatch.setenv("JOBIFY_PROVIDER_READ_TIMEOUT_SECONDS", "30")
+    with pytest.raises(ValidationError, match="must cover"):
+        WorkerSettings()
+
+
+def test_notification_lease_includes_connect_read_and_completion_margin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _set_minimum_env(monkeypatch)
+    monkeypatch.setenv("JOBIFY_NOTIFY_LEASE_SECONDS", "35")
+    monkeypatch.setenv("JOBIFY_PROVIDER_CONNECT_TIMEOUT_SECONDS", "5")
+    monkeypatch.setenv("JOBIFY_PROVIDER_READ_TIMEOUT_SECONDS", "30")
+    with pytest.raises(ValidationError, match="connect, read, and completion margin"):
+        WorkerSettings()

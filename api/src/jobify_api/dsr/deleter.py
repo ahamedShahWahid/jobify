@@ -16,7 +16,6 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-import structlog
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import delete, exists, func, or_, select, update
 from sqlalchemy.engine import CursorResult
@@ -39,9 +38,7 @@ from jobify.db.models import (
     UserConsent,
     UserRole,
 )
-from jobify.integrations.storage import Storage
-
-_log = structlog.get_logger(__name__)
+from jobify.outbox import enqueue_blob_delete
 
 
 class OwnerlessEmployerWarning(BaseModel):
@@ -108,7 +105,6 @@ async def _detect_ownerless_employers(
 async def delete_user_data(
     session: AsyncSession,
     *,
-    storage: Storage,
     user: User,
 ) -> DeleteReport:
     """Erase a user's personal data per the spec §2 table. Caller owns
@@ -191,23 +187,19 @@ async def delete_user_data(
         )
         counts["applicant_embeddings"] = r.rowcount or 0
 
-        # 9. Resume blobs — best-effort; storage failure must NOT roll back the DB.
+        # 9. Resume blobs — persist deletion intents in this transaction. The
+        # outbox sweeper performs the external I/O after commit with retries.
         resume_rows = (
             (await session.execute(select(Resume).where(Resume.applicant_id == applicant_id)))
             .scalars()
             .all()
         )
+        blob_deletions_queued = 0
         for resume in resume_rows:
             if resume.storage_key:
-                try:
-                    await storage.delete(resume.storage_key)
-                except Exception:
-                    _log.warning(
-                        "dsr.blob-delete-failed",
-                        resume_id=str(resume.id),
-                        storage_key=resume.storage_key,
-                        exc_info=True,
-                    )
+                enqueue_blob_delete(session, resume.storage_key)
+                blob_deletions_queued += 1
+        counts["blob_deletions_queued"] = blob_deletions_queued
 
         # 10. Resume rows — scrub PII fields + tombstone.
         now = datetime.now(UTC)
@@ -244,6 +236,7 @@ async def delete_user_data(
         counts["applicant_preferences"] = 0
         counts["applicant_embeddings"] = 0
         counts["resumes_scrubbed"] = 0
+        counts["blob_deletions_queued"] = 0
         counts["applicant_tombstoned"] = 0
 
     # 12. User — scrub PII + tombstone.

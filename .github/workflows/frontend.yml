@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - 'frontend/**'
+      - 'tests/unit/openapi_snapshot.json'
       - '.github/workflows/frontend.yml'
   push:
     branches: [main]
     paths:
       - 'frontend/**'
+      - 'tests/unit/openapi_snapshot.json'
       - '.github/workflows/frontend.yml'
 
 jobs:
@@ -27,6 +29,8 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - run: npm ci
+
+      - run: npm test
 
       # tsc -b && vite build — the typecheck + build gate (no eslint config exists).
       - run: npm run build

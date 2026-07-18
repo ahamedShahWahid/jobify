@@ -125,3 +125,37 @@ async def test_audit_logs_requires_admin(
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_analytics_summary_aggregates_in_database(
+    async_client: AsyncClient,
+    session: AsyncSession,
+    admin_user_and_token: tuple[User, str],
+) -> None:
+    _admin, token = admin_user_and_token
+    actor = User(email=f"analytics-{uuid4().hex[:8]}@example.com", role=UserRole.APPLICANT)
+    session.add(actor)
+    await session.flush()
+    action = f"test.analytics.{uuid4().hex}"
+    for _ in range(3):
+        await audit_log(
+            session,
+            action=action,
+            actor=actor,
+            resource_type="test",
+        )
+    await session.commit()
+
+    response = await async_client.get(
+        "/v1/admin/analytics/summary",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total_events"] >= 3
+    assert body["distinct_actors"] >= 1
+    assert body["last_24h"] >= 3
+    assert {row["key"]: row["count"] for row in body["action_counts"]}[action] == 3
+    assert sum(row["count"] for row in body["activity"]) == body["total_events"]

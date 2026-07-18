@@ -7,17 +7,16 @@ dependencies = [
     "alembic>=1.14,<2",
     "anyio>=4,<5",
     "asyncpg>=0.30,<0.31",
-    "celery[redis]>=5.5,<6",
-    "google-genai>=1.20,<2",
-    "pdfminer.six>=20240706,<20270101",
     "pgvector>=0.3.0,<0.4",
     "pydantic>=2.9,<3",
     "pydantic-settings>=2.5,<3",
-    "pypdf>=5,<6",
-    "python-docx>=1.1,<2",
     "sqlalchemy[asyncio]>=2.0.36,<2.1",
     "structlog>=24.4,<25",
 ]
+
+[project.optional-dependencies]
+aws = ["boto3>=1.35,<2"]
+ai = ["google-genai>=1.20,<2"]
 
 [build-system]
 requires = ["hatchling"]

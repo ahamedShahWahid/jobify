@@ -27,7 +27,6 @@ from jobify.db.models import (
     User,
     UserRole,
 )
-from jobify.settings import Settings
 from jobify_api.auth.google_verifier import (
     GoogleClaims,
     GoogleIdTokenVerifier,
@@ -41,6 +40,7 @@ from jobify_api.auth.tokens import (
     sha256_token_hash,
 )
 from jobify_api.dependencies import get_session
+from jobify_api.settings import Settings
 
 _log = structlog.get_logger(__name__)
 

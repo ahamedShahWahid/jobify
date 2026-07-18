@@ -18,10 +18,13 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.sql import func
 
 from jobify.db.models import Match
+from jobify.outbox import enqueue_task
 from jobify.scoring.explainer import ExplainContext
-from jobify.scoring.match import MatchScore, score_match
+from jobify.scoring.match import MatchScore, TransientScoringError, score_match
 
 if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
     from jobify.scoring.explainer import MatchExplainer
 
 # Upper bound on concurrent explain() calls per batch (LLM impl hits Gemini).
@@ -171,3 +174,26 @@ def match_upsert_statement(scored: ScoredMatch) -> Any:
             },
         )
     )
+
+
+async def persist_score_batch(
+    session_maker: async_sessionmaker[AsyncSession],
+    scores: list[ScoredMatch],
+    *,
+    continuation: tuple[str, ...] | None,
+    log: Any,
+    log_context: dict[str, str],
+) -> None:
+    """Persist one scoring batch and its durable continuation atomically."""
+    async with session_maker() as session:
+        try:
+            for scored in scores:
+                await session.execute(match_upsert_statement(scored))
+            if continuation is not None:
+                task_name, *args = continuation
+                enqueue_task(session, task_name, *args)
+            await session.commit()
+        except Exception as exc:
+            await session.rollback()
+            log.exception("score.upsert-failed", **log_context)
+            raise TransientScoringError(f"upsert failed: {type(exc).__name__}") from exc

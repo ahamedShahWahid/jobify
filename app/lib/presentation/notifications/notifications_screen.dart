@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
+import 'package:jobify_app/core/format/date_formats.dart';
 import 'package:jobify_app/data/notifications/notification_dto.dart';
 import 'package:jobify_app/presentation/notifications/notification_title.dart';
 import 'package:jobify_app/presentation/notifications/notifications_controller.dart';
@@ -10,8 +10,6 @@ import 'package:jobify_app/presentation/routing/routes.dart';
 import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
 import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
 import 'package:jobify_app/presentation/widgets/jobify_loading_view.dart';
-
-final _dateFormat = DateFormat.yMMMd();
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
@@ -88,7 +86,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     fontWeight: unread ? FontWeight.w600 : FontWeight.normal,
                   ),
                 ),
-                subtitle: Text(_dateFormat.format(n.createdAt)),
+                subtitle: Text(jobifyShortDateFormat.format(n.createdAt)),
                 onTap: () => _onTap(n),
               );
             },

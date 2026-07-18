@@ -9,8 +9,11 @@ on an exception with no response; no phantom 500 on a clean no-response return).
 from __future__ import annotations
 
 import inspect
+from types import SimpleNamespace
 
 import pytest
+from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 from jobify_api.metrics import record_request, render_prometheus, reset_metrics
 from jobify_api.middleware.metrics import MetricsMiddleware
@@ -23,19 +26,35 @@ def _clean_counters() -> None:
 
 
 def test_render_exposition_format_and_case_folding() -> None:
-    record_request("get", 200)
-    record_request("GET", 200)
+    record_request("get", 200, route="/v1/jobs/{job_id}", duration_seconds=0.02)
+    record_request("GET", 200, route="/v1/jobs/{job_id}", duration_seconds=0.2)
     record_request("POST", 500)
     out = render_prometheus()
     assert "# TYPE http_requests_total counter" in out
     assert 'http_requests_total{method="GET",status="200"} 2' in out
     assert 'http_requests_total{method="POST",status="500"} 1' in out
+    assert (
+        'http_request_duration_seconds_bucket{method="GET",route="/v1/jobs/{job_id}",'
+        'le="0.025"} 1' in out
+    )
+    assert 'http_request_duration_seconds_count{method="GET",route="/v1/jobs/{job_id}"} 2' in out
 
 
 def test_metrics_route_handler_is_async() -> None:
     # A sync handler would run in a threadpool and race the event loop's
     # record_request mutating the dict during render's iteration.
     assert inspect.iscoroutinefunction(metrics_route.metrics)
+
+
+def test_metrics_bearer_token_is_enforced() -> None:
+    from jobify_api.app_factory import create_app
+
+    app = create_app()
+    app.state.settings.metrics_bearer_token = SecretStr("ops-secret")
+    with TestClient(app) as client:
+        assert client.get("/metrics").status_code == 401
+        response = client.get("/metrics", headers={"Authorization": "Bearer ops-secret"})
+    assert response.status_code == 200
 
 
 async def _drive(app: MetricsMiddleware, *, method: str = "GET") -> None:
@@ -52,11 +71,13 @@ async def _drive(app: MetricsMiddleware, *, method: str = "GET") -> None:
 
 async def test_records_actual_started_status() -> None:
     async def app(scope, receive, send) -> None:  # type: ignore[no-untyped-def]
+        scope["route"] = SimpleNamespace(path="/v1/jobs/{job_id}")
         await send({"type": "http.response.start", "status": 204})
         await send({"type": "http.response.body", "body": b""})
 
     await _drive(MetricsMiddleware(app))
     assert 'http_requests_total{method="GET",status="204"} 1' in render_prometheus()
+    assert 'route="/v1/jobs/{job_id}"' in render_prometheus()
 
 
 async def test_exception_before_response_records_500_and_reraises() -> None:

@@ -4,12 +4,13 @@ version = "0.1.0"
 description = "Jobify API service"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "jobify-core",
+    "jobify-core[aws]",
     "fastapi>=0.115,<0.116",
     "uvicorn[standard]>=0.32,<0.33",
     "python-multipart>=0.0.12,<0.1",
     "pyjwt[crypto]>=2.10.1,<3",
     "httpx>=0.28.1,<1",
+    "redis>=5.2,<6",
 ]
 
 [project.scripts]

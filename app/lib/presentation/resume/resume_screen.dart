@@ -4,9 +4,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import 'package:jobify_app/core/error/exceptions.dart';
+import 'package:jobify_app/core/format/date_formats.dart';
 import 'package:jobify_app/data/resume/resume_dto.dart';
 import 'package:jobify_app/data/resume/resume_parse_status.dart';
 import 'package:jobify_app/presentation/preferences/preferences_controller.dart';
@@ -14,8 +14,6 @@ import 'package:jobify_app/presentation/resume/resume_controller.dart';
 import 'package:jobify_app/presentation/routing/routes.dart';
 import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
 import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
-
-final _dateFormat = DateFormat.yMMMMd();
 
 const _extToContentType = <String, String>{
   'pdf': 'application/pdf',
@@ -222,7 +220,7 @@ class _ResumeCard extends StatelessWidget {
             Text(resume.originalFilename, style: theme.textTheme.titleMedium),
             const SizedBox(height: JobifySpacing.xs),
             Text(
-              'Uploaded ${_dateFormat.format(resume.createdAt)}',
+              'Uploaded ${jobifyLongDateFormat.format(resume.createdAt)}',
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),

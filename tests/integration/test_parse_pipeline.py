@@ -23,6 +23,7 @@ from sqlalchemy.pool import NullPool
 
 from jobify.db.models import Applicant, Resume, ResumeParseStatus, User, UserRole
 from jobify_api.auth.tokens import mint_access_token
+from tests.integration.outbox_helpers import drain_outbox_eager
 
 pytestmark = pytest.mark.integration
 
@@ -57,10 +58,10 @@ async def pipeline_client(
     monkeypatch.setenv("JOBIFY_STORAGE_ROOT", str(tmp_path))
     monkeypatch.setenv("JOBIFY_JWT_SECRET", _JWT_SECRET)
 
-    import jobify.celery_app as _celery_mod
+    import jobify_worker.celery_app as _celery_mod
     import jobify_worker.worker_app  # noqa: F401  — registers tasks onto celery_app
-    from jobify.celery_app import celery_app
     from jobify_api.app_factory import create_app
+    from jobify_worker.celery_app import celery_app
 
     app = create_app()
 
@@ -73,9 +74,14 @@ async def pipeline_client(
     # was first imported.
     monkeypatch.setattr(_celery_mod.settings, "storage_root", tmp_path)
 
+    async def _drain_after_upload(response: httpx.Response) -> None:
+        if response.status_code == 201 and response.request.url.path.endswith("/resumes"):
+            await drain_outbox_eager(migrated_db, app.state.storage)
+
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app),  # type: ignore[arg-type]
         base_url="http://test",
+        event_hooks={"response": [_drain_after_upload]},
     ) as ac:
         yield ac
 

@@ -3,7 +3,7 @@
 The sweeper implements the outbox-pattern fan-out for the notifications table.
 It is designed to be called on demand (or via Celery Beat when worker infra
 hardens). Multiple concurrent sweeper instances are safe: ``SKIP LOCKED``
-ensures disjoint batches.
+ensures each one-at-a-time claim owns a distinct row.
 
 State machine per row:
     pending -> dispatching -> sent      (success path)
@@ -18,20 +18,15 @@ aborts the rest of the batch.
 
 from __future__ import annotations
 
-import asyncio
-import concurrent.futures
 import random
-from collections.abc import Callable, Coroutine
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any
-from uuid import UUID
+from typing import TYPE_CHECKING
+from uuid import UUID, uuid4
 
 import structlog
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.sql import func
 
-from jobify.celery_app import celery_app
-from jobify.celery_app import settings as _worker_settings
 from jobify.consent import get_consent
 from jobify.db.models import (
     DEFAULT_CONSENTS,
@@ -42,6 +37,9 @@ from jobify.db.models import (
     User,
 )
 from jobify.integrations.notifications.base import ChannelResult
+from jobify_worker.async_bridge import run_async
+from jobify_worker.celery_app import celery_app
+from jobify_worker.celery_app import settings as _worker_settings
 from jobify_worker.runtime import get_email_channel, get_session_maker
 
 if TYPE_CHECKING:
@@ -77,20 +75,7 @@ def sweep_notifications(self) -> None:  # type: ignore[no-untyped-def]
     to a fresh thread so the inner ``asyncio.run()`` gets a clean loop.
     """
 
-    def _run(coro_factory: Callable[[], Coroutine[Any, Any, None]]) -> None:
-        """Run a coroutine, dispatching to a thread if a loop is running."""
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-        if loop is not None and loop.is_running():
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                fut = pool.submit(asyncio.run, coro_factory())
-                fut.result()
-        else:
-            asyncio.run(coro_factory())
-
-    _run(lambda: _sweep_notifications_async())
+    run_async(_sweep_notifications_async)
 
 
 # --- Async body ---
@@ -102,7 +87,7 @@ async def _sweep_notifications_async(
     email_channel: EmailChannel | None = None,
     batch_size: int | None = None,
 ) -> None:
-    """Async body — claim a batch of pending notifications and dispatch each one.
+    """Claim and dispatch at most ``batch_size`` notifications one at a time.
 
     Production callers (the Celery task) pass nothing; this resolves the real
     sessionmaker, email channel, and batch size from settings.
@@ -116,36 +101,87 @@ async def _sweep_notifications_async(
         batch_size if batch_size is not None else _worker_settings.notify_batch_size
     )
 
-    # --- Txn 1: claim a batch (SELECT FOR UPDATE SKIP LOCKED → set DISPATCHING) ---
-    async with sm() as session:
-        stmt = (
-            select(Notification)
-            .where(
-                Notification.deleted_at.is_(None),
-                Notification.status == NotificationStatus.PENDING,
-                Notification.send_after <= func.now(),
-            )
-            .order_by(Notification.send_after.asc())
-            .limit(effective_batch_size)
-            .with_for_update(skip_locked=True)
-        )
-        rows = (await session.execute(stmt)).scalars().all()
-        for n in rows:
-            n.status = NotificationStatus.DISPATCHING
-        await session.commit()
-
-    _log.info("sweep.batch-claimed", count=len(rows))
-
-    # --- Per-notification dispatch (each in its own session) ---
-    for notification in rows:
+    claimed_count = 0
+    for _ in range(effective_batch_size):
+        claim = await _claim_notification(sm)
+        if claim is None:
+            break
+        notification_id, dispatch_token = claim
+        if notification_id is None or dispatch_token is None:
+            # An exhausted row was terminally failed and consumed this batch slot.
+            continue
+        claimed_count += 1
         try:
             await _dispatch_one(
                 session_maker=sm,
                 email_channel=email_channel,
-                notification_id=notification.id,
+                notification_id=notification_id,
+                dispatch_token=dispatch_token,
             )
         except Exception:
-            _log.exception("sweep.dispatch-unexpected", notification_id=str(notification.id))
+            # The lease makes this recoverable: a later sweep reclaims the row.
+            _log.exception("sweep.dispatch-unexpected", notification_id=str(notification_id))
+    _log.info("sweep.batch-claimed", count=claimed_count)
+
+
+async def _claim_notification(
+    session_maker: async_sessionmaker[AsyncSession],
+) -> tuple[UUID | None, UUID | None] | None:
+    """Lease one due row immediately before its provider side effect.
+
+    A per-claim token prevents a slow, stale worker from completing a row after
+    another worker has reclaimed it. Attempts increment at claim time so repeated
+    worker crashes eventually become terminal instead of looping forever. The
+    ``(None, None)`` outcome means an exhausted row consumed the current batch
+    slot; ``None`` means no claimable row exists.
+    """
+    now = datetime.now(UTC)
+    lease_until = now + timedelta(seconds=_worker_settings.notify_lease_seconds)
+    async with session_maker() as session:
+        stmt = (
+            select(Notification)
+            .where(
+                Notification.deleted_at.is_(None),
+                or_(
+                    (
+                        (Notification.status == NotificationStatus.PENDING)
+                        & (Notification.send_after <= now)
+                    ),
+                    (
+                        (Notification.status == NotificationStatus.DISPATCHING)
+                        & or_(
+                            Notification.locked_until.is_(None),
+                            Notification.locked_until < now,
+                        )
+                    ),
+                ),
+            )
+            .order_by(Notification.send_after.asc(), Notification.id.asc())
+            .limit(1)
+            .with_for_update(skip_locked=True)
+        )
+        notification = (await session.execute(stmt)).scalar_one_or_none()
+        if notification is None:
+            return None
+        if notification.attempts >= _worker_settings.notify_max_attempts:
+            _log.warning(
+                "sweep.claim-exhausted",
+                notification_id=str(notification.id),
+                attempts=notification.attempts,
+            )
+            notification.status = NotificationStatus.FAILED
+            notification.last_error = notification.last_error or "dispatch_lease_expired"
+            notification.dispatch_token = None
+            notification.locked_until = None
+            await session.commit()
+            return (None, None)
+        token = uuid4()
+        notification.status = NotificationStatus.DISPATCHING
+        notification.attempts += 1
+        notification.dispatch_token = token
+        notification.locked_until = lease_until
+        await session.commit()
+        return (notification.id, token)
 
 
 async def _dispatch_one(
@@ -153,16 +189,23 @@ async def _dispatch_one(
     session_maker: async_sessionmaker[AsyncSession],
     email_channel: EmailChannel,
     notification_id: UUID,
+    dispatch_token: UUID,
 ) -> None:
     """Load the notification row, call the channel adapter, and commit the new state.
 
     Opens a fresh session so failures are isolated to a single row. The caller
     wraps this in a broad except so one bad notification never aborts the batch.
     """
+    # Resolve recipient and consent in a short DB transaction. The external
+    # channel call happens only after this session closes, so a slow provider
+    # cannot consume a database connection for the duration of network I/O.
     async with session_maker() as session:
-        n = await session.get(Notification, notification_id)
+        n = await session.get(Notification, notification_id, with_for_update=True)
         if n is None or n.deleted_at is not None:
             _log.warning("sweep.notification-missing", notification_id=str(notification_id))
+            return
+        if not _owns_claim(n, dispatch_token):
+            _log.info("sweep.claim-lost", notification_id=str(notification_id))
             return
 
         # Resolve the recipient from users.email rather than trusting the payload.
@@ -175,6 +218,7 @@ async def _dispatch_one(
             )
             n.status = NotificationStatus.FAILED
             n.last_error = "user_missing_or_no_email"
+            _clear_claim(n)
             await session.commit()
             return
 
@@ -191,6 +235,7 @@ async def _dispatch_one(
             n.status = NotificationStatus.CANCELLED
             n.cancelled_at = func.now()
             n.last_error = f"consent_revoked:{scope.value}"
+            _clear_claim(n)
             _log.info(
                 "sweep.cancelled-no-consent",
                 notification_id=str(notification_id),
@@ -200,20 +245,32 @@ async def _dispatch_one(
             await session.commit()
             return
 
-        # --- Channel dispatch ---
-        if n.channel == NotificationChannel.EMAIL:
-            result: ChannelResult = await email_channel.send(n, recipient=user.email)
-        elif n.channel == NotificationChannel.IN_APP:
-            # In-app delivery is "the row exists" — mark sent immediately.
+        channel = n.channel
+        recipient = user.email
+
+    # --- Channel dispatch (no open DB session) ---
+    try:
+        if channel == NotificationChannel.EMAIL:
+            result: ChannelResult = await email_channel.send(n, recipient=recipient)
+        elif channel == NotificationChannel.IN_APP:
             result = ChannelResult.success()
         else:
-            result = ChannelResult.failed(f"unknown_channel:{n.channel}")
+            result = ChannelResult.failed(f"unknown_channel:{channel}")
+    except Exception as exc:
+        result = ChannelResult.failed(f"{type(exc).__name__}:{exc}"[:1000])
 
-        # --- State transition ---
+    # --- State transition, guarded by the exact claim token ---
+    async with session_maker() as session:
+        n = await session.get(Notification, notification_id, with_for_update=True)
+        if n is None or not _owns_claim(n, dispatch_token):
+            _log.info("sweep.claim-lost-after-dispatch", notification_id=str(notification_id))
+            return
+
         if result.ok:
             n.status = NotificationStatus.SENT
             n.sent_at = func.now()
             n.last_error = None
+            _clear_claim(n)
             _log.info(
                 "sweep.sent",
                 notification_id=str(notification_id),
@@ -221,10 +278,10 @@ async def _dispatch_one(
                 kind=n.kind,
             )
         else:
-            n.attempts += 1
             n.last_error = result.message
-            if n.attempts >= 5:
+            if n.attempts >= _worker_settings.notify_max_attempts:
                 n.status = NotificationStatus.FAILED
+                _clear_claim(n)
                 _log.warning(
                     "sweep.max-attempts-reached",
                     notification_id=str(notification_id),
@@ -235,6 +292,7 @@ async def _dispatch_one(
                 n.status = NotificationStatus.PENDING
                 delay = min(60 * (2 ** (n.attempts - 1)), 3600) + random.randint(0, 30)  # noqa: S311
                 n.send_after = datetime.now(UTC) + timedelta(seconds=delay)
+                _clear_claim(n)
                 _log.info(
                     "sweep.retry-scheduled",
                     notification_id=str(notification_id),
@@ -243,3 +301,15 @@ async def _dispatch_one(
                 )
 
         await session.commit()
+
+
+def _owns_claim(notification: Notification, dispatch_token: UUID) -> bool:
+    return (
+        notification.status == NotificationStatus.DISPATCHING
+        and notification.dispatch_token == dispatch_token
+    )
+
+
+def _clear_claim(notification: Notification) -> None:
+    notification.dispatch_token = None
+    notification.locked_until = None

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { errorMessage } from "../../api/client";
-import type { ConsoleClient } from "../../api/client";
 import type {
   EmployerVerificationRow,
   EmployerVerificationStatus,
@@ -30,26 +29,6 @@ const EMPTY_COPY: Record<EmployerVerificationStatus, string> = {
   verified: "No employers have been verified yet.",
   rejected: "Nothing rejected. Clean slate.",
 };
-
-// Bounded drain (mirrors Analytics' drainAuditLogs) purely to compute the per-
-// status tile counts. The list endpoint has no count, so we page through each
-// status once. A misbehaving cursor must not loop forever.
-const MAX_PAGES = 20;
-
-async function countStatus(
-  client: ConsoleClient,
-  status: EmployerVerificationStatus,
-): Promise<number> {
-  let total = 0;
-  let cursor: string | undefined;
-  for (let page = 0; page < MAX_PAGES; page++) {
-    const res = await client.listEmployersForVerification(status, cursor);
-    total += res.items.length;
-    if (!res.next_cursor) break;
-    cursor = res.next_cursor;
-  }
-  return total;
-}
 
 /** The verification checklist — display-only booleans derived per row. The
  * domain/email checks only appear when the (demo-only) fields are present; the
@@ -106,10 +85,8 @@ export function Verification() {
     let cancelled = false;
     (async () => {
       try {
-        const [pending, verified, rejected] = await Promise.all(
-          STATUSES.map((s) => countStatus(client, s)),
-        );
-        if (!cancelled) setCounts({ pending, verified, rejected });
+        const result = await client.employerVerificationCounts();
+        if (!cancelled) setCounts(result);
       } catch {
         // Tile counts are best-effort; the table itself surfaces real errors.
         if (!cancelled) setCounts(null);

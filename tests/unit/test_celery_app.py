@@ -3,7 +3,7 @@ routes write Notification rows but nothing was dispatching the sweeper."""
 
 from __future__ import annotations
 
-from jobify.celery_app import celery_app
+from jobify_worker.celery_app import celery_app
 
 
 def test_sweep_notifications_is_beat_scheduled() -> None:
@@ -12,6 +12,16 @@ def test_sweep_notifications_is_beat_scheduled() -> None:
     entry = schedule["sweep-notifications"]
     assert entry["task"] == "jobify.sweep_notifications"
     assert entry["schedule"].run_every.total_seconds() > 0
+
+
+def test_cleanup_outbox_is_beat_scheduled() -> None:
+    entry = celery_app.conf.beat_schedule["cleanup-outbox"]
+    assert entry["task"] == "jobify.cleanup_outbox"
+    assert entry["schedule"].run_every.total_seconds() == 86400
+
+
+def test_cleanup_outbox_routes_to_outbox_queue() -> None:
+    assert celery_app.conf.task_routes["jobify.cleanup_outbox"] == {"queue": "outbox"}
 
 
 def test_every_beat_scheduled_task_has_a_queue_route() -> None:

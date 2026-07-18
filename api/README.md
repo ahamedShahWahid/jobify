@@ -155,7 +155,7 @@ JOBIFY_REDIS_URL=redis://localhost:6379/0
 
 ### Skipping the worker for tests
 
-Integration tests set `JOBIFY_CELERY_TASK_ALWAYS_EAGER=true` so `.delay()` runs tasks inline — no Redis required during `pytest`.
+Integration tests use eager Celery execution and explicitly drain durable outbox rows, so Redis is not required during `pytest`.
 
 ## Seeding demo data
 
@@ -209,7 +209,19 @@ All settings are read from environment variables prefixed `JOBIFY_`. The `.env` 
 | `JOBIFY_ENV`          | yes      | —       | `local` \| `dev` \| `staging` \| `prod` |
 | `JOBIFY_SERVICE_NAME` | yes      | —       | Reported in `/health`           |
 | `JOBIFY_DB_URL`       | yes      | —       | SQLAlchemy DSN; must use `postgresql+asyncpg://` |
-| `JOBIFY_STORAGE_ROOT` | no       | `var/uploads` | Filesystem root for `LocalFileStorage`. |
+| `JOBIFY_DB_POOL_SIZE` | no | `10` | Persistent API database connections per process |
+| `JOBIFY_DB_MAX_OVERFLOW` | no | `10` | Temporary connections above pool size |
+| `JOBIFY_DB_POOL_TIMEOUT_SECONDS` | no | `30` | Wait for a pooled connection |
+| `JOBIFY_DB_POOL_RECYCLE_SECONDS` | no | `1800` | Recycle pooled connections |
+| `JOBIFY_DB_COMMAND_TIMEOUT_SECONDS` | no | `30` | asyncpg command timeout |
+| `JOBIFY_STORAGE_BACKEND` | no | `local` | `local` filesystem or `s3` object storage. |
+| `JOBIFY_STORAGE_ROOT` | no       | `var/uploads` | Filesystem root when storage backend is `local`. |
+| `JOBIFY_S3_BUCKET` | for S3 | — | Object-storage bucket. |
+| `JOBIFY_S3_PREFIX` | no | empty | Object-key prefix within the bucket. |
+| `JOBIFY_AWS_REGION` | no | SDK default | AWS region for S3/SES. |
+| `JOBIFY_AWS_ENDPOINT_URL` | no | AWS | S3-compatible endpoint override. |
+| `JOBIFY_PROVIDER_CONNECT_TIMEOUT_SECONDS` | no | `5` | S3/provider connect deadline. |
+| `JOBIFY_PROVIDER_READ_TIMEOUT_SECONDS` | no | `30` | S3/provider read deadline. |
 | `JOBIFY_MAX_UPLOAD_BYTES` | no   | `10485760` | Max bytes per upload (10 MiB). |
 | `JOBIFY_ALLOWED_RESUME_CONTENT_TYPES` | no | (pdf, doc, docx) | Comma-separated content-type whitelist. |
 | `JOBIFY_LOG_LEVEL`    | no       | `INFO`  | Stdlib log level                |
@@ -221,17 +233,14 @@ All settings are read from environment variables prefixed `JOBIFY_`. The `.env` 
 | `JOBIFY_GOOGLE_JWKS_URL`         | no | `https://www.googleapis.com/oauth2/v3/certs` | Override for tests |
 | `JOBIFY_GOOGLE_JWKS_CACHE_TTL_SECONDS` | no | `3600` | JWKS in-process cache TTL |
 | `JOBIFY_AUTH_REQUIRE_EMAIL_VERIFIED`   | no | `false` | Reject unverified Google sign-ins |
+| `JOBIFY_AUTH_GOOGLE_RATE_LIMIT_PER_MINUTE` | no | `10` | Google sign-in attempts per client IP per minute |
+| `JOBIFY_AUTH_REFRESH_RATE_LIMIT_PER_MINUTE` | no | `30` | Refresh attempts per IP/token fingerprint per minute |
 | `JOBIFY_CORS_ALLOW_ORIGINS` | no | `http://localhost:8080` | Comma-separated list of allowed CORS origins (web frontend). |
-| `JOBIFY_REDIS_URL`    | yes      | —       | Redis connection string. Required for Celery broker. |
-| `JOBIFY_CELERY_TASK_ALWAYS_EAGER` | no | `false` | Run tasks synchronously (tests only). |
-| `JOBIFY_GEMINI_API_KEY` | yes    | —       | Gemini Developer API key for embedding worker |
-| `JOBIFY_EMBEDDING_MODEL` | no   | `gemini-embedding-2` | Embedding model identifier |
-| `JOBIFY_EMBEDDING_DIM` | no     | `1536`  | Matryoshka output dim — must match migration's Vector(N) |
-| `JOBIFY_EMAIL_CHANNEL` | no     | `logging` | Email adapter: `logging` (stdout stub) or `ses` |
-| `JOBIFY_NOTIFY_BATCH_SIZE` | no | `50`   | Max notifications claimed per sweep run |
-| `JOBIFY_NOTIFY_SWEEP_INTERVAL_SECONDS` | no | `60` | How often Celery beat dispatches `sweep_notifications` |
+| `JOBIFY_REDIS_URL`    | yes      | —       | Redis for API rate limits and readiness. |
+| `JOBIFY_METRICS_BEARER_TOKEN` | staging/prod | — | Bearer token protecting `/metrics` |
 
-The service refuses to boot if required variables are missing or invalid.
+The API refuses to boot if required variables are missing or invalid. Worker-only
+Gemini, email, lease, batch, and Celery settings are documented in `worker/README.md`.
 
 ## Auth
 
@@ -269,7 +278,7 @@ repo root/
 │   ├── alembic.ini
 │   ├── emails/           # HTML email templates
 │   ├── data/             # sample_jobs.json, parse_eval/
-│   └── src/jobify/       # domain package: db, integrations, scoring, celery_app, …
+│   └── src/jobify/       # domain package: db, integrations, scoring, outbox, …
 ├── api/
 │   └── src/jobify_api/   # FastAPI service: app_factory, routes, auth, middleware, …
 └── worker/

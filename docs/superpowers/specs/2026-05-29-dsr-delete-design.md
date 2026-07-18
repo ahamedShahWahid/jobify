@@ -25,7 +25,7 @@ Practical translation:
 | `user_consents` | **hard delete** | Operational state, not history (history is in `audit_logs`). |
 | `employer_users` (recruiter case) | **hard delete** | Recruiter ↔ employer membership. |
 | `resumes` | **soft-delete + scrub** (`parsed_json=NULL`, `original_filename=NULL`, `storage_key=NULL`, `deleted_at=now()`) | Tombstone for `Application` recruiter-side analytics that may have surfaced this resume; PII content gone. Blob deleted separately. |
-| `resume` blobs (object storage) | **hard delete** | Done before scrubbing the row's `storage_key`. |
+| `resume` blobs (object storage) | **durable asynchronous hard delete** | Copy each key into `outbox_events` before scrubbing `storage_key`; the outbox sweeper deletes with retries. |
 | `applicant_embeddings` | **hard delete** | Vector encodes PII; row has no analytics value once the embedding is gone. |
 | `notifications` | **hard delete** | Payload contains PII (e.g., job title in apply confirmations). |
 | `saved_jobs` | **hard delete** | Private to user; no employer-side analytics value. |
@@ -103,13 +103,12 @@ The two audit rows write in the **same transaction** as the destructive work. If
 
 ## 5. Deletion orchestrator
 
-`src/kpa/dsr/deleter.py`:
+`api/src/jobify_api/dsr/deleter.py`:
 
 ```python
 async def delete_user_data(
     session: AsyncSession,
     *,
-    storage: Storage,
     user: User,
 ) -> DeleteReport:
     """Walk the deletion graph for a single user.
@@ -133,7 +132,7 @@ The order matters because of FK dependencies and blob storage. Bottom-up by FK d
 5. **Employer-user memberships** — hard delete by `user_id`. (Record sole-owner-employer warnings BEFORE deleting so we still see them.)
 6. **Saved jobs** — hard delete via `applicant.id` (CASCADE would handle but we do it explicitly for the report counts).
 7. **Applicant embeddings** — hard delete via `applicant.id`.
-8. **Resume blobs in storage** — for each Resume row, `await storage.delete(storage_key)`. Wrapped in `try/except` with `_log.warning`; a storage failure should NOT roll back the DB deletion (the storage backend will eventually be reaped by a janitor).
+8. **Resume blob intents** — for each Resume row, insert a `blob_delete` outbox event containing the storage key. It commits atomically with the DB scrub; no storage I/O occurs in this transaction.
 9. **Resumes** — soft-delete + scrub fields. Keep `applicant_id` FK.
 10. **Applicant** — scrub PII fields + set `deleted_at`. Keep `user_id` FK.
 11. **User** — scrub PII fields + set `deleted_at`.
@@ -155,9 +154,7 @@ class DeleteReport:
 
 ## 6. Storage blob deletion semantics
 
-`Storage.delete(key)` already exists (or will be added in this slice if missing). Behavior on missing blob: log warning, return. Blobs are best-effort cleanup, not part of the transactional atom.
-
-If the blob delete fails for transient reasons (S3 5xx), we keep going. The DB row's `storage_key` is set to NULL anyway — the blob becomes orphaned. A future janitor sweep can find and delete orphans by scanning storage and comparing to live `Resume.storage_key` references.
+`sweep_outbox` leases the event and calls `Storage.delete(key)` after the DSR transaction commits. Missing objects are an idempotent success. Transient failures reschedule the event with backoff; terminal failures retain the key and error for inspection and `jobify-requeue-outbox` recovery.
 
 ## 7. Sole-owner employer detection
 
@@ -201,13 +198,13 @@ Add under "Architecture — non-obvious bits" after the DSR-export section:
 ### DSR delete
 
 - **Soft-delete + scrub, not hard-delete the User row.** Hard-deleting users would CASCADE-wipe applications and matches (FKs to applicants → users), losing recruiter analytics and the eval substrate. The brainstorm constraint was "hard-delete PII, keep anonymized aggregates" — we honor it by tombstoning `users` and `applicants` with PII scrubbed, then hard-deleting the truly-PII tables around them.
-- **Application-layer deletion graph, not FK CASCADE.** Several FKs are CASCADE (Notification, UserConsent → users) but we don't rely on them; the orchestrator (`kpa.dsr.deleter.delete_user_data`) walks the graph explicitly so the report counts and the order-sensitive blob-delete-before-scrub work correctly.
+- **Application-layer deletion graph, not FK CASCADE.** Several FKs are CASCADE, but the orchestrator walks the graph explicitly so report counts are stable and blob cleanup intents are recorded before storage keys are scrubbed.
 - **Atomic transaction.** Unlike the export (whose `dsr_export_requested` row is durable on assembly failure), the delete's `dsr_delete_requested` audit row commits or rolls back atomically with all destructive work. Partial deletion is worse than no deletion.
 - **`audit_logs.actor_user_id` references survive** as pointers to the tombstone — soft-delete-and-scrub keeps the User row, so the FK still resolves. `SET NULL` only fires if a future admin sub-project hard-deletes the tombstone (post-retention).
 - **Re-signup works** because `_upsert_identity`'s email-collision check filters `deleted_at IS NULL` — tombstoned emails (scrubbed to NULL anyway) don't conflict.
 - **Confirmation token in body, not query.** `DELETE /v1/me/dsr` with body `{"confirmation": "DELETE_MY_ACCOUNT"}` — query-string would leak the token into access logs.
 - **Sole-owner employer edge case** surfaces a `warnings` entry in the response. The employer stays (admin tooling handles reassignment). Recruiter's `employer_users` rows still hard-delete.
-- **Resume blob deletion is best-effort.** Storage 5xx logs a warning but doesn't roll back the DB. Orphaned blobs are reaped by a future janitor; CLAUDE.md flags this for the deploy-target (P5) sub-project.
+- **Resume blob deletion is durable and asynchronous.** DB scrubbing and cleanup intent are atomic; storage deletion is at-least-once and operator-requeueable.
 - **NO retry after a successful DSR delete.** Subsequent calls return 401 `user_not_found` because `current_user` re-fetches and the tombstone is soft-deleted. Clients should treat 401 as "already done" post-DELETE.
 ```
 
@@ -215,7 +212,7 @@ Add under "Architecture — non-obvious bits" after the DSR-export section:
 
 - Admin-initiated DSR-delete of another user. Separate admin sub-project.
 - 30-day grace period with reversibility. Could ship as a `users.dsr_delete_scheduled_at` column + Celery beat. Not MVP — immediate deletion matches user expectation.
-- Janitor sweep for orphaned blobs. Tracked as a follow-up.
+- Periodic alerting/dashboard for terminal failed outbox events.
 - Tombstone hard-delete after N-year retention. Defer until we have data retention policy.
 - Cross-region replication awareness (the blob delete is single-region). Defer to deploy-target sub-project (P5).
 - WhatsApp / SMS unsubscribe at the BSP. Tracked when those channels ship.

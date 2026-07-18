@@ -19,23 +19,24 @@ from urllib.parse import quote
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response
-from sqlalchemy import and_, func, select, update
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobify.audit import audit_log
 from jobify.db.models import (
     Application,
-    ApplicationStatus,
     Employer,
     EmployerUser,
     Job,
-    JobStatus,
-    Notification,
-    NotificationChannel,
     Resume,
     User,
 )
 from jobify.integrations.storage.base import Storage
+from jobify_api.applications.service import (
+    ApplicationCommandError,
+    apply_to_open_job,
+    withdraw_application,
+)
 from jobify_api.auth.dependencies import (
     _require_recruiter,
     current_user,
@@ -105,102 +106,24 @@ async def apply_to_job(
     """
     applicant = await _require_applicant(user, session)
 
-    # Load the job + employer in one JOIN — must be open and not soft-deleted.
-    job_employer = (
-        await session.execute(
-            select(Job, Employer)
-            .join(Employer, Employer.id == Job.employer_id)
-            .where(
-                Job.id == job_id,
-                Job.status == JobStatus.OPEN,
-                Job.deleted_at.is_(None),
-                Employer.deleted_at.is_(None),
-            )
-        )
-    ).first()
-    if job_employer is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="job_not_found")
-    job, employer = job_employer
-
-    # Look up existing live application for this (applicant, job) pair.
-    existing = (
-        await session.execute(
-            select(Application).where(
-                Application.applicant_id == applicant.id,
-                Application.job_id == job_id,
-                Application.deleted_at.is_(None),
-            )
-        )
-    ).scalar_one_or_none()
-
-    if existing is not None:
-        if existing.status == ApplicationStatus.APPLIED:
-            # Already applied — idempotent 200. No notification.
-            return Response(
-                content=ApplicationRead.model_validate(existing).model_dump_json(),
-                status_code=status.HTTP_200_OK,
-                media_type="application/json",
-            )
-        # existing.status == WITHDRAWN — update back to applied, refresh created_at.
-        # Per spec Decision #8: re-apply after withdraw does NOT insert notifications.
-        await session.execute(
-            update(Application)
-            .where(Application.id == existing.id)
-            .values(
-                status=ApplicationStatus.APPLIED,
-                source=body.source,
-                created_at=func.now(),
-                updated_at=func.now(),
-            )
-        )
-        await session.commit()
-        # Re-fetch to get DB-resolved timestamps.
-        refreshed = (
-            await session.execute(select(Application).where(Application.id == existing.id))
-        ).scalar_one()
-        return Response(
-            content=ApplicationRead.model_validate(refreshed).model_dump_json(),
-            status_code=status.HTTP_200_OK,
-            media_type="application/json",
-        )
-
-    # No existing row — INSERT with notifications (same transaction, same commit).
-    new_application = Application(
-        applicant_id=applicant.id,
-        job_id=job_id,
-        status=ApplicationStatus.APPLIED,
-        source=body.source,
-    )
-    session.add(new_application)
-    # Flush to get the application id before building notification payload.
-    await session.flush()
-
-    notification_payload = {
-        "kind": "application_received",
-        "application_id": str(new_application.id),
-        "job_id": str(job.id),
-        "job_title": job.title,
-        "employer_name": employer.name,
-    }
-    session.add(
-        Notification(
+    try:
+        outcome = await apply_to_open_job(
+            session,
+            applicant_id=applicant.id,
             user_id=user.id,
-            kind="application_received",
-            channel=NotificationChannel.EMAIL,
-            payload=notification_payload,
+            job_id=job_id,
+            source=body.source,
         )
+    except ApplicationCommandError as exc:
+        raise HTTPException(status_code=404, detail=exc.detail) from exc
+    result = ApplicationRead.model_validate(outcome.application)
+    if outcome.created:
+        return result
+    return Response(
+        content=result.model_dump_json(),
+        status_code=status.HTTP_200_OK,
+        media_type="application/json",
     )
-    session.add(
-        Notification(
-            user_id=user.id,
-            kind="application_received",
-            channel=NotificationChannel.IN_APP,
-            payload=notification_payload,
-        )
-    )
-    await session.commit()
-    await session.refresh(new_application)
-    return ApplicationRead.model_validate(new_application)
 
 
 # ---------------------------------------------------------------------------
@@ -226,51 +149,17 @@ async def patch_application(
     """
     applicant = await _require_applicant(user, session)
 
-    # Load the application scoped to the current applicant.
-    application = (
-        await session.execute(
-            select(Application).where(
-                Application.id == application_id,
-                Application.applicant_id == applicant.id,
-                Application.deleted_at.is_(None),
-            )
+    try:
+        application = await withdraw_application(
+            session,
+            applicant_id=applicant.id,
+            application_id=application_id,
+            target_status=body.status,
         )
-    ).scalar_one_or_none()
-    if application is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="application_not_found",
-        )
-
-    # Validate the requested target status.
-    if body.status != "withdrawn":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="invalid_transition",
-        )
-
-    # Re-withdraw no-op.
-    if application.status == ApplicationStatus.WITHDRAWN:
-        return ApplicationRead.model_validate(application)
-
-    # applied → withdrawn.
-    if application.status == ApplicationStatus.APPLIED:
-        await session.execute(
-            update(Application)
-            .where(Application.id == application.id)
-            .values(status=ApplicationStatus.WITHDRAWN, updated_at=func.now())
-        )
-        await session.commit()
-        refreshed = (
-            await session.execute(select(Application).where(Application.id == application.id))
-        ).scalar_one()
-        return ApplicationRead.model_validate(refreshed)
-
-    # Defensive — unexpected status value.
-    raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail="invalid_transition",
-    )
+    except ApplicationCommandError as exc:
+        error_status = 404 if exc.detail == "application_not_found" else 400
+        raise HTTPException(status_code=error_status, detail=exc.detail) from exc
+    return ApplicationRead.model_validate(application)
 
 
 # ---------------------------------------------------------------------------

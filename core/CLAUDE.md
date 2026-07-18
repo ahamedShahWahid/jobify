@@ -1,6 +1,6 @@
 # CLAUDE.md — core (`jobify` domain package)
 
-Load-bearing invariants for the FastAPI-free domain package (`core/src/jobify`): db models + Alembic migrations, settings, integrations (storage, parser, embeddings, email, scoring, explainer), consent/DSR/audit, eval, seeding CLI, the Celery bare app (`celery_app.py` only — task *implementations* live in the `worker` package's `tasks/`, NOT here). Auto-loaded when working under `core/`. Repo overview + universal conventions are in the root `CLAUDE.md`.
+Load-bearing invariants for the FastAPI- and Celery-free domain package (`core/src/jobify`): db models + Alembic migrations, shared settings contracts, integrations (storage, parser, embeddings, email, scoring, explainer), consent/DSR/audit, eval, and durable outbox primitives. Celery configuration and task implementations live in `worker/`. Auto-loaded when working under `core/`. Repo overview + universal conventions are in the root `CLAUDE.md`.
 
 > Each section names its paired design doc in `docs/superpowers/specs/` (the **why** + full reserved-slug tables). Below = rules that cause a bug if violated and aren't obvious from the code. Task-side invariants for the parse/embed/score Celery tasks live in `worker/CLAUDE.md`.
 
@@ -54,5 +54,5 @@ CLI entrypoint `jobify-seed-jobs` AND its loader logic live in `api/src/jobify_a
 
 - **`employers`/`jobs` via CLI** (`uv run jobify-seed-jobs` reads `core/data/sample_jobs.json`, upserts), not migrations. Idempotency: `employers.name_norm` (DB partial-UNIQUE) + `(jobs.employer_id, lower(jobs.title))` (script-only). JSON uses `posted_days_ago: int` (→ `now() - timedelta`) so it doesn't age.
 - **Updates preserve human state:** `employers.name` never overwritten; `verified_at` set only when `NULL`.
-- **`_apply_in_session(session, payload, report)` is the test seam** (CLI's `_apply()` opens its own engine; tests pass the savepoint session). `embed_job` dispatch (`_dispatch_embeds(...)`) runs AFTER `_apply` returns (outside `asyncio.run`); same broad-except.
+- **`_apply_in_session(session, payload, report)` is the test seam** (CLI's `_apply()` opens its own engine; tests pass the savepoint session). It stages one durable `jobify.embed_job` outbox event per inserted/updated job in the same transaction.
 - **Drift guard** `test_loader_against_sample_jobs_json` asserts `employers==10, jobs==27` — update in the same commit.

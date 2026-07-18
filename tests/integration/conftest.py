@@ -21,6 +21,7 @@ import pytest
 import pytest_asyncio
 from alembic import command
 from alembic.config import Config
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
@@ -42,6 +43,11 @@ from jobify_api.auth.google_verifier import (
 from jobify_api.auth.tokens import mint_access_token
 
 pytestmark = pytest.mark.integration
+
+
+class NoopRateLimiter:
+    async def hit(self, *, key: str, limit: int, window_seconds: int) -> int:
+        return limit
 
 
 @dataclass
@@ -280,6 +286,7 @@ def client(
     from jobify_api.dependencies import get_session
 
     app = create_app()
+    app.state.rate_limiter = NoopRateLimiter()
 
     async def _shared_session() -> AsyncIterator[AsyncSession]:
         yield session
@@ -294,19 +301,17 @@ def client(
 
 
 @pytest_asyncio.fixture
-async def async_client(
+async def integration_app(
     session: AsyncSession,
     db_url: str,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     google_verifier: FakeGoogleIdTokenVerifier,
-) -> AsyncIterator[AsyncClient]:
-    """Async HTTP client for async tests that share a ``session``.
+) -> AsyncIterator[FastAPI]:
+    """FastAPI app wired to the savepoint-bound integration-test session.
 
-    Uses httpx.AsyncClient with ASGITransport so the ASGI app executes in the
-    same event loop as the async test function. This avoids the asyncpg
-    ``Future attached to a different loop`` error that arises when TestClient's
-    blocking portal creates its own event loop.
+    Exposing the app explicitly gives tests a supported seam for app state
+    without reaching through private HTTPX transport attributes.
     """
     monkeypatch.setenv("JOBIFY_ENV", "local")
     monkeypatch.setenv("JOBIFY_SERVICE_NAME", "jobify-api")
@@ -324,6 +329,7 @@ async def async_client(
     from jobify_api.dependencies import get_session
 
     app = create_app()
+    app.state.rate_limiter = NoopRateLimiter()
 
     async def _shared_session() -> AsyncIterator[AsyncSession]:
         yield session
@@ -331,10 +337,20 @@ async def async_client(
     app.dependency_overrides[get_session] = _shared_session
     app.dependency_overrides[get_google_verifier] = lambda: google_verifier
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        yield ac
+    yield app
 
     app.dependency_overrides.clear()
+    await app.state.db_engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def async_client(integration_app: FastAPI) -> AsyncIterator[AsyncClient]:
+    """Async HTTP client that executes the explicit integration app in-loop."""
+    async with AsyncClient(
+        transport=ASGITransport(app=integration_app),
+        base_url="http://test",
+    ) as ac:
+        yield ac
 
 
 @pytest_asyncio.fixture
@@ -399,6 +415,7 @@ async def concurrent_async_client(
     from jobify_api.app_factory import create_app
 
     app = create_app()
+    app.state.rate_limiter = NoopRateLimiter()
     app.dependency_overrides[get_google_verifier] = lambda: google_verifier
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:

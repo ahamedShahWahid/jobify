@@ -49,12 +49,29 @@ export interface AuditLogFilters {
   limit?: number;
 }
 
-// ---- /v1/admin/employers (PROPOSED — see client.ts) ------------
-//
-// No backend endpoint exists for an employer verification queue yet (admin has
-// only audit-logs + suspend/unsuspend today). These types model the contract the
-// console *would* consume once the backend exposes it; in live mode the calls
-// 404. The DemoClient implements them fully against seeded data.
+export interface CountBucket {
+  key: string;
+  count: number;
+}
+
+export interface DayBucket {
+  day: string;
+  count: number;
+}
+
+export interface AdminAnalyticsSummary {
+  total_events: number;
+  distinct_actors: number;
+  last_24h: number;
+  system_events: number;
+  span_start: string | null;
+  span_end: string | null;
+  activity: DayBucket[];
+  role_counts: CountBucket[];
+  action_counts: CountBucket[];
+}
+
+// ---- /v1/admin/employers ----------------------------------------
 
 export type EmployerVerificationStatus = "pending" | "verified" | "rejected";
 
@@ -77,4 +94,10 @@ export interface EmployerVerificationRow {
 export interface EmployerVerificationPage {
   items: EmployerVerificationRow[];
   next_cursor: string | null;
+}
+
+export interface EmployerVerificationCounts {
+  pending: number;
+  verified: number;
+  rejected: number;
 }

@@ -18,6 +18,10 @@ working
 # Playwright MCP verification artifacts (screenshots, console logs).
 .playwright-mcp/
 
+# Project-local Git worktrees used for isolated implementation sessions.
+.worktrees/
+.superpowers/
+
 # Python
 __pycache__/
 *.py[cod]

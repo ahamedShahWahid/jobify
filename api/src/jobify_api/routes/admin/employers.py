@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobify.audit import audit_log
 from jobify.db.models import Employer, User
+from jobify_api.admin.analytics import load_employer_verification_counts
 from jobify_api.auth.dependencies import _require_admin, current_user
 from jobify_api.dependencies import get_session
 from jobify_api.routes.admin._common import decode_admin_cursor, encode_admin_cursor
@@ -85,6 +86,12 @@ class AdminEmployerListResponse(BaseModel):
     next_cursor: str | None = None
 
 
+class EmployerVerificationCounts(BaseModel):
+    pending: int
+    verified: int
+    rejected: int
+
+
 class RejectEmployerRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     reason: str = Field(min_length=1, max_length=255)
@@ -98,6 +105,15 @@ def _status_filters(status: EmployerVerificationStatus) -> list[Any]:
     if status == "rejected":
         return [Employer.verified_at.is_(None), Employer.rejected_at.is_not(None)]
     return [Employer.verified_at.is_(None), Employer.rejected_at.is_(None)]
+
+
+@router.get("/employers/counts", response_model=EmployerVerificationCounts)
+async def employer_verification_counts(
+    user: User = Depends(current_user),  # noqa: B008
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> EmployerVerificationCounts:
+    await _require_admin(user)
+    return EmployerVerificationCounts(**(await load_employer_verification_counts(session)))
 
 
 @router.get("/employers", response_model=AdminEmployerListResponse)
@@ -217,6 +233,5 @@ async def reject_employer(
         "admin.employer-rejected",
         admin_user_id=str(user.id),
         employer_id=str(employer_id),
-        reason=body.reason,
     )
     return AdminEmployerRead.from_employer(refreshed)

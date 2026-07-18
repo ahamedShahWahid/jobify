@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import 'package:jobify_app/core/error/exceptions.dart';
+import 'package:jobify_app/core/format/date_formats.dart';
 import 'package:jobify_app/data/jobs/applicant_of_job_dto.dart';
 import 'package:jobify_app/data/jobs/recruiter_jobs_repository_impl.dart';
 import 'package:jobify_app/presentation/recruiter/recruiter_applicants_controller.dart';
@@ -13,8 +13,6 @@ import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
 import 'package:jobify_app/presentation/widgets/jobify_empty_state.dart';
 import 'package:jobify_app/presentation/widgets/jobify_loading_view.dart';
 import 'package:jobify_app/presentation/widgets/jobify_score_badge.dart';
-
-final _dateFormat = DateFormat.yMMMMd();
 
 class JobApplicantsScreen extends ConsumerStatefulWidget {
   const JobApplicantsScreen({required this.jobId, super.key});
@@ -168,7 +166,7 @@ class _ApplicantCard extends StatelessWidget {
             ),
             const SizedBox(height: JobifySpacing.xs),
             Text(
-              'Applied ${_dateFormat.format(applicant.appliedAt)}',
+              'Applied ${jobifyLongDateFormat.format(applicant.appliedAt)}',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

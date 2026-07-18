@@ -13,10 +13,7 @@ TransientEmbeddingError → autoretry.
 
 from __future__ import annotations
 
-import asyncio
-import concurrent.futures
-from collections.abc import Callable, Coroutine
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 import structlog
@@ -24,7 +21,6 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.sql import func
 
-from jobify.celery_app import celery_app
 from jobify.db.models import Applicant, ApplicantEmbedding, Resume, ResumeParseStatus
 from jobify.integrations.embeddings.base import (
     EmbeddingProvider,
@@ -34,6 +30,9 @@ from jobify.integrations.embeddings.base import (
 )
 from jobify.integrations.embeddings.canonicalize import canonicalize_profile
 from jobify.integrations.parser.base import ParsedResume
+from jobify.outbox import enqueue_task
+from jobify_worker.async_bridge import run_async
+from jobify_worker.celery_app import celery_app
 from jobify_worker.runtime import get_embedding_provider, get_session_maker
 
 if TYPE_CHECKING:
@@ -64,20 +63,7 @@ def embed_applicant(self, applicant_id_str: str) -> None:  # type: ignore[no-unt
     to a fresh thread so the inner ``asyncio.run()`` gets a clean loop.
     """
 
-    def _run(coro_factory: Callable[[], Coroutine[Any, Any, None]]) -> None:
-        """Run a coroutine, dispatching to a thread if a loop is running."""
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-        if loop is not None and loop.is_running():
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                fut = pool.submit(asyncio.run, coro_factory())
-                fut.result()
-        else:
-            asyncio.run(coro_factory())
-
-    _run(lambda: _embed_applicant_async(UUID(applicant_id_str)))
+    run_async(lambda: _embed_applicant_async(UUID(applicant_id_str)))
 
 
 # --- Async body ---
@@ -189,6 +175,7 @@ async def _embed_applicant_async(
             )
         )
         await session.execute(stmt)
+        enqueue_task(session, "jobify.score_applicant", str(applicant_id))
         await session.commit()
 
     _log.info(
@@ -197,21 +184,6 @@ async def _embed_applicant_async(
         model_name=result.model_name,
         input_tokens=result.input_tokens,
     )
-    _dispatch_score(applicant_id)
-
-
-def _dispatch_score(applicant_id: UUID) -> None:
-    """Fire score_applicant.delay(...) post-embed, fire-and-forget.
-
-    Broker outage MUST NOT propagate — the embedding is durable. Same broad-except
-    + warning-log pattern as the upload route → parse worker dispatch.
-    """
-    from jobify_worker.tasks.score_applicant import score_applicant
-
-    try:
-        score_applicant.delay(str(applicant_id))
-    except Exception:
-        _log.warning("score.dispatch-failed", applicant_id=str(applicant_id), exc_info=True)
 
 
 async def _load_latest_parsed_resume(session: AsyncSession, applicant_id: UUID) -> Resume | None:

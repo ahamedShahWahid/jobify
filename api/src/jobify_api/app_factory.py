@@ -9,17 +9,18 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from redis.asyncio import Redis
 from starlette.middleware.cors import CORSMiddleware
 
 from jobify import __version__
 from jobify.db.session import create_engine_from_settings, make_sessionmaker
-from jobify.integrations.storage import LocalFileStorage
+from jobify.integrations.storage import create_storage
 from jobify.observability.logging import configure_logging
-from jobify.settings import Settings
 from jobify_api.auth.google_verifier import JwksGoogleIdTokenVerifier
 from jobify_api.middleware.error_handler import register_error_handlers
 from jobify_api.middleware.metrics import MetricsMiddleware
 from jobify_api.middleware.request_id import RequestIdMiddleware
+from jobify_api.rate_limit import RedisRateLimiter
 from jobify_api.routes import (
     admin,
     applicants,
@@ -39,16 +40,19 @@ from jobify_api.routes import (
     resumes,
     saved_jobs,
 )
+from jobify_api.settings import Settings
 
 
 def create_app() -> FastAPI:
     settings = Settings()  # validated; raises on misconfiguration
-    configure_logging()
+    configure_logging(settings)
     engine = create_engine_from_settings(settings)
+    redis_client = Redis.from_url(settings.redis_url, decode_responses=True)
 
     @asynccontextmanager
     async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
         yield
+        await redis_client.aclose()
         await engine.dispose()  # release asyncpg connections on shutdown
 
     app = FastAPI(
@@ -60,7 +64,9 @@ def create_app() -> FastAPI:
     app.state.settings = settings
     app.state.db_engine = engine
     app.state.db_sessionmaker = make_sessionmaker(engine)
-    app.state.storage = LocalFileStorage(root=settings.storage_root)
+    app.state.redis = redis_client
+    app.state.rate_limiter = RedisRateLimiter(redis_client)
+    app.state.storage = create_storage(settings)
     app.state.google_verifier = JwksGoogleIdTokenVerifier(
         jwks_url=settings.google_jwks_url,
         accepted_client_ids=list(settings.google_oauth_client_ids),
