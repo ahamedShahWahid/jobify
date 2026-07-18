@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobify.db.models import Applicant, Resume, ResumeParseStatus, User
 from jobify.integrations.storage import Storage
-from jobify.settings import Settings
+from jobify.outbox import enqueue_task
 from jobify_api.auth.dependencies import (
     current_user,
 )
@@ -28,6 +28,7 @@ from jobify_api.auth.dependencies import (
     require_applicant as _require_applicant,
 )
 from jobify_api.dependencies import get_session, get_storage
+from jobify_api.settings import Settings
 
 _log = structlog.get_logger(__name__)
 
@@ -144,30 +145,8 @@ async def upload_resume(
     resume.storage_key = storage_key
 
     await storage.save(key=storage_key, content=content, content_type=file.content_type)
+    enqueue_task(session, "jobify.parse_resume", str(resume.id))
     await session.commit()
-
-    # Dispatch async parse — broker outages MUST NOT fail the upload because
-    # the resume row + file are already durable. Admin tooling can replay
-    # pending rows after the broker recovers.
-    #
-    try:
-        from jobify.celery_app import enqueue
-
-        enqueue("jobify.parse_resume", str(resume.id))
-    except Exception as exc:
-        # Broad catch is deliberate: the row + blob are already durable, so
-        # any dispatch-time error (broker down, import failure, eager-mode
-        # task crash) must NOT roll back what we already committed. The log
-        # event name stays generic ("dispatch.failed") so eager-mode parser
-        # bugs aren't mislabeled as broker outages; exc_info carries the
-        # traceback so an operator can tell broker-down from a real bug.
-        _log.warning(
-            "dispatch.failed",
-            resume_id=str(resume.id),
-            error_type=type(exc).__name__,
-            error_message=str(exc),
-            exc_info=True,
-        )
 
     await session.refresh(resume)
     return resume

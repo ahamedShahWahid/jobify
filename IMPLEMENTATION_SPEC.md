@@ -133,11 +133,11 @@ core/src/jobify/                # domain package (FastAPI-free):
                                 #   db (models + alembic migrations), settings,
                                 #   integrations (storage, parser, embeddings,
                                 #   email, scoring, explainer), consent/dsr/audit,
-                                #   seeding CLI, Celery bare app (jobify.celery_app)
+                                #   shared settings contracts + durable outbox primitives
 api/src/jobify_api/             # FastAPI service: app_factory, routes, auth,
                                 #   middleware, dependencies, dsr/admin/employer routes
-worker/src/jobify_worker/       # Celery daemon: tasks (parse, embed, score,
-                                #   sweep_notifications), runtime singletons, worker_app
+worker/src/jobify_worker/       # Celery daemon: settings, Celery routing/beat,
+                                #   tasks, runtime singletons, worker_app
 ```
 
 See `core/README.md`, `api/README.md`, and `worker/README.md` for per-package detail; `CLAUDE.md` holds the load-bearing invariants.
@@ -192,7 +192,9 @@ Indexes worth calling out:
 - `jobs(status, posted_at DESC)` for the public listing.
 - `notifications(status, send_after)` for the outbox poller.
 
-R/W split: a single primary + one read replica via `AbstractRoutingDataSource`-equivalent (SQLAlchemy `bind` selection in `Session`). Read-only endpoints (`GET /feed`, `GET /jobs`) hit the replica; everything else hits primary. Engine swap is keyed off a `read_only: bool` annotation on the FastAPI dependency.
+R/W split is a deployment backlog item. The current implementation uses one
+PostgreSQL primary through a single async SQLAlchemy engine; add replica routing
+only after production read load demonstrates the need.
 
 ---
 
@@ -200,14 +202,19 @@ R/W split: a single primary + one read replica via `AbstractRoutingDataSource`-e
 
 ### 6.1 Resume parse + embed
 
-1. Client uploads to a presigned S3 URL → POSTs `{s3_key}` to `/applicants/me/resumes`.
-2. API creates `resumes` row (status=`queued`) and dispatches `parse_resume.delay(resume_id)`.
+1. Client multipart-uploads the resume to `/v1/applicants/me/resumes`.
+2. API stores it through the configured `Storage` adapter (`local` or S3), creates a
+   `resumes` row (`pending`), and inserts a `jobify.parse_resume` durable outbox event
+   in the same database transaction.
 3. Worker:
    - Pulls the file from S3.
    - Extracts text (PDF: `pypdf` → fallback `pdfminer.six`; DOCX: `python-docx`).
    - Calls the parser (see §7) to produce `parsed_json` matching a strict schema (name, contacts, experience[], education[], skills[], certifications[]).
    - Writes `parsed_json`, sets status=`parsed`.
-4. After persisting `parsed_json` and setting `parse_status=parsed`, dispatches `embed_applicant.delay(applicant_id)` from Txn 3 (fire-and-forget under broad except — parse is durable if the broker is down). The embedding worker computes the vector asynchronously via the Gemini provider and upserts into `applicant_embeddings`.
+4. Txn 3 persists `parsed_json`, sets `parse_status=parsed`, and inserts the
+   `jobify.embed_applicant` outbox event atomically. The embedding worker similarly
+   upserts `applicant_embeddings` and stages scoring in the same commit. Celery beat's
+   outbox sweep publishes pending task intents after broker recovery.
 5. Client polls `/resumes/{id}` and is also pushed via FCM when state changes.
 
 Target: parse → first matches surfaced in **≤ 10 min** (BRD MVP criterion). p50 budget: parse 8 s, embed 1 s, score initial 10 jobs 4 s.
@@ -215,7 +222,7 @@ Target: parse → first matches surfaced in **≤ 10 min** (BRD MVP criterion). 
 ### 6.2 Job ingestion
 
 Two paths:
-- **Direct posting** (recruiter UI): trivial — write row + dispatch `embed_job`.
+- **Direct posting** (recruiter UI): write the row and durable `embed_job` intent in one transaction.
 - **Approved sources** (post legal sign-off — see §14): Celery beat schedules `ingest_source.delay(source_id)` per source. Worker fetches, normalizes to the `jobs` schema, dedupes via `(employer_name_norm, title_norm, locations, posted_at_day)`, embeds, indexes. Failed fetches are recorded in `ingest_runs` and surfaced in the admin source monitor.
 
 Each source has a `kind` and an adapter class implementing `fetch() -> Iterable[RawJob]` and `normalize(raw) -> Job`. Source-specific quirks are isolated in the adapter, not the core pipeline.

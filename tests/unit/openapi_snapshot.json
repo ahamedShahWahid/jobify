@@ -389,6 +389,84 @@
         "title": "ApplicationRead",
         "type": "object"
       },
+      "AuditAnalyticsRead": {
+        "properties": {
+          "action_counts": {
+            "items": {
+              "$ref": "#/components/schemas/CountBucketRead"
+            },
+            "title": "Action Counts",
+            "type": "array"
+          },
+          "activity": {
+            "items": {
+              "$ref": "#/components/schemas/DayBucketRead"
+            },
+            "title": "Activity",
+            "type": "array"
+          },
+          "distinct_actors": {
+            "title": "Distinct Actors",
+            "type": "integer"
+          },
+          "last_24h": {
+            "title": "Last 24H",
+            "type": "integer"
+          },
+          "role_counts": {
+            "items": {
+              "$ref": "#/components/schemas/CountBucketRead"
+            },
+            "title": "Role Counts",
+            "type": "array"
+          },
+          "span_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Span End"
+          },
+          "span_start": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Span Start"
+          },
+          "system_events": {
+            "title": "System Events",
+            "type": "integer"
+          },
+          "total_events": {
+            "title": "Total Events",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_events",
+          "distinct_actors",
+          "last_24h",
+          "system_events",
+          "span_start",
+          "span_end",
+          "activity",
+          "role_counts",
+          "action_counts"
+        ],
+        "title": "AuditAnalyticsRead",
+        "type": "object"
+      },
       "AuditLogListResponse": {
         "properties": {
           "items": {
@@ -571,6 +649,43 @@
         "title": "ConsentScope",
         "type": "string"
       },
+      "CountBucketRead": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "count"
+        ],
+        "title": "CountBucketRead",
+        "type": "object"
+      },
+      "DayBucketRead": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day",
+          "count"
+        ],
+        "title": "DayBucketRead",
+        "type": "object"
+      },
       "DeleteReport": {
         "additionalProperties": false,
         "properties": {
@@ -643,6 +758,29 @@
           "name"
         ],
         "title": "EmployerCreate",
+        "type": "object"
+      },
+      "EmployerVerificationCounts": {
+        "properties": {
+          "pending": {
+            "title": "Pending",
+            "type": "integer"
+          },
+          "rejected": {
+            "title": "Rejected",
+            "type": "integer"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pending",
+          "verified",
+          "rejected"
+        ],
+        "title": "EmployerVerificationCounts",
         "type": "object"
       },
       "FeedItemRead": {
@@ -2476,6 +2614,27 @@
         ]
       }
     },
+    "/v1/admin/analytics/summary": {
+      "get": {
+        "operationId": "analytics_summary_v1_admin_analytics_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditAnalyticsRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Analytics Summary",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/v1/admin/audit-logs": {
       "get": {
         "operationId": "list_audit_logs_v1_admin_audit_logs_get",
@@ -2708,6 +2867,27 @@
           }
         },
         "summary": "List Employers For Verification",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/v1/admin/employers/counts": {
+      "get": {
+        "operationId": "employer_verification_counts_v1_admin_employers_counts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmployerVerificationCounts"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Employer Verification Counts",
         "tags": [
           "admin"
         ]

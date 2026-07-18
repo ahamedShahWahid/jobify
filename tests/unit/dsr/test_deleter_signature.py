@@ -11,8 +11,8 @@ def test_delete_user_data_signature() -> None:
     sig = inspect.signature(delete_user_data)
     params = list(sig.parameters)
     assert params[0] == "session"
-    for name in ("storage", "user"):
-        assert sig.parameters[name].kind == inspect.Parameter.KEYWORD_ONLY
+    assert sig.parameters["user"].kind == inspect.Parameter.KEYWORD_ONLY
+    assert "storage" not in sig.parameters
 
 
 def test_delete_report_top_level_fields() -> None:

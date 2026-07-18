@@ -17,13 +17,14 @@ from typing import TYPE_CHECKING
 from celery.signals import worker_process_init, worker_shutting_down
 from sqlalchemy.pool import NullPool
 
-from jobify.celery_app import settings
+from jobify_worker.celery_app import settings
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
     from jobify.integrations.embeddings.gemini import GeminiEmbeddingProvider
     from jobify.integrations.notifications.base import EmailChannel
+    from jobify.integrations.storage.base import Storage
     from jobify.scoring.explainer import MatchExplainer
 
 
@@ -76,6 +77,21 @@ def get_session_maker() -> async_sessionmaker[AsyncSession]:
     return _sessionmaker
 
 
+# --- Per-worker storage adapter ---
+
+_storage: Storage | None = None
+
+
+def get_storage() -> Storage:
+    """Return the configured storage adapter shared by worker tasks."""
+    global _storage
+    if _storage is None:
+        from jobify.integrations.storage import create_storage
+
+        _storage = create_storage(settings)
+    return _storage
+
+
 # --- Per-worker embedding provider ---
 
 _embedding_provider: GeminiEmbeddingProvider | None = None
@@ -102,6 +118,7 @@ def get_embedding_provider() -> GeminiEmbeddingProvider:
             api_key=_gemini_api_key_or_raise(),
             model=settings.embedding_model,
             output_dim=settings.embedding_dim,
+            timeout_seconds=settings.provider_read_timeout_seconds,
         )
     return _embedding_provider
 
@@ -116,7 +133,7 @@ def get_email_channel() -> EmailChannel:
 
     Reads ``settings.email_channel`` to choose the implementation:
     - ``"logging"`` — ``LoggingEmailChannel`` (stub; no email is actually sent).
-    - ``"ses"``     — raises ``NotImplementedError`` (deferred until deploy target is picked).
+    - ``"ses"``     — ``SesEmailChannel`` using the configured verified sender.
 
     Like ``get_embedding_provider``, the channel is built on first call so that
     eager-mode tests can monkeypatch before the factory is invoked.
@@ -128,7 +145,16 @@ def get_email_channel() -> EmailChannel:
 
             _email_channel = LoggingEmailChannel()
         elif settings.email_channel == "ses":
-            raise NotImplementedError("SES email channel is not yet implemented")
+            from jobify.integrations.notifications.ses import SesEmailChannel
+
+            if settings.email_from_address is None:  # defense in depth
+                raise ValueError("email_from_address is required for SES")
+            _email_channel = SesEmailChannel(
+                from_address=settings.email_from_address,
+                region=settings.aws_region,
+                connect_timeout_seconds=settings.provider_connect_timeout_seconds,
+                read_timeout_seconds=settings.provider_read_timeout_seconds,
+            )
         else:
             raise ValueError(f"unknown email_channel: {settings.email_channel!r}")
     return _email_channel
@@ -163,7 +189,12 @@ def get_match_explainer() -> MatchExplainer:
             from jobify.scoring.llm_explainer import GeminiMatchExplainer
 
             _match_explainer = GeminiMatchExplainer(
-                client=genai.Client(api_key=_gemini_api_key_or_raise()),
+                client=genai.Client(
+                    api_key=_gemini_api_key_or_raise(),
+                    http_options=genai.types.HttpOptions(
+                        timeout=int(settings.provider_read_timeout_seconds * 1000)
+                    ),
+                ),
                 model=settings.match_explainer_model,
             )
         else:

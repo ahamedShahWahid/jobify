@@ -5,10 +5,9 @@ Shared domain package (`jobify`). This is a library depended on by the FastAPI s
 ## What's inside
 
 - **Database**: SQLAlchemy models, Alembic migrations (`core/src/jobify/db/migrations/`), schema (`jobify` namespace)
-- **Settings**: environment variable parsing and validation (`jobify.settings`)
+- **Shared settings contracts**: minimal database/logging configuration for migrations and tooling
 - **Integrations**: storage, resume parser, Gemini embeddings, email templates, scoring, LLM explainer
-- **Celery**: bare app (`jobify.celery_app`) used by both API and worker
-- **Domain logic**: consent/channel prefs, DSR export/delete, audit logs, seeding CLI
+- **Domain logic**: consent/channel prefs, DSR export/delete, audit logs, durable outbox primitives
 - **Assets**: email templates (`core/emails/`), parse quality-gate gold dataset (`core/data/parse_eval/`), sample jobs fixture (`core/data/sample_jobs.json`)
 
 ## Running migrations

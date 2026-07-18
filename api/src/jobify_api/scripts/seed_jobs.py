@@ -41,7 +41,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import jobify
 from jobify.db.models import Employer, Job, JobStatus
 from jobify.db.session import create_engine_from_settings, make_sessionmaker
-from jobify.settings import Settings
+from jobify.outbox import enqueue_task
+from jobify_api.settings import Settings
 
 _log = structlog.get_logger(__name__)
 
@@ -163,8 +164,6 @@ async def _apply(payload: SeedPayload, *, dry_run: bool) -> SeedReport:
                 await session.commit()
     finally:
         await engine.dispose()
-    if not dry_run:
-        _dispatch_embeds(report.inserted_job_ids + report.updated_job_ids)
     return report
 
 
@@ -181,6 +180,8 @@ async def _apply_in_session(
     for job_raw in payload.jobs:
         await _upsert_job(session, job_raw, name_to_employer_id[job_raw.employer_name], report)
     await session.flush()
+    for job_id in report.inserted_job_ids + report.updated_job_ids:
+        enqueue_task(session, "jobify.embed_job", str(job_id))
 
 
 async def _upsert_employer(
@@ -285,22 +286,6 @@ async def _upsert_job(
         title=match.title,
         id=str(match.id),
     )
-
-
-def _dispatch_embeds(job_ids: list[uuid.UUID]) -> None:
-    """Fire ``enqueue("jobify.embed_job", ...)`` for each job_id, fire-and-forget.
-
-    Broker outage MUST NOT fail the seed — the rows are durable. The broad
-    except + warning log mirrors the upload-route → parse-resume dispatch
-    pattern in ``routes/resumes.py``. Don't tighten the except.
-    """
-    from jobify.celery_app import enqueue
-
-    for jid in job_ids:
-        try:
-            enqueue("jobify.embed_job", str(jid))
-        except Exception:
-            _log.warning("embed.dispatch-failed", job_id=str(jid), exc_info=True)
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:

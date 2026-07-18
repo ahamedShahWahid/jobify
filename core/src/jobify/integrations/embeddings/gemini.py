@@ -22,8 +22,18 @@ _log = structlog.get_logger(__name__)
 
 
 class GeminiEmbeddingProvider(EmbeddingProvider):
-    def __init__(self, *, api_key: str, model: str, output_dim: int) -> None:
-        self._client = genai.Client(api_key=api_key)
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        model: str,
+        output_dim: int,
+        timeout_seconds: float = 30.0,
+    ) -> None:
+        self._client = genai.Client(
+            api_key=api_key,
+            http_options=types.HttpOptions(timeout=int(timeout_seconds * 1000)),
+        )
         self._model = model
         self._output_dim = output_dim
 

@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jobify.db.models import ApplicantPreferences, User, UserRole
 from jobify_api.auth.google_verifier import GoogleClaims
 from jobify_api.auth.tokens import mint_access_token
+from tests.integration.outbox_helpers import task_event_args
 
 pytestmark = pytest.mark.integration
 
@@ -145,41 +146,24 @@ async def test_patch_recruiter_returns_403(
 
 
 async def test_patch_matching_field_dispatches_rescore(
-    async_client: httpx.AsyncClient, google_verifier, monkeypatch
+    async_client: httpx.AsyncClient, google_verifier, session
 ) -> None:
-    import jobify.celery_app as _celery_mod
-
-    calls: list[str] = []
-
-    def _spy_enqueue(name: str, *args: object) -> None:
-        if name == "jobify.score_applicant":
-            calls.extend(args)
-
-    monkeypatch.setattr(_celery_mod, "enqueue", _spy_enqueue)
-
     signin = await _signin(async_client, google_verifier)
     headers = {"Authorization": f"Bearer {signin['access_token']}"}
     resp = await async_client.patch(
         "/v1/applicants/me/preferences", headers=headers, json={"locations": ["Pune"]}
     )
     assert resp.status_code == 200
-    assert calls == [signin["user"]["applicant_id"]]
+    assert [signin["user"]["applicant_id"]] in await task_event_args(
+        session, "jobify.score_applicant"
+    )
 
 
 async def test_patch_desired_role_only_no_rescore(
-    async_client: httpx.AsyncClient, google_verifier, monkeypatch
+    async_client: httpx.AsyncClient, google_verifier, session
 ) -> None:
-    import jobify.celery_app as _celery_mod
-
-    calls: list[str] = []
-
-    def _spy_enqueue(name: str, *args: object) -> None:
-        if name == "jobify.score_applicant":
-            calls.extend(args)
-
-    monkeypatch.setattr(_celery_mod, "enqueue", _spy_enqueue)
-
     signin = await _signin(async_client, google_verifier)
+    before = len(await task_event_args(session, "jobify.score_applicant"))
     headers = {"Authorization": f"Bearer {signin['access_token']}"}
     resp = await async_client.patch(
         "/v1/applicants/me/preferences",
@@ -187,22 +171,12 @@ async def test_patch_desired_role_only_no_rescore(
         json={"desired_role": "design"},
     )
     assert resp.status_code == 200
-    assert calls == []  # desired_role is capture-only, not a matching field
+    assert len(await task_event_args(session, "jobify.score_applicant")) == before
 
 
 async def test_patch_expected_ctc_explicit_null_clears_and_rescores(
-    async_client: httpx.AsyncClient, google_verifier, monkeypatch
+    async_client: httpx.AsyncClient, google_verifier, session
 ) -> None:
-    import jobify.celery_app as _celery_mod
-
-    calls: list[str] = []
-
-    def _spy_enqueue(name: str, *args: object) -> None:
-        if name == "jobify.score_applicant":
-            calls.extend(args)
-
-    monkeypatch.setattr(_celery_mod, "enqueue", _spy_enqueue)
-
     signin = await _signin(async_client, google_verifier)
     headers = {"Authorization": f"Bearer {signin['access_token']}"}
     resp = await async_client.patch(
@@ -210,7 +184,7 @@ async def test_patch_expected_ctc_explicit_null_clears_and_rescores(
     )
     assert resp.status_code == 200
     assert resp.json()["expected_ctc"] == "1200000.00"
-    calls.clear()
+    before = len(await task_event_args(session, "jobify.score_applicant"))
 
     resp = await async_client.patch(
         "/v1/applicants/me/preferences", headers=headers, json={"expected_ctc": None}
@@ -218,23 +192,16 @@ async def test_patch_expected_ctc_explicit_null_clears_and_rescores(
     assert resp.status_code == 200
     assert resp.json()["expected_ctc"] is None
     # Clearing a matching field is still a matching change → rescore.
-    assert calls == [signin["user"]["applicant_id"]]
+    events = await task_event_args(session, "jobify.score_applicant")
+    assert len(events) == before + 1
+    assert events[-1] == [signin["user"]["applicant_id"]]
 
 
 async def test_patch_desired_role_explicit_null_clears_no_rescore(
-    async_client: httpx.AsyncClient, google_verifier, monkeypatch
+    async_client: httpx.AsyncClient, google_verifier, session
 ) -> None:
-    import jobify.celery_app as _celery_mod
-
-    calls: list[str] = []
-
-    def _spy_enqueue(name: str, *args: object) -> None:
-        if name == "jobify.score_applicant":
-            calls.extend(args)
-
-    monkeypatch.setattr(_celery_mod, "enqueue", _spy_enqueue)
-
     signin = await _signin(async_client, google_verifier)
+    before = len(await task_event_args(session, "jobify.score_applicant"))
     headers = {"Authorization": f"Bearer {signin['access_token']}"}
     resp = await async_client.patch(
         "/v1/applicants/me/preferences", headers=headers, json={"desired_role": "design"}
@@ -247,22 +214,12 @@ async def test_patch_desired_role_explicit_null_clears_no_rescore(
     )
     assert resp.status_code == 200
     assert resp.json()["desired_role"] is None
-    assert calls == []  # capture-only field, cleared or set
+    assert len(await task_event_args(session, "jobify.score_applicant")) == before
 
 
 async def test_patch_empty_body_is_noop(
-    async_client: httpx.AsyncClient, google_verifier, monkeypatch
+    async_client: httpx.AsyncClient, google_verifier, session
 ) -> None:
-    import jobify.celery_app as _celery_mod
-
-    calls: list[str] = []
-
-    def _spy_enqueue(name: str, *args: object) -> None:
-        if name == "jobify.score_applicant":
-            calls.extend(args)
-
-    monkeypatch.setattr(_celery_mod, "enqueue", _spy_enqueue)
-
     signin = await _signin(async_client, google_verifier)
     headers = {"Authorization": f"Bearer {signin['access_token']}"}
     resp = await async_client.patch(
@@ -271,7 +228,7 @@ async def test_patch_empty_body_is_noop(
         json={"desired_role": "design", "locations": ["Pune"], "expected_ctc": 500000},
     )
     assert resp.status_code == 200
-    calls.clear()
+    before = len(await task_event_args(session, "jobify.score_applicant"))
 
     resp = await async_client.patch("/v1/applicants/me/preferences", headers=headers, json={})
     assert resp.status_code == 200
@@ -280,7 +237,7 @@ async def test_patch_empty_body_is_noop(
         "locations": ["Pune"],
         "expected_ctc": "500000.00",
     }
-    assert calls == []  # nothing changed → no rescore
+    assert len(await task_event_args(session, "jobify.score_applicant")) == before
 
 
 async def test_get_soft_deleted_preferences_row_returns_500(

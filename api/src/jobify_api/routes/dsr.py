@@ -12,9 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobify.audit import audit_log
 from jobify.db.models import User
-from jobify.integrations.storage import Storage
 from jobify_api.auth.dependencies import current_user
-from jobify_api.dependencies import get_session, get_storage
+from jobify_api.dependencies import get_session
 from jobify_api.dsr import build_user_export
 from jobify_api.dsr.deleter import DeleteReport, delete_user_data
 
@@ -107,7 +106,6 @@ async def delete_user_data_endpoint(
     request: Request,
     user: User = Depends(current_user),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
-    storage: Storage = Depends(get_storage),  # noqa: B008
 ) -> DeleteReport:
     """DPDP § 12 right-of-erasure. Soft-delete-and-scrub User + Applicant
     tombstones; hard-delete around them. Atomic — partial deletion is worse
@@ -128,7 +126,7 @@ async def delete_user_data_endpoint(
         context={"request_id": request_id},
     )
 
-    report = await delete_user_data(session, storage=storage, user=user)
+    report = await delete_user_data(session, user=user)
 
     await audit_log(
         session,

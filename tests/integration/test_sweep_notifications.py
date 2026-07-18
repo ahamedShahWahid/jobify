@@ -148,6 +148,49 @@ async def test_sweep_skips_already_sent(session: AsyncSession) -> None:
 
 
 @pytest.mark.integration
+async def test_sweep_reclaims_expired_dispatch_lease(session: AsyncSession) -> None:
+    """A worker crash after claim must not strand a notification forever."""
+    user = await _seed_user(session, email="reclaim@example.com")
+    n = await _seed_notification(
+        session,
+        user,
+        channel=NotificationChannel.IN_APP,
+        status=NotificationStatus.DISPATCHING,
+        attempts=1,
+    )
+    n.locked_until = datetime.now(UTC) - timedelta(seconds=1)
+    await session.commit()
+
+    await _sweep_notifications_async(sm=_make_sm(session), batch_size=10)
+
+    await session.refresh(n)
+    assert n.status == NotificationStatus.SENT
+    assert n.attempts == 2
+    assert n.dispatch_token is None
+    assert n.locked_until is None
+
+
+@pytest.mark.integration
+async def test_sweep_does_not_steal_active_dispatch_lease(session: AsyncSession) -> None:
+    user = await _seed_user(session, email="active-lease@example.com")
+    n = await _seed_notification(
+        session,
+        user,
+        channel=NotificationChannel.IN_APP,
+        status=NotificationStatus.DISPATCHING,
+        attempts=1,
+    )
+    n.locked_until = datetime.now(UTC) + timedelta(minutes=1)
+    await session.commit()
+
+    await _sweep_notifications_async(sm=_make_sm(session), batch_size=10)
+
+    await session.refresh(n)
+    assert n.status == NotificationStatus.DISPATCHING
+    assert n.attempts == 1
+
+
+@pytest.mark.integration
 async def test_sweep_retries_on_failed_channel(
     session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,

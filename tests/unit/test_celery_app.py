@@ -3,7 +3,7 @@ routes write Notification rows but nothing was dispatching the sweeper."""
 
 from __future__ import annotations
 
-from jobify.celery_app import celery_app
+from jobify_worker.celery_app import celery_app
 
 
 def test_sweep_notifications_is_beat_scheduled() -> None:

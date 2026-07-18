@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import pytest
+from sqlalchemy import select
 
-import jobify.celery_app as _celery_mod
+from jobify.db.models import Job
+from tests.integration.outbox_helpers import task_event_args
 
 pytestmark = pytest.mark.integration
 
@@ -27,23 +29,13 @@ async def _make_recruiter_and_job(async_client, token):
     return emp.json()["id"], job_resp.json()["id"]
 
 
-class _RecordingEnqueue:
-    def __init__(self) -> None:
-        self.calls: list[str] = []
-
-    def __call__(self, name: str, *args: object) -> None:
-        if name == "jobify.embed_job":
-            self.calls.extend(args)
-
-
 async def test_patch_content_field_redispatches_embed(
-    async_client, applicant_user_and_token, monkeypatch
+    async_client, applicant_user_and_token, session
 ):
     _, token = applicant_user_and_token
     _, job_id = await _make_recruiter_and_job(async_client, token)
 
-    stub = _RecordingEnqueue()
-    monkeypatch.setattr(_celery_mod, "enqueue", stub)
+    before = len(await task_event_args(session, "jobify.embed_job"))
 
     r = await async_client.patch(
         f"/v1/jobs/{job_id}",
@@ -52,17 +44,18 @@ async def test_patch_content_field_redispatches_embed(
     )
     assert r.status_code == 200, r.text
     assert r.json()["title"] == "Renamed Role"
-    assert stub.calls == [job_id]
+    events = await task_event_args(session, "jobify.embed_job")
+    assert len(events) == before + 1
+    assert events[-1] == [job_id]
 
 
 async def test_patch_status_only_does_not_redispatch_embed(
-    async_client, applicant_user_and_token, monkeypatch
+    async_client, applicant_user_and_token, session
 ):
     _, token = applicant_user_and_token
     _, job_id = await _make_recruiter_and_job(async_client, token)
 
-    stub = _RecordingEnqueue()
-    monkeypatch.setattr(_celery_mod, "enqueue", stub)
+    before = len(await task_event_args(session, "jobify.embed_job"))
 
     r = await async_client.patch(
         f"/v1/jobs/{job_id}",
@@ -71,17 +64,16 @@ async def test_patch_status_only_does_not_redispatch_embed(
     )
     assert r.status_code == 200, r.text
     assert r.json()["status"] == "closed"
-    assert stub.calls == []
+    assert len(await task_event_args(session, "jobify.embed_job")) == before
 
 
 async def test_patch_combined_content_and_status_redispatches_once(
-    async_client, applicant_user_and_token, monkeypatch
+    async_client, applicant_user_and_token, session
 ):
     _, token = applicant_user_and_token
     _, job_id = await _make_recruiter_and_job(async_client, token)
 
-    stub = _RecordingEnqueue()
-    monkeypatch.setattr(_celery_mod, "enqueue", stub)
+    before = len(await task_event_args(session, "jobify.embed_job"))
 
     r = await async_client.patch(
         f"/v1/jobs/{job_id}",
@@ -89,7 +81,9 @@ async def test_patch_combined_content_and_status_redispatches_once(
         headers={"Authorization": f"Bearer {token}"},
     )
     assert r.status_code == 200, r.text
-    assert stub.calls == [job_id]
+    events = await task_event_args(session, "jobify.embed_job")
+    assert len(events) == before + 1
+    assert events[-1] == [job_id]
 
 
 async def test_patch_unknown_status_returns_422(async_client, applicant_user_and_token):
@@ -102,6 +96,44 @@ async def test_patch_unknown_status_returns_422(async_client, applicant_user_and
         headers={"Authorization": f"Bearer {token}"},
     )
     assert r.status_code == 422
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["title", "description", "locations", "min_exp_years", "max_exp_years", "status"],
+)
+async def test_patch_rejects_null_for_required_job_fields(
+    async_client, applicant_user_and_token, field
+):
+    _, token = applicant_user_and_token
+    _, job_id = await _make_recruiter_and_job(async_client, token)
+
+    response = await async_client.patch(
+        f"/v1/jobs/{job_id}",
+        json={field: None},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 422
+
+
+async def test_patch_rejects_invalid_merged_experience_band(
+    async_client, applicant_user_and_token, session
+):
+    _, token = applicant_user_and_token
+    _, job_id = await _make_recruiter_and_job(async_client, token)
+
+    response = await async_client.patch(
+        f"/v1/jobs/{job_id}",
+        json={"min_exp_years": 6},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 422
+    unchanged = await session.scalar(select(Job).where(Job.id == job_id))
+    assert unchanged is not None
+    assert unchanged.min_exp_years == 1
+    assert unchanged.max_exp_years == 5
 
 
 async def test_patch_other_employer_returns_404(async_client, session, applicant_user_and_token):

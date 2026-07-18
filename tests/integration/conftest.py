@@ -44,6 +44,11 @@ from jobify_api.auth.tokens import mint_access_token
 pytestmark = pytest.mark.integration
 
 
+class NoopRateLimiter:
+    async def hit(self, *, key: str, limit: int, window_seconds: int) -> int:
+        return limit
+
+
 @dataclass
 class FakeGoogleIdTokenVerifier:
     """Test double: opaque token strings → canned :class:`GoogleClaims`.
@@ -280,6 +285,7 @@ def client(
     from jobify_api.dependencies import get_session
 
     app = create_app()
+    app.state.rate_limiter = NoopRateLimiter()
 
     async def _shared_session() -> AsyncIterator[AsyncSession]:
         yield session
@@ -324,6 +330,7 @@ async def async_client(
     from jobify_api.dependencies import get_session
 
     app = create_app()
+    app.state.rate_limiter = NoopRateLimiter()
 
     async def _shared_session() -> AsyncIterator[AsyncSession]:
         yield session
@@ -399,6 +406,7 @@ async def concurrent_async_client(
     from jobify_api.app_factory import create_app
 
     app = create_app()
+    app.state.rate_limiter = NoopRateLimiter()
     app.dependency_overrides[get_google_verifier] = lambda: google_verifier
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:

@@ -18,9 +18,9 @@ When working across packages, read the relevant package file(s) — a single ses
 Jobify — an early-stage placement platform.
 
 - **Backend — uv workspace (3 packages, all from repo root):**
-  - `core/` — `jobify` domain package. DB models + Alembic migrations (`core/alembic.ini`), integrations (storage, parser, embeddings, email, scoring, explainer), consent/DSR/audit, seeding CLI, Celery bare app (`jobify.celery_app`). Email templates at `core/emails/`.
+  - `core/` — `jobify` domain package. DB models + Alembic migrations (`core/alembic.ini`), integrations (storage, parser, embeddings, email, scoring, explainer), consent/DSR/audit, and durable outbox primitives. Email templates at `core/emails/`.
   - `api/` — `jobify_api` FastAPI service. App factory, routes, auth, middleware, DSR/admin routes, employer/invite routes. Entry point `jobify_api.main:app`. Scripts: `jobify-seed-jobs`, `jobify-seed-consents`, `jobify-grant-admin`.
-  - `worker/` — `jobify_worker` Celery daemon. Tasks (parse, embed, score, sweep_notifications), runtime singletons, worker entry point `jobify_worker.worker_app`. See `worker/README.md`.
+  - `worker/` — `jobify_worker` Celery daemon. Owns Celery configuration, worker-only settings, tasks (parse, embed, score, notification/outbox sweeps), runtime singletons, and `jobify_worker.worker_app`. See `worker/README.md`.
   - `tests/` — all tests at repo root (`tests/unit/`, `tests/integration/`, `tests/eval/`).
   - Root `pyproject.toml` is the workspace (`[tool.uv.workspace] members = [core, api, worker]`). `.env` lives at repo root.
 - `IMPLEMENTATION_SPEC.md` — **how** we build it (engineering spec, v0.2 MVP-first).
@@ -38,7 +38,7 @@ All backend commands run from the **repo root** (`pyproject.toml` + `uv.lock` li
 - App refuses to boot if a required `JOBIFY_*` var is missing/invalid (`settings.py` in `jobify_api`); `JOBIFY_DB_URL` **must** use `postgresql+asyncpg://` (enforced in `Settings._enforce_async_driver`).
 - Integration fixtures inject `JOBIFY_JWT_SECRET="x"*32` + `JOBIFY_GOOGLE_OAUTH_CLIENT_IDS=test.apps.googleusercontent.com` — match these for new apps under test.
 - **Alembic runs from `core/`:** `cd core && uv run alembic upgrade head` (alembic.ini lives in `core/`).
-- **Worker runs from repo root:** `uv run --env-file=.env celery -A jobify_worker.worker_app worker --pool=solo --concurrency=1 -Q parse,embed,score,notify --loglevel=info`. Dispatch by task name via `jobify.celery_app.enqueue("jobify.<task>", …)`.
+- **Worker runs from repo root:** `uv run --env-file=.env celery -A jobify_worker.worker_app worker --pool=solo --concurrency=1 -Q parse,embed,score,notify,outbox --loglevel=info`. API/worker transactions stage task intents in `outbox_events`; `sweep_outbox` publishes them by task name.
 - **CI verbatim** (run these exact commands from repo root before claiming green) — backend: `uv run ruff check core/src api/src worker/src tests` · `uv run ruff format --check core/src api/src worker/src tests` · `uv run mypy` · `uv run pytest -v -m "not integration and not eval"` · `uv run pytest -v -s -m eval` · `uv run pytest -v -m integration`; app: `dart format --set-exit-if-changed lib test` · `flutter analyze` · `flutter test`.
 
 ## Conventions (apply everywhere)

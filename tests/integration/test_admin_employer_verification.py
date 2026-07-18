@@ -7,6 +7,7 @@ rejected_at; verify and reject are mutually exclusive.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
@@ -153,6 +154,37 @@ async def test_list_filters_by_status(
         # rows of the other two statuses must not leak into this partition.
         other_ids = {str(pending.id), str(verified.id), str(rejected.id)} - {str(expected_id)}
         assert ids.isdisjoint(other_ids)
+
+
+@pytest.mark.asyncio
+async def test_verification_counts_returns_all_statuses(
+    async_client: AsyncClient,
+    session: AsyncSession,
+    admin_user_and_token: tuple[User, str],
+) -> None:
+    _, token = admin_user_and_token
+    before_response = await async_client.get("/v1/admin/employers/counts", headers=_auth(token))
+    assert before_response.status_code == 200
+    before = before_response.json()
+
+    pending = await _make_employer(session, name=f"Count pending {uuid4().hex[:6]}")
+    verified = await _make_employer(session, name=f"Count verified {uuid4().hex[:6]}")
+    rejected = await _make_employer(session, name=f"Count rejected {uuid4().hex[:6]}")
+    now = datetime.now(UTC)
+    verified.verified_at = now
+    rejected.rejected_at = now
+    rejected.rejection_reason = "test"
+    await session.commit()
+
+    response = await async_client.get("/v1/admin/employers/counts", headers=_auth(token))
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "pending": before["pending"] + 1,
+        "verified": before["verified"] + 1,
+        "rejected": before["rejected"] + 1,
+    }
+    assert pending.id and verified.id and rejected.id
 
 
 @pytest.mark.asyncio

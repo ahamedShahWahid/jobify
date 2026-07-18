@@ -40,6 +40,12 @@ from jobify_api.auth.dependencies import (
     current_user,
 )
 from jobify_api.dependencies import get_session
+from jobify_api.jobs.service import (
+    RecruiterJobError,
+    create_recruiter_job,
+    delete_recruiter_job,
+    patch_recruiter_job,
+)
 from jobify_api.pagination import decode_cursor, encode_cursor
 from jobify_api.routes.schemas import JobRead
 
@@ -190,45 +196,12 @@ async def create_job(
     await _require_recruiter(user)
     await _require_recruiter_at_employer(user, payload.employer_id, session)
 
-    job = Job(
+    job, employer = await create_recruiter_job(
+        session,
         employer_id=payload.employer_id,
-        title=payload.title,
-        description=payload.description,
-        locations=payload.locations,
-        min_exp_years=payload.min_exp_years,
-        max_exp_years=payload.max_exp_years,
-        ctc_min=payload.ctc_min,
-        ctc_max=payload.ctc_max,
-        status=JobStatus(payload.status),
+        values=payload.model_dump(exclude={"employer_id"}),
     )
-    session.add(job)
-    await session.commit()
-    await session.refresh(job)
-
-    try:
-        from jobify.celery_app import enqueue
-
-        enqueue("jobify.embed_job", str(job.id))
-    except Exception:
-        _log.warning("embed.dispatch-failed", job_id=str(job.id), exc_info=True)
-
-    emp = await session.scalar(select(Employer).where(Employer.id == job.employer_id))
-    if emp is None:  # pragma: no cover — FK constraint makes this unreachable
-        raise HTTPException(status_code=500, detail="employer_missing")
-    return JobRead.from_job_and_employer(job, emp)
-
-
-_EMBED_TRIGGERING_FIELDS = frozenset(
-    {
-        "title",
-        "description",
-        "locations",
-        "min_exp_years",
-        "max_exp_years",
-        "ctc_min",
-        "ctc_max",
-    }
-)
+    return JobRead.from_job_and_employer(job, employer)
 
 
 class JobPatch(BaseModel):
@@ -241,6 +214,25 @@ class JobPatch(BaseModel):
     ctc_min: Decimal | None = Field(default=None, ge=0)
     ctc_max: Decimal | None = Field(default=None, ge=0)
     status: Literal["open", "closed"] | None = None
+
+    @model_validator(mode="after")
+    def _required_fields_cannot_be_cleared(self) -> JobPatch:
+        required_fields = {
+            "title",
+            "description",
+            "locations",
+            "min_exp_years",
+            "max_exp_years",
+            "status",
+        }
+        cleared = sorted(
+            field
+            for field in required_fields & self.model_fields_set
+            if getattr(self, field) is None
+        )
+        if cleared:
+            raise ValueError(f"required job fields cannot be null: {', '.join(cleared)}")
+        return self
 
 
 async def _load_recruiter_job(job_id: uuid.UUID, user: User, session: AsyncSession) -> Job:
@@ -269,31 +261,17 @@ async def patch_job(
     user: User = Depends(current_user),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> JobRead:
-    job = await _load_recruiter_job(job_id, user, session)
-
-    fields = payload.model_dump(exclude_unset=True)
-    content_changed = bool(_EMBED_TRIGGERING_FIELDS & fields.keys())
-
-    for key, value in fields.items():
-        if key == "status":
-            setattr(job, key, JobStatus(value))
-        else:
-            setattr(job, key, value)
-    await session.commit()
-    await session.refresh(job)
-
-    if content_changed:
-        try:
-            from jobify.celery_app import enqueue
-
-            enqueue("jobify.embed_job", str(job.id))
-        except Exception:
-            _log.warning("embed.dispatch-failed", job_id=str(job.id), exc_info=True)
-
-    emp = await session.scalar(select(Employer).where(Employer.id == job.employer_id))
-    if emp is None:  # pragma: no cover — FK constraint makes this unreachable
-        raise HTTPException(status_code=500, detail="employer_missing")
-    return JobRead.from_job_and_employer(job, emp)
+    await _require_recruiter(user)
+    try:
+        job, employer = await patch_recruiter_job(
+            session,
+            job_id=job_id,
+            recruiter_user_id=user.id,
+            values=payload.model_dump(exclude_unset=True),
+        )
+    except RecruiterJobError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return JobRead.from_job_and_employer(job, employer)
 
 
 @router.delete("/jobs/{job_id}", status_code=204)
@@ -302,9 +280,11 @@ async def delete_job(
     user: User = Depends(current_user),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> Response:
-    job = await _load_recruiter_job(job_id, user, session)
-    job.deleted_at = func.now()
-    await session.commit()
+    await _require_recruiter(user)
+    try:
+        await delete_recruiter_job(session, job_id=job_id, recruiter_user_id=user.id)
+    except RecruiterJobError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     return Response(status_code=204)
 
 

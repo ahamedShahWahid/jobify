@@ -27,6 +27,8 @@ from sqlalchemy.pool import NullPool
 from jobify.db.models import Resume, ResumeParseStatus, User
 from jobify.integrations.embeddings import EmbeddingTask
 from jobify_api.auth.google_verifier import GoogleClaims, get_google_verifier
+from tests.integration.conftest import NoopRateLimiter
+from tests.integration.outbox_helpers import drain_outbox_eager, task_event_args
 
 pytestmark = pytest.mark.integration
 
@@ -148,22 +150,28 @@ async def eager_client(
 
     import jobify_worker.runtime as _runtime_mod
     import jobify_worker.worker_app  # noqa: F401  — registers tasks onto celery_app
-    from jobify.celery_app import celery_app
     from jobify_api.app_factory import create_app
+    from jobify_worker.celery_app import celery_app
 
     app = create_app()
+    app.state.rate_limiter = NoopRateLimiter()
     app.dependency_overrides[get_google_verifier] = lambda: google_verifier
 
     # Enable eager mode so parse_resume + embed_applicant run synchronously.
     monkeypatch.setattr(celery_app.conf, "task_always_eager", True)
     monkeypatch.setattr(celery_app.conf, "task_eager_propagates", True)
-    import jobify.celery_app as _celery_mod
+    import jobify_worker.celery_app as _celery_mod
 
     monkeypatch.setattr(_celery_mod.settings, "storage_root", tmp_path)
+
+    async def _drain_after_upload(response: httpx.Response) -> None:
+        if response.status_code == 201 and response.request.url.path.endswith("/resumes"):
+            await drain_outbox_eager(migrated_db, app.state.storage)
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app),  # type: ignore[arg-type]
         base_url="http://test",
+        event_hooks={"response": [_drain_after_upload]},
     ) as ac:
         yield ac
 
@@ -178,6 +186,7 @@ async def eager_client(
     # resetting _embedding_provider via monkeypatch teardown.
     _runtime_mod._engine = None
     _runtime_mod._sessionmaker = None
+    _runtime_mod._storage = None
 
 
 async def test_embed_after_parse_writes_row(
@@ -319,72 +328,15 @@ async def test_embed_no_parsed_resume_is_no_op(
         await _cleanup_user_by_email(migrated_db, email_used)
 
 
-async def test_dispatch_resilient_to_embed_broker_failure(
-    eager_client: httpx.AsyncClient,
-    migrated_db: str,
-    google_verifier,
-    patched_embedding_provider,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """If embed_applicant.delay() raises, parse still commits PARSED and no
-    embedding row is written."""
-    from jobify_worker.tasks import embed as embed_mod
-
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Helvetica", size=12)
-    pdf.cell(text="Broker Test User")
-    pdf_bytes = bytes(pdf.output())
-
-    def _raise_broker_down(*args, **kwargs):  # type: ignore[no-untyped-def]
-        raise ConnectionError("broker unreachable")
-
-    monkeypatch.setattr(embed_mod.embed_applicant, "delay", _raise_broker_down)
-
-    applicant_id_str, access = await _signin_as_applicant(eager_client, google_verifier)
-    applicant_id = uuid.UUID(applicant_id_str)
-
-    try:
-        resp = await eager_client.post(
-            "/v1/applicants/me/resumes",
-            files={"file": ("cv.pdf", pdf_bytes, "application/pdf")},
-            headers=_auth(access),
-        )
-        assert resp.status_code == 201, "upload should succeed even if embed dispatch fails"
-
-        # Parse still committed PARSED (the embed dispatch happens after parse commits).
-        resume_id = resp.json()["id"]
-        resume = await _get_resume_row_direct(migrated_db, resume_id)
-        assert resume.parse_status is ResumeParseStatus.PARSED
-
-        # No embedding row was written (dispatch failed before the worker ran).
-        row = await _get_embedding_row_direct(migrated_db, str(applicant_id))
-        assert row is None, "embedding row should not exist when dispatch raised"
-
-        # The fake provider should NOT have been called.
-        assert patched_embedding_provider.calls == []
-    finally:
-        for claims in google_verifier.canned.values():
-            await _cleanup_user_by_email(migrated_db, claims.email)
-
-
 @pytest.mark.integration
 async def test_embed_applicant_dispatches_score_applicant(
     session,
     patched_embedding_provider,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """After embed_applicant Txn 3 commits, score_applicant.delay is called."""
+    """Embedding and score intent commit atomically."""
     from sqlalchemy.ext.asyncio import async_sessionmaker
 
     from jobify.db.models import Applicant, Resume, ResumeParseStatus, User, UserRole
-
-    calls: list[str] = []
-
-    def _spy(applicant_id_str: str) -> None:
-        calls.append(applicant_id_str)
-
-    monkeypatch.setattr("jobify_worker.tasks.score_applicant.score_applicant.delay", _spy)
 
     user = User(email="dispatch@example.com", role=UserRole.APPLICANT)
     session.add(user)
@@ -422,5 +374,4 @@ async def test_embed_applicant_dispatches_score_applicant(
     from jobify_worker.tasks.embed import _embed_applicant_async
 
     await _embed_applicant_async(applicant.id, sm=sm, provider=patched_embedding_provider)
-    assert len(calls) == 1
-    assert calls[0] == str(applicant.id)
+    assert [str(applicant.id)] in await task_event_args(session, "jobify.score_applicant")

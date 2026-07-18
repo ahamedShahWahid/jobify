@@ -50,6 +50,28 @@ export interface AuditLogFilters {
   limit?: number;
 }
 
+export interface CountBucket {
+  key: string;
+  count: number;
+}
+
+export interface DayBucket {
+  day: string;
+  count: number;
+}
+
+export interface AdminAnalyticsSummary {
+  total_events: number;
+  distinct_actors: number;
+  last_24h: number;
+  system_events: number;
+  span_start: string | null;
+  span_end: string | null;
+  activity: DayBucket[];
+  role_counts: CountBucket[];
+  action_counts: CountBucket[];
+}
+
 // ---- /v1/jobs (recruiter) --------------------------------------
 
 export interface JobRead {
@@ -153,6 +175,12 @@ export interface EmployerVerificationRow {
 export interface EmployerVerificationPage {
   items: EmployerVerificationRow[];
   next_cursor: string | null;
+}
+
+export interface EmployerVerificationCounts {
+  pending: number;
+  verified: number;
+  rejected: number;
 }
 
 export interface MemberRead {

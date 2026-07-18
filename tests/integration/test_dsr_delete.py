@@ -35,6 +35,8 @@ from jobify.db.models import (
     NotificationChannel,
     OAuthIdentity,
     OAuthProvider,
+    OutboxEvent,
+    OutboxEventKind,
     Resume,
     User,
     UserConsent,
@@ -157,7 +159,8 @@ async def test_applicant_happy_path_tombstones_and_clears(
         content=b"%PDF-1.4\nx",
         content_type="application/pdf",
     )
-    blob_path = tmp_path / resume.storage_key
+    original_storage_key = resume.storage_key
+    blob_path = tmp_path / original_storage_key
     await session.commit()
 
     resp = await async_client.request(
@@ -205,7 +208,15 @@ async def test_applicant_happy_path_tombstones_and_clears(
     assert refetched_resume.original_filename is None
     assert refetched_resume.storage_key is None
     assert refetched_resume.parsed_json is None
-    assert not blob_path.exists()
+    assert blob_path.exists(), "blob deletion is durable and asynchronous"
+
+    cleanup = (
+        await session.execute(
+            select(OutboxEvent).where(OutboxEvent.kind == OutboxEventKind.BLOB_DELETE)
+        )
+    ).scalar_one()
+    assert cleanup.payload == {"storage_key": original_storage_key}
+    assert body["section_counts"]["blob_deletions_queued"] == 1
 
     # Notifications + OAuth identities + consents are hard-gone.
     assert (

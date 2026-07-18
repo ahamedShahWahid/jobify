@@ -1,8 +1,8 @@
 """Applicant profile update — PATCH /v1/applicants/me.
 
 The authenticated applicant edits their own profile fields. A change to
-years_experience fires a fire-and-forget rescore post-commit (it feeds the
-structured score). locations/expected_ctc moved to
+years_experience stages a durable rescore intent in the update transaction (it
+feeds the structured score). locations/expected_ctc moved to
 applicant_preferences — see PATCH /v1/applicants/me/preferences below.
 """
 
@@ -19,6 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobify.db.models import ApplicantPreferences, RoleCategory, User
+from jobify.outbox import enqueue_task
 from jobify_api.auth.dependencies import (
     current_user,
 )
@@ -58,17 +59,6 @@ class ProfileUpdate(BaseModel):
         return self
 
 
-def _dispatch_score(applicant_id: UUID) -> None:
-    """Fire score_applicant dispatch post-commit, fire-and-forget. A broker
-    outage MUST NOT fail the save — same pattern as embed.py:_dispatch_score."""
-    from jobify.celery_app import enqueue
-
-    try:
-        enqueue("jobify.score_applicant", str(applicant_id))
-    except Exception:
-        _log.warning("score.dispatch-failed", applicant_id=str(applicant_id), exc_info=True)
-
-
 @router.patch("", response_model=MeResponse, status_code=status.HTTP_200_OK)
 async def update_profile(
     payload: ProfileUpdate,
@@ -84,6 +74,8 @@ async def update_profile(
         setattr(applicant, name, getattr(payload, name))
         if name in _MATCHING_FIELDS:
             changed_matching = True
+    if changed_matching:
+        enqueue_task(session, "jobify.score_applicant", str(applicant.id))
     await session.flush()
     await session.commit()
     await session.refresh(applicant)
@@ -94,8 +86,6 @@ async def update_profile(
         role=user.role.value,
         applicant=ApplicantRead.model_validate(applicant, from_attributes=True),
     )
-    if changed_matching:
-        _dispatch_score(applicant.id)
     return response
 
 
@@ -175,10 +165,10 @@ async def update_preferences(
         setattr(row, name, getattr(payload, name))
         if name in _PREFERENCES_MATCHING_FIELDS:
             changed_matching = True
+    if changed_matching:
+        enqueue_task(session, "jobify.score_applicant", str(applicant.id))
     await session.flush()
     await session.commit()
     await session.refresh(row)
 
-    if changed_matching:
-        _dispatch_score(applicant.id)
     return PreferencesRead.model_validate(row, from_attributes=True)

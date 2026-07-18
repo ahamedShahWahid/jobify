@@ -14,6 +14,7 @@ from jobify.integrations.embeddings.base import (
     TransientEmbeddingError,
 )
 from jobify_worker.tasks.embed_job import _embed_job_async, embed_job
+from tests.integration.outbox_helpers import task_event_args
 
 pytestmark = pytest.mark.integration
 
@@ -235,18 +236,9 @@ async def test_embed_job_permanent_error_does_not_retry(
 async def test_embed_job_dispatches_score_job(
     session: AsyncSession,
     patched_embedding_provider,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """After embed_job Txn 3 commits, score_job.delay is called."""
-    calls: list[str] = []
-
-    def _spy(job_id_str: str) -> None:
-        calls.append(job_id_str)
-
-    monkeypatch.setattr("jobify_worker.tasks.score_job.score_job.delay", _spy)
-
+    """Embedding and score intent commit atomically."""
     job = await _make_job(session)
     sm = _make_sm(session)
     await _embed_job_async(job.id, sm=sm, provider=patched_embedding_provider)
-    assert len(calls) == 1
-    assert calls[0] == str(job.id)
+    assert [str(job.id)] in await task_event_args(session, "jobify.score_job")

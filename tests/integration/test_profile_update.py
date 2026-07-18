@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jobify.db.models import Applicant, User, UserRole
 from jobify_api.auth.google_verifier import GoogleClaims
 from jobify_api.auth.tokens import mint_access_token
+from tests.integration.outbox_helpers import task_event_args
 
 pytestmark = pytest.mark.integration
 
@@ -135,18 +136,8 @@ async def test_patch_recruiter_returns_403(
 
 
 async def test_patch_matching_field_dispatches_rescore(
-    async_client: httpx.AsyncClient, google_verifier, monkeypatch
+    async_client: httpx.AsyncClient, google_verifier, session
 ) -> None:
-    import jobify.celery_app as _celery_mod
-
-    calls: list[str] = []
-
-    def _spy_enqueue(name: str, *args: object) -> None:
-        if name == "jobify.score_applicant":
-            calls.extend(args)
-
-    monkeypatch.setattr(_celery_mod, "enqueue", _spy_enqueue)
-
     signin = await _signin(async_client, google_verifier)
     headers = {"Authorization": f"Bearer {signin['access_token']}"}
 
@@ -154,23 +145,16 @@ async def test_patch_matching_field_dispatches_rescore(
         "/v1/applicants/me", headers=headers, json={"years_experience": 3}
     )
     assert resp.status_code == 200
-    assert calls == [signin["user"]["applicant_id"]]
+    assert [signin["user"]["applicant_id"]] in await task_event_args(
+        session, "jobify.score_applicant"
+    )
 
 
 async def test_patch_non_matching_field_no_rescore(
-    async_client: httpx.AsyncClient, google_verifier, monkeypatch
+    async_client: httpx.AsyncClient, google_verifier, session
 ) -> None:
-    import jobify.celery_app as _celery_mod
-
-    calls: list[str] = []
-
-    def _spy_enqueue(name: str, *args: object) -> None:
-        if name == "jobify.score_applicant":
-            calls.extend(args)
-
-    monkeypatch.setattr(_celery_mod, "enqueue", _spy_enqueue)
-
     signin = await _signin(async_client, google_verifier)
+    before = len(await task_event_args(session, "jobify.score_applicant"))
     headers = {"Authorization": f"Bearer {signin['access_token']}"}
 
     # notice_period_days is informational — no matching impact.
@@ -178,4 +162,4 @@ async def test_patch_non_matching_field_no_rescore(
         "/v1/applicants/me", headers=headers, json={"notice_period_days": 30}
     )
     assert resp.status_code == 200
-    assert calls == []
+    assert len(await task_event_args(session, "jobify.score_applicant")) == before

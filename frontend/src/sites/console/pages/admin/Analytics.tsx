@@ -1,68 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ConsoleClient } from "../../api/client";
 import { errorMessage } from "../../api/client";
-import type { AuditLogRead } from "../../api/types";
+import type { AdminAnalyticsSummary } from "../../api/types";
 import { EmptyState, ErrorNotice } from "../../components/bits";
 import { useSession } from "../../session";
 
-/**
- * Admins have exactly ONE read endpoint — `listAuditLogs`. Every chart on this
- * page is derived purely from that stream: we drain it (bounded), then bucket
- * and aggregate in the browser. No analytics endpoint exists, and inventing one
- * would lie about the backend contract.
- *
- * Bounded like the recruiter dashboard's drainJobs: a misbehaving cursor must
- * not loop forever. If we hit the cap we surface "most recent N events" rather
- * than silently truncate.
- */
-const MAX_PAGES = 40;
-const PAGE_LIMIT = 100;
-
-interface Drained {
-  rows: AuditLogRead[];
-  capped: boolean;
-}
-
-async function drainAuditLogs(client: ConsoleClient): Promise<Drained> {
-  const rows: AuditLogRead[] = [];
-  let cursor: string | undefined;
-  for (let page = 0; page < MAX_PAGES; page++) {
-    const res = await client.listAuditLogs({ cursor, limit: PAGE_LIMIT });
-    rows.push(...res.items);
-    if (!res.next_cursor) return { rows, capped: false };
-    cursor = res.next_cursor;
-  }
-  // Drained MAX_PAGES and the cursor still pointed onward.
-  return { rows, capped: true };
-}
-
-// ---- derivation helpers (pure; all memoized off `rows`) ----------
-
 const DAY_MS = 86_400_000;
-
-/** YYYY-MM-DD bucket key in UTC, so days line up with the audit log's instants. */
-function dayKey(iso: string): string {
-  return iso.slice(0, 10);
-}
 
 interface DayBucket {
   key: string;
   count: number;
 }
 
-/** One bucket per calendar day across the full span (gaps filled with 0). */
-function bucketByDay(rows: AuditLogRead[]): DayBucket[] {
-  if (rows.length === 0) return [];
+/** Fill missing UTC calendar days returned by the database aggregate. */
+function fillDayBuckets(summary: AdminAnalyticsSummary): DayBucket[] {
+  if (summary.activity.length === 0) return [];
   const counts = new Map<string, number>();
-  let min = Infinity;
-  let max = -Infinity;
-  for (const row of rows) {
-    const key = dayKey(row.created_at);
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-    const t = Date.parse(`${key}T00:00:00Z`);
-    if (t < min) min = t;
-    if (t > max) max = t;
-  }
+  for (const row of summary.activity) counts.set(row.day, row.count);
+  const min = Date.parse(`${summary.activity[0].day}T00:00:00Z`);
+  const max = Date.parse(`${summary.activity[summary.activity.length - 1].day}T00:00:00Z`);
   const out: DayBucket[] = [];
   for (let t = min; t <= max; t += DAY_MS) {
     const key = new Date(t).toISOString().slice(0, 10);
@@ -71,24 +26,8 @@ function bucketByDay(rows: AuditLogRead[]): DayBucket[] {
   return out;
 }
 
-interface Tally {
-  label: string;
-  count: number;
-}
-
-function tally(rows: AuditLogRead[], pick: (r: AuditLogRead) => string): Tally[] {
-  const counts = new Map<string, number>();
-  for (const row of rows) {
-    const label = pick(row);
-    counts.set(label, (counts.get(label) ?? 0) + 1);
-  }
-  return [...counts.entries()]
-    .map(([label, count]) => ({ label, count }))
-    .sort((a, b) => b.count - a.count);
-}
-
-function countAction(rows: AuditLogRead[], action: string): number {
-  return rows.reduce((n, r) => (r.action === action ? n + 1 : n), 0);
+function countAction(counts: Map<string, number>, action: string): number {
+  return counts.get(action) ?? 0;
 }
 
 const FUNNEL_STEPS: Array<{ action: string; label: string }> = [
@@ -197,15 +136,15 @@ function ActivityChart({ buckets }: { buckets: DayBucket[] }) {
 
 export function Analytics() {
   const { client } = useSession();
-  const [drained, setDrained] = useState<Drained | null>(null);
+  const [summary, setSummary] = useState<AdminAnalyticsSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const result = await drainAuditLogs(client);
-        if (!cancelled) setDrained(result);
+        const result = await client.analyticsSummary();
+        if (!cancelled) setSummary(result);
       } catch (e) {
         if (!cancelled) setError(errorMessage(e));
       }
@@ -215,62 +154,53 @@ export function Analytics() {
     };
   }, [client]);
 
-  const rows = drained?.rows ?? [];
-  const loading = drained === null;
+  const loading = summary === null;
 
   const stats = useMemo(() => {
-    if (rows.length === 0) {
-      return {
-        total: 0,
-        actors: 0,
-        last24h: 0,
-        systemShare: 0,
-        spanStart: null as string | null,
-        spanEnd: null as string | null,
-        spanDays: 0,
-      };
-    }
-    const actors = new Set<string>();
-    let last24h = 0;
-    let system = 0;
-    let minT = Infinity;
-    let maxT = -Infinity;
-    const cutoff = Date.now() - DAY_MS;
-    for (const row of rows) {
-      if (row.actor_user_id) actors.add(row.actor_user_id);
-      const t = Date.parse(row.created_at);
-      if (t >= cutoff) last24h += 1;
-      if (row.actor_role === "system") system += 1;
-      if (t < minT) minT = t;
-      if (t > maxT) maxT = t;
-    }
+    const total = summary?.total_events ?? 0;
+    const spanStart = summary?.span_start ?? null;
+    const spanEnd = summary?.span_end ?? null;
     return {
-      total: rows.length,
-      actors: actors.size,
-      last24h,
-      systemShare: system / rows.length,
-      spanStart: new Date(minT).toISOString(),
-      spanEnd: new Date(maxT).toISOString(),
-      spanDays: Math.max(1, Math.round((maxT - minT) / DAY_MS) + 1),
+      total,
+      actors: summary?.distinct_actors ?? 0,
+      last24h: summary?.last_24h ?? 0,
+      systemShare: total > 0 ? (summary?.system_events ?? 0) / total : 0,
+      spanStart,
+      spanEnd,
+      spanDays:
+        spanStart && spanEnd
+          ? Math.max(1, Math.round((Date.parse(spanEnd) - Date.parse(spanStart)) / DAY_MS) + 1)
+          : 0,
     };
-  }, [rows]);
+  }, [summary]);
 
-  const buckets = useMemo(() => bucketByDay(rows), [rows]);
+  const buckets = useMemo(() => (summary ? fillDayBuckets(summary) : []), [summary]);
   const roleMix = useMemo(() => {
-    const counts = tally(rows, (r) => r.actor_role);
+    const counts = (summary?.role_counts ?? []).map((row) => ({
+      label: row.key,
+      count: row.count,
+    }));
     // Stable, meaningful order; unknown roles appended after.
     const known = ROLE_ORDER.map((role) => counts.find((c) => c.label === role)).filter(
-      (c): c is Tally => c !== undefined,
+      (c): c is { label: string; count: number } => c !== undefined,
     );
     const extra = counts.filter((c) => !ROLE_ORDER.includes(c.label));
     return [...known, ...extra];
-  }, [rows]);
-  const actions = useMemo(() => tally(rows, (r) => r.action), [rows]);
+  }, [summary]);
+  const actions = useMemo(
+    () =>
+      (summary?.action_counts ?? []).map((row) => ({ label: row.key, count: row.count })),
+    [summary],
+  );
+  const actionCounts = useMemo(
+    () => new Map((summary?.action_counts ?? []).map((row) => [row.key, row.count])),
+    [summary],
+  );
 
   const funnel = useMemo(() => {
     const steps = FUNNEL_STEPS.map((step) => ({
       ...step,
-      count: countAction(rows, step.action),
+      count: countAction(actionCounts, step.action),
     }));
     const top = Math.max(1, steps[0]?.count ?? 0);
     return steps.map((step, i) => {
@@ -278,17 +208,17 @@ export function Analytics() {
       const stepPct = prev && prev > 0 ? step.count / prev : null;
       return { ...step, widthPct: (step.count / top) * 100, stepPct };
     });
-  }, [rows]);
+  }, [actionCounts]);
 
   const compliance = useMemo(
     () => ({
-      dsrRequested: countAction(rows, "user.dsr_export_requested"),
-      dsrCompleted: countAction(rows, "user.dsr_export_completed"),
-      suspended: countAction(rows, "admin.user.suspended"),
-      unsuspended: countAction(rows, "admin.user.unsuspended"),
-      consentUpdates: countAction(rows, "consent.updated"),
+      dsrRequested: countAction(actionCounts, "user.dsr_export_requested"),
+      dsrCompleted: countAction(actionCounts, "user.dsr_export_completed"),
+      suspended: countAction(actionCounts, "admin.user.suspended"),
+      unsuspended: countAction(actionCounts, "admin.user.unsuspended"),
+      consentUpdates: countAction(actionCounts, "consent.updated"),
     }),
-    [rows],
+    [actionCounts],
   );
 
   const actionMax = actions[0]?.count ?? 1;
@@ -304,14 +234,9 @@ export function Analytics() {
             One stream, read many ways. Everything below is derived from the audit trail itself —
             no second source.
           </span>
-          {!loading && rows.length > 0 && (
+          {!loading && stats.total > 0 && (
             <span className="chip">
               <span className="led amber" /> {stats.total} events · {stats.spanDays}d
-            </span>
-          )}
-          {drained?.capped && (
-            <span className="chip danger" title="Cursor exceeded the page cap">
-              most recent {stats.total}
             </span>
           )}
         </div>
@@ -319,7 +244,7 @@ export function Analytics() {
 
       <ErrorNotice error={error} />
 
-      {!loading && rows.length === 0 && !error ? (
+      {!loading && stats.total === 0 && !error ? (
         <EmptyState>The audit trail is empty — nothing to chart yet.</EmptyState>
       ) : (
         <>
@@ -347,7 +272,7 @@ export function Analytics() {
               <span className="k">activity · events per day</span>
               <span className="k num dim">
                 {loading
-                  ? "draining…"
+                  ? "loading…"
                   : stats.spanStart && stats.spanEnd
                     ? `${stats.spanStart.slice(0, 10)} → ${stats.spanEnd.slice(0, 10)}`
                     : "—"}

@@ -1,6 +1,7 @@
 import type { ConsoleClient } from "./client";
 import { ApiError } from "./client";
 import type {
+  AdminAnalyticsSummary,
   AdminUserRead,
   ApplicantOfJobRow,
   ApplicantsOfJobPage,
@@ -9,6 +10,7 @@ import type {
   AuditLogRead,
   EmployerRead,
   EmployerVerificationPage,
+  EmployerVerificationCounts,
   EmployerVerificationRow,
   EmployerVerificationStatus,
   InviteRead,
@@ -466,6 +468,46 @@ export class DemoClient implements ConsoleClient {
     };
   }
 
+  async analyticsSummary(): Promise<AdminAnalyticsSummary> {
+    await delay();
+    const roleCounts = new Map<string, number>();
+    const actionCounts = new Map<string, number>();
+    const dayCounts = new Map<string, number>();
+    let last24h = 0;
+    let systemEvents = 0;
+    const cutoff = Date.now() - 86_400_000;
+    for (const row of auditLogs) {
+      roleCounts.set(row.actor_role, (roleCounts.get(row.actor_role) ?? 0) + 1);
+      actionCounts.set(row.action, (actionCounts.get(row.action) ?? 0) + 1);
+      const day = row.created_at.slice(0, 10);
+      dayCounts.set(day, (dayCounts.get(day) ?? 0) + 1);
+      if (Date.parse(row.created_at) >= cutoff) last24h += 1;
+      if (row.actor_role === "system") systemEvents += 1;
+    }
+    const sorted = [...auditLogs].sort((a, b) => a.created_at.localeCompare(b.created_at));
+    const buckets = (source: Map<string, number>) =>
+      [...source.entries()]
+        .map(([key, count]) => ({ key, count }))
+        .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key));
+    return {
+      total_events: auditLogs.length,
+      distinct_actors: new Set(
+        auditLogs
+          .map((row) => row.actor_user_id)
+          .filter((actorId): actorId is string => actorId !== null),
+      ).size,
+      last_24h: last24h,
+      system_events: systemEvents,
+      span_start: sorted[0]?.created_at ?? null,
+      span_end: sorted.at(-1)?.created_at ?? null,
+      activity: [...dayCounts.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([day, count]) => ({ day, count })),
+      role_counts: buckets(roleCounts),
+      action_counts: buckets(actionCounts),
+    };
+  }
+
   async suspendUser(userId: string, reason: string): Promise<AdminUserRead> {
     await delay();
     if (reason.length < 1 || reason.length > 255)
@@ -529,6 +571,15 @@ export class DemoClient implements ConsoleClient {
     return {
       items: rows.slice(start, start + limit),
       next_cursor: start + limit < rows.length ? String(start + limit) : null,
+    };
+  }
+
+  async employerVerificationCounts(): Promise<EmployerVerificationCounts> {
+    await delay();
+    return {
+      pending: verificationQueue.filter((row) => row.status === "pending").length,
+      verified: verificationQueue.filter((row) => row.status === "verified").length,
+      rejected: verificationQueue.filter((row) => row.status === "rejected").length,
     };
   }
 

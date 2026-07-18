@@ -16,6 +16,7 @@ Load-bearing invariants for the web app: two route-prefixed surfaces under one H
 
 ## Design system
 
+- **Full standard: `docs/design-system.md`** — the self-contained catalogue (both palettes, philosophy, hard rules, verify checklist). Read it before styling anything; the bullets below are the web-side invariants only.
 - **Token home:** `src/shared/styles/tokens.css` — `:root` (light defaults) + `:root[data-theme="dark"]`. All colour/spacing/font values go here; per-surface CSS uses `var(--token)` exclusively.
 - **Shared primitives:** `src/shared/styles/components.css` — currently just `.ds-theme-switch` (3-way light/dark/system segmented control, consumed by `shared/theme/ThemeToggle.tsx`). The button/card/input/badge primitives once here were deleted 2026-07 (zero adopters after PR #44/#45 — each surface hand-rolled its own instead); don't reintroduce a "canonical baseline" speculatively — build one only when a real slice needs to share a component across surfaces.
 - **ThemeProvider** (`src/shared/theme/`) is the **deliberate exception** to the per-surface SessionProvider rule — one global provider wraps both surfaces. It reads/writes `localStorage` key `jobify-theme`, sets `data-theme` on `<html>`, and exposes `useTheme()` → `{ theme, resolvedTheme, setTheme, toggle }`.

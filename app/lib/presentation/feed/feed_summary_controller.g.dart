@@ -34,7 +34,7 @@ final class FeedSummaryControllerProvider
 }
 
 String _$feedSummaryControllerHash() =>
-    r'6a8b53615153a344727f6428c94a02ecf17f9577';
+    r'4683571b808f9a345a9d1e110b6851acae5f0bdc';
 
 abstract class _$FeedSummaryController extends $AsyncNotifier<FeedSummary> {
   FutureOr<FeedSummary> build();

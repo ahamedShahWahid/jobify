@@ -14,7 +14,7 @@ from jobify_api.app_factory import create_app
 def pytest_configure(config: object) -> None:
     """Set env-var defaults before pytest collects and imports test modules.
 
-    Modules like ``jobify.celery_app`` call ``Settings()`` at import time,
+    Modules like ``jobify_worker.celery_app`` call ``WorkerSettings()`` at import time,
     which requires JOBIFY_* env vars to be present *before* collection. ``monkeypatch``
     runs after collection, so it's too late for module-level Settings calls.
     ``os.environ.setdefault`` only writes when the key is absent — real shell

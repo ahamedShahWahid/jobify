@@ -1,7 +1,7 @@
 """Stub email channel that logs the would-be email payload via structlog.
 
-Used for MVP / dev environments. Swap to ``SESEmailChannel`` when a deploy
-target is picked and ``JOBIFY_EMAIL_CHANNEL=ses`` is set.
+Used for local/dev environments. Set ``JOBIFY_EMAIL_CHANNEL=ses`` to select
+the production SES adapter.
 
 No email is actually sent. Every call emits a structlog ``email.sent`` event
 at INFO level with the notification id, kind, recipient, and payload so that

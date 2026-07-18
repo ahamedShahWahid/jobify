@@ -3,7 +3,16 @@ name = "jobify-worker"
 version = "0.1.0"
 description = "Jobify Celery worker"
 requires-python = ">=3.12,<3.13"
-dependencies = ["jobify-core"]
+dependencies = [
+    "jobify-core[ai,aws]",
+    "celery[redis]>=5.5,<6",
+    "pdfminer.six>=20240706,<20270101",
+    "pypdf>=5,<6",
+    "python-docx>=1.1,<2",
+]
+
+[project.scripts]
+jobify-requeue-outbox = "jobify_worker.scripts.requeue_outbox:main"
 
 [build-system]
 requires = ["hatchling"]

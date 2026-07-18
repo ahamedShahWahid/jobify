@@ -34,7 +34,7 @@ final class PreferencesControllerProvider
 }
 
 String _$preferencesControllerHash() =>
-    r'cc4047855187f20eda99110c4a97e84b24f47ea3';
+    r'b2e628325af037fa434707e3338851152628559f';
 
 abstract class _$PreferencesController extends $AsyncNotifier<PreferencesDto> {
   FutureOr<PreferencesDto> build();

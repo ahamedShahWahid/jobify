@@ -10,7 +10,7 @@ from alembic import context
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from jobify.db.models import Base
-from jobify.settings import Settings
+from jobify.settings import CoreSettings
 
 config = context.config
 if config.config_file_name:
@@ -20,7 +20,7 @@ target_metadata = Base.metadata
 
 
 def _set_url() -> None:
-    config.set_main_option("sqlalchemy.url", Settings().db_url)
+    config.set_main_option("sqlalchemy.url", CoreSettings().db_url)
 
 
 def run_migrations_offline() -> None:

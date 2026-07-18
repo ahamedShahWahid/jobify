@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobify.db.models import Applicant, Resume, ResumeParseStatus, User, UserRole
 from jobify_api.auth.tokens import mint_access_token
+from tests.integration.outbox_helpers import task_event_args
 
 pytestmark = pytest.mark.integration
 
@@ -42,19 +43,11 @@ async def _make_applicant_with_token(session: AsyncSession) -> tuple[str, str]:
     return str(applicant.id), token
 
 
-async def test_upload_returns_201_even_if_broker_dispatch_raises(
+async def test_upload_returns_201_and_stages_dispatch_without_broker_access(
     async_client,
     session,
-    monkeypatch,
 ) -> None:
-    """If enqueue() raises (broker down), upload still returns 201
-    and the row exists with parse_status=pending."""
-    import jobify.celery_app as celery_app_mod
-
-    def _raise_broker_down(*args, **kwargs):  # type: ignore[no-untyped-def]
-        raise ConnectionError("broker unreachable")
-
-    monkeypatch.setattr(celery_app_mod, "enqueue", _raise_broker_down)
+    """Upload commits its parse intent without contacting the broker."""
 
     applicant_id, access = await _make_applicant_with_token(session)
     pdf = _tiny_pdf()
@@ -70,3 +63,4 @@ async def test_upload_returns_201_even_if_broker_dispatch_raises(
         await session.execute(select(Resume).where(Resume.applicant_id.in_([applicant_id])))
     ).scalar_one()
     assert row.parse_status == ResumeParseStatus.PENDING
+    assert [str(row.id)] in await task_event_args(session, "jobify.parse_resume")

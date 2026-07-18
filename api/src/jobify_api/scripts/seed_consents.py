@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jobify.consent import seed_default_consents
 from jobify.db.models import User
 from jobify.db.session import create_engine_from_settings, make_sessionmaker
-from jobify.settings import Settings
+from jobify_api.settings import Settings
 
 _log = structlog.get_logger(__name__)
 

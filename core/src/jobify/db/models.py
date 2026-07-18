@@ -833,6 +833,8 @@ class Notification(Base):
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    dispatch_token: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[CreatedAt]
     updated_at: Mapped[UpdatedAt]
     deleted_at: Mapped[DeletedAt]
@@ -847,6 +849,11 @@ class Notification(Base):
             "send_after",
             postgresql_where="deleted_at IS NULL AND status IN ('pending', 'dispatching')",
         ),
+        Index(
+            "ix_notifications_dispatch_recovery_live",
+            "locked_until",
+            postgresql_where="deleted_at IS NULL AND status = 'dispatching'",
+        ),
         # User inbox query path: all live rows for a user, newest first.
         # Raw SQL via op.execute because op.create_index doesn't support DESC ordering.
         Index(
@@ -854,6 +861,76 @@ class Notification(Base):
             "user_id",
             text("created_at DESC"),
             postgresql_where="deleted_at IS NULL",
+        ),
+        {"schema": "jobify"},
+    )
+
+
+class OutboxEventKind(StrEnum):
+    TASK_DISPATCH = "task_dispatch"
+    BLOB_DELETE = "blob_delete"
+
+
+class OutboxEventStatus(StrEnum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class OutboxEvent(Base):
+    """Durable intent crossing the database/message-broker/storage boundary.
+
+    Business transactions insert these rows instead of performing an external
+    side effect after commit.  The outbox sweeper leases and processes them;
+    expired leases are reclaimable, so a worker crash cannot strand an event.
+    Consumers must remain idempotent because a crash after the external action
+    but before the completion commit can result in at-least-once delivery.
+    """
+
+    __tablename__ = "outbox_events"
+
+    id: Mapped[UuidPK]
+    kind: Mapped[OutboxEventKind] = mapped_column(
+        SAEnum(
+            OutboxEventKind,
+            name="outbox_event_kind",
+            schema="jobify",
+            native_enum=True,
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        nullable=False,
+    )
+    status: Mapped[OutboxEventStatus] = mapped_column(
+        SAEnum(
+            OutboxEventStatus,
+            name="outbox_event_status",
+            schema="jobify",
+            native_enum=True,
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        nullable=False,
+        default=OutboxEventStatus.PENDING,
+        server_default=OutboxEventStatus.PENDING.value,
+    )
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    available_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[CreatedAt]
+    updated_at: Mapped[UpdatedAt]
+    deleted_at: Mapped[DeletedAt]
+
+    __table_args__ = (
+        Index(
+            "ix_outbox_events_claimable_live",
+            "status",
+            "available_at",
+            postgresql_where=("deleted_at IS NULL AND status IN ('pending', 'processing')"),
         ),
         {"schema": "jobify"},
     )

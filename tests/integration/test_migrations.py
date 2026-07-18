@@ -1,4 +1,4 @@
-"""Verifies alembic upgrade head + downgrade base round-trip."""
+"""Verifies the schema produced by an Alembic upgrade to head."""
 
 from __future__ import annotations
 
@@ -21,6 +21,18 @@ async def test_migrated_db_has_users_and_applicants_tables(session: AsyncSession
     names = {row[0] for row in result}
     assert "users" in names
     assert "applicants" in names
+
+
+@pytest.mark.integration
+async def test_outbox_migration_has_claim_index(session: AsyncSession) -> None:
+    result = await session.execute(
+        text("""
+        SELECT indexname FROM pg_indexes
+        WHERE schemaname = 'jobify' AND tablename = 'outbox_events'
+    """)
+    )
+    names = {row[0] for row in result}
+    assert "ix_outbox_events_claimable_live" in names
 
 
 @pytest.mark.integration
@@ -246,6 +258,27 @@ async def test_migrated_db_has_notifications_table(session: AsyncSession) -> Non
     )
     names = {row[0] for row in result}
     assert "notifications" in names
+
+
+@pytest.mark.integration
+async def test_notifications_have_dispatch_lease_columns_and_index(
+    session: AsyncSession,
+) -> None:
+    columns = await session.execute(
+        text("""
+        SELECT column_name FROM information_schema.columns
+        WHERE table_schema = 'jobify' AND table_name = 'notifications'
+    """)
+    )
+    assert {"dispatch_token", "locked_until"} <= {row[0] for row in columns}
+
+    indexes = await session.execute(
+        text("""
+        SELECT indexname FROM pg_indexes
+        WHERE schemaname = 'jobify' AND tablename = 'notifications'
+    """)
+    )
+    assert "ix_notifications_dispatch_recovery_live" in {row[0] for row in indexes}
 
 
 @pytest.mark.integration

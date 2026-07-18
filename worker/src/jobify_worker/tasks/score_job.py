@@ -5,17 +5,12 @@ Mirror of score_applicant. Dispatched from embed_job Txn 3 post-commit.
 
 from __future__ import annotations
 
-import asyncio
-import concurrent.futures
-from collections.abc import Callable, Coroutine
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 import structlog
 from sqlalchemy import and_, select
 
-from jobify.celery_app import celery_app
-from jobify.celery_app import settings as _settings
 from jobify.db.models import (
     Applicant,
     ApplicantEmbedding,
@@ -26,8 +21,11 @@ from jobify.db.models import (
     JobStatus,
 )
 from jobify.scoring.match import TransientScoringError
+from jobify_worker.async_bridge import run_async
+from jobify_worker.celery_app import celery_app
+from jobify_worker.celery_app import settings as _settings
 from jobify_worker.runtime import get_session_maker
-from jobify_worker.tasks._scoring_common import ScoringInput, explain_scores, match_upsert_statement
+from jobify_worker.tasks._scoring_common import ScoringInput, explain_scores, persist_score_batch
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -50,22 +48,10 @@ def score_job(  # type: ignore[no-untyped-def]
 ) -> None:
     """Sync entry. Wraps the async body in a fresh event loop, with eager-mode thread hop."""
 
-    def _run(coro_factory: Callable[[], Coroutine[Any, Any, None]]) -> None:
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-        if loop is not None and loop.is_running():
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                fut = pool.submit(asyncio.run, coro_factory())
-                fut.result()
-        else:
-            asyncio.run(coro_factory())
-
     after_applicant_id = (
         UUID(after_applicant_id_str) if after_applicant_id_str is not None else None
     )
-    _run(lambda: _score_job_async(UUID(job_id_str), after_applicant_id=after_applicant_id))
+    run_async(lambda: _score_job_async(UUID(job_id_str), after_applicant_id=after_applicant_id))
 
 
 async def _score_job_async(
@@ -199,30 +185,18 @@ async def _score_job_async(
         threshold=_settings.match_surface_threshold,
     )
 
-    # --- Txn 2: UPSERT each row ---
-    async with sm() as session:
-        try:
-            for scored in scores:
-                await session.execute(match_upsert_statement(scored))
-            await session.commit()
-        except Exception as exc:
-            await session.rollback()
-            _log.exception("score.upsert-failed", job_id=str(job_id))
-            raise TransientScoringError(f"upsert failed: {type(exc).__name__}") from exc
+    # --- Txn 2: UPSERT each row + durable continuation ---
+    continuation = (
+        ("jobify.score_job", str(job_id), str(next_after_applicant_id))
+        if next_after_applicant_id is not None
+        else None
+    )
+    await persist_score_batch(
+        sm,
+        scores,
+        continuation=continuation,
+        log=_log,
+        log_context={"job_id": str(job_id)},
+    )
 
     _log.info("score.job-complete", job_id=str(job_id), scored=len(scores), has_more=has_more)
-    if next_after_applicant_id is not None:
-        _dispatch_next_batch(job_id, next_after_applicant_id)
-
-
-def _dispatch_next_batch(job_id: UUID, after_applicant_id: UUID) -> None:
-    """Continue job scoring after a successful committed batch."""
-    try:
-        score_job.delay(str(job_id), str(after_applicant_id))
-    except Exception as exc:
-        _log.exception(
-            "score.next-batch-dispatch-failed",
-            job_id=str(job_id),
-            after_applicant_id=str(after_applicant_id),
-        )
-        raise TransientScoringError("next batch dispatch failed") from exc

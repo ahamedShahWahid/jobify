@@ -14,8 +14,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from jobify_api.routes.admin import employers, users
+from jobify_api.routes.admin import analytics, employers, users
 
 router = APIRouter()
+router.include_router(analytics.router)
 router.include_router(users.router)
 router.include_router(employers.router)
