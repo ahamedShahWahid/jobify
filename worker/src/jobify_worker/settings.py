@@ -11,6 +11,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from jobify.settings import Environment, LogFormat, LogLevel
 
 _VALID_EMBEDDING_DIMS = frozenset({128, 256, 512, 768, 1024, 1536, 3072})
+_PROVIDER_COMPLETION_MARGIN_SECONDS = 5.0
 
 
 class WorkerSettings(BaseSettings):
@@ -114,6 +115,13 @@ class WorkerSettings(BaseSettings):
             raise ValueError("email_from_address is required when email_channel='ses'")
         if self.task_time_limit_seconds <= self.task_soft_time_limit_seconds:
             raise ValueError("task_time_limit_seconds must exceed task_soft_time_limit_seconds")
-        if self.notify_lease_seconds < self.provider_read_timeout_seconds:
-            raise ValueError("notify_lease_seconds must cover provider_read_timeout_seconds")
+        provider_deadline = (
+            self.provider_connect_timeout_seconds
+            + self.provider_read_timeout_seconds
+            + _PROVIDER_COMPLETION_MARGIN_SECONDS
+        )
+        if self.notify_lease_seconds < provider_deadline:
+            raise ValueError(
+                "notify_lease_seconds must cover provider connect, read, and completion margin"
+            )
         return self

@@ -15,6 +15,11 @@ down_revision = "0022"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
+# The worker hard limit is configurable up to 7,200 seconds. Legacy workers do
+# not own a dispatch token, so quarantine their in-flight rows beyond that
+# maximum plus five minutes before token-aware workers may reclaim them.
+_LEGACY_DISPATCH_QUARANTINE_SECONDS = 7_500
+
 
 def upgrade() -> None:
     op.add_column(
@@ -27,11 +32,15 @@ def upgrade() -> None:
         sa.Column("locked_until", sa.DateTime(timezone=True), nullable=True),
         schema="jobify",
     )
-    # Pre-lease deployments could strand rows in dispatching forever. Return
-    # them to the claimable state once while rolling out lease ownership.
+    # Keep pre-token dispatches in-flight during a rolling deployment. Resetting
+    # them to pending here could make a new worker duplicate a non-idempotent
+    # provider call that an old worker is still completing.
     op.execute(
-        "UPDATE jobify.notifications SET status = 'pending' "
-        "WHERE status = 'dispatching' AND deleted_at IS NULL"
+        sa.text(
+            "UPDATE jobify.notifications "
+            "SET locked_until = now() + make_interval(secs => :quarantine_seconds) "
+            "WHERE status = 'dispatching' AND deleted_at IS NULL"
+        ).bindparams(quarantine_seconds=_LEGACY_DISPATCH_QUARANTINE_SECONDS)
     )
     op.execute(
         "CREATE INDEX ix_notifications_dispatch_recovery_live "

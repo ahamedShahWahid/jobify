@@ -233,6 +233,5 @@ async def reject_employer(
         "admin.employer-rejected",
         admin_user_id=str(user.id),
         employer_id=str(employer_id),
-        reason=body.reason,
     )
     return AdminEmployerRead.from_employer(refreshed)

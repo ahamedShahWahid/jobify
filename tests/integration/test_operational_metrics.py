@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
-from httpx import ASGITransport, AsyncClient
+from fastapi import FastAPI
+from httpx import AsyncClient
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -30,14 +32,13 @@ def _age_value(body: str, *, queue: str) -> float:
 
 async def test_metrics_exposes_bounded_async_work_health(
     async_client: AsyncClient,
+    integration_app: FastAPI,
     session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    transport = async_client._transport
-    assert isinstance(transport, ASGITransport)
     assert session.bind is not None
     monkeypatch.setattr(
-        transport.app.state,
+        integration_app.state,
         "db_sessionmaker",
         async_sessionmaker(
             bind=session.bind,
@@ -49,6 +50,7 @@ async def test_metrics_exposes_bounded_async_work_health(
     await session.execute(delete(Notification))
     await session.execute(delete(OutboxEvent))
 
+    seeded_at = datetime.now(UTC) - timedelta(seconds=120)
     user = User(email=f"metrics-{uuid4()}@example.com", role=UserRole.APPLICANT)
     session.add(user)
     await session.flush()
@@ -60,6 +62,7 @@ async def test_metrics_exposes_bounded_async_work_health(
                 channel=NotificationChannel.IN_APP,
                 status=NotificationStatus.PENDING,
                 payload={},
+                created_at=seeded_at,
             ),
             Notification(
                 user_id=user.id,
@@ -79,6 +82,7 @@ async def test_metrics_exposes_bounded_async_work_health(
                 kind=OutboxEventKind.TASK_DISPATCH,
                 status=OutboxEventStatus.PROCESSING,
                 payload={"task_name": "jobify.parse_resume", "args": ["metrics"]},
+                created_at=seeded_at,
             ),
             OutboxEvent(
                 kind=OutboxEventKind.TASK_DISPATCH,
@@ -99,5 +103,7 @@ async def test_metrics_exposes_bounded_async_work_health(
     assert 'jobify_async_items{queue="notifications",status="failed"} 1' in lines
     assert 'jobify_async_items{queue="outbox",status="processing"} 1' in lines
     assert 'jobify_async_items{queue="outbox",status="completed"} 1' in lines
-    assert _age_value(body, queue="notifications") >= 0.0
-    assert _age_value(body, queue="outbox") >= 0.0
+    notification_age = _age_value(body, queue="notifications")
+    outbox_age = _age_value(body, queue="outbox")
+    assert 115.0 <= notification_age <= 300.0
+    assert 115.0 <= outbox_age <= 300.0

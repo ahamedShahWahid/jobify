@@ -14,6 +14,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from structlog.testing import capture_logs
 
 from jobify.db.models import AuditLog, Employer, User, UserRole
 from jobify_api.auth.tokens import mint_access_token
@@ -232,6 +233,37 @@ async def test_reject_requires_reason(
         f"/v1/admin/employers/{employer.id}/reject", headers=_auth(token), json={"reason": ""}
     )
     assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_rejection_reason_is_audited_but_not_logged(
+    async_client: AsyncClient,
+    session: AsyncSession,
+    admin_user_and_token: tuple[User, str],
+) -> None:
+    _, token = admin_user_and_token
+    employer = await _make_employer(session)
+    await session.commit()
+    sensitive_reason = "private verification evidence"
+
+    with capture_logs() as logs:
+        response = await async_client.post(
+            f"/v1/admin/employers/{employer.id}/reject",
+            headers=_auth(token),
+            json={"reason": sensitive_reason},
+        )
+
+    assert response.status_code == 200
+    assert sensitive_reason not in str(logs)
+    audit = (
+        await session.execute(
+            select(AuditLog).where(
+                AuditLog.action == "admin.employer.rejected",
+                AuditLog.resource_id == employer.id,
+            )
+        )
+    ).scalar_one()
+    assert audit.context["reason"] == sensitive_reason
 
 
 @pytest.mark.asyncio

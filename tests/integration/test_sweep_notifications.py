@@ -12,13 +12,19 @@ email channel.
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+from sqlalchemy.pool import NullPool
 from structlog.testing import capture_logs
 
 from jobify.db.models import (
@@ -276,6 +282,106 @@ async def test_sweep_batch_size_respected(session: AsyncSession) -> None:
     pending = [r for r in rows if r.status == NotificationStatus.PENDING]
     assert len(sent) == 10
     assert len(pending) == 90
+
+
+@pytest.mark.integration
+async def test_slow_notification_claim_does_not_preclaim_later_rows(
+    migrated_db: str,
+) -> None:
+    engine = create_async_engine(migrated_db, poolclass=NullPool)
+    sm = async_sessionmaker(engine, expire_on_commit=False)
+    notification_ids: list[UUID] = []
+    user_id: UUID | None = None
+    first_send_started = asyncio.Event()
+    release_first_send = asyncio.Event()
+
+    class _SlowFirstChannel:
+        async def send(self, row: Notification, *, recipient: str) -> ChannelResult:
+            if row.id == notification_ids[0]:
+                first_send_started.set()
+                await release_first_send.wait()
+            return ChannelResult.success()
+
+    try:
+        async with sm() as seed:
+            user = User(email=f"slow-{uuid4()}@example.com", role=UserRole.APPLICANT)
+            seed.add(user)
+            await seed.flush()
+            user_id = user.id
+            first = Notification(
+                user_id=user.id,
+                kind="application_received",
+                channel=NotificationChannel.EMAIL,
+                status=NotificationStatus.PENDING,
+                send_after=datetime(2000, 1, 1, tzinfo=UTC),
+                payload={},
+            )
+            second = Notification(
+                user_id=user.id,
+                kind="application_received",
+                channel=NotificationChannel.EMAIL,
+                status=NotificationStatus.PENDING,
+                send_after=datetime(2000, 1, 2, tzinfo=UTC),
+                payload={},
+            )
+            seed.add_all([first, second])
+            await seed.commit()
+            notification_ids = [first.id, second.id]
+
+        async with sm() as isolation_session:
+            async with isolation_session.begin():
+                await isolation_session.execute(
+                    select(Notification.id)
+                    .where(Notification.id.not_in(notification_ids))
+                    .with_for_update()
+                )
+                first_sweep = asyncio.create_task(
+                    _sweep_notifications_async(
+                        sm=sm,
+                        email_channel=_SlowFirstChannel(),
+                        batch_size=2,
+                    )
+                )
+                await asyncio.wait_for(first_send_started.wait(), timeout=5)
+
+                async with sm() as inspect_session:
+                    later = await inspect_session.get(Notification, notification_ids[1])
+                    assert later is not None
+                    assert later.status == NotificationStatus.PENDING
+                    assert later.dispatch_token is None
+                    assert later.locked_until is None
+
+                await _sweep_notifications_async(
+                    sm=sm,
+                    email_channel=_SlowFirstChannel(),
+                    batch_size=1,
+                )
+                release_first_send.set()
+                await asyncio.wait_for(first_sweep, timeout=5)
+
+        async with sm() as verify:
+            rows = list(
+                (
+                    await verify.execute(
+                        select(Notification).where(Notification.id.in_(notification_ids))
+                    )
+                ).scalars()
+            )
+            assert {row.status for row in rows} == {NotificationStatus.SENT}
+            assert {row.attempts for row in rows} == {1}
+            assert all(row.dispatch_token is None and row.locked_until is None for row in rows)
+    finally:
+        release_first_send.set()
+        if notification_ids or user_id is not None:
+            async with sm() as cleanup:
+                if notification_ids:
+                    await cleanup.execute(
+                        delete(Notification).where(Notification.id.in_(notification_ids))
+                    )
+                if user_id is not None:
+                    await cleanup.execute(delete(User).where(User.id == user_id))
+                await cleanup.commit()
+        await engine.dispose()
 
 
 @pytest.mark.integration

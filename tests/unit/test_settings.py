@@ -547,3 +547,14 @@ def test_notification_lease_must_cover_provider_deadline(
     monkeypatch.setenv("JOBIFY_PROVIDER_READ_TIMEOUT_SECONDS", "30")
     with pytest.raises(ValidationError, match="must cover"):
         WorkerSettings()
+
+
+def test_notification_lease_includes_connect_read_and_completion_margin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _set_minimum_env(monkeypatch)
+    monkeypatch.setenv("JOBIFY_NOTIFY_LEASE_SECONDS", "35")
+    monkeypatch.setenv("JOBIFY_PROVIDER_CONNECT_TIMEOUT_SECONDS", "5")
+    monkeypatch.setenv("JOBIFY_PROVIDER_READ_TIMEOUT_SECONDS", "30")
+    with pytest.raises(ValidationError, match="connect, read, and completion margin"):
+        WorkerSettings()

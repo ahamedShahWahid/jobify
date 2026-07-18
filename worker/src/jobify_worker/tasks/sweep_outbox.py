@@ -44,8 +44,14 @@ async def _sweep_outbox_async(
     storage = storage or get_storage()
     dispatch = dispatch or _dispatch_task
 
-    claims = await _claim(sm)
-    for event_id, dispatch_token in claims:
+    for _ in range(settings.outbox_batch_size):
+        claim = await _claim_one(sm)
+        if claim is None:
+            break
+        event_id, dispatch_token = claim
+        if event_id is None or dispatch_token is None:
+            # An exhausted row was terminally failed and consumed this batch slot.
+            continue
         try:
             await _process_one(
                 sm,
@@ -58,58 +64,57 @@ async def _sweep_outbox_async(
             await _record_failure(sm, event_id, dispatch_token, exc)
 
 
-async def _claim(sm: async_sessionmaker[AsyncSession]) -> list[tuple[UUID, UUID]]:
+async def _claim_one(
+    sm: async_sessionmaker[AsyncSession],
+) -> tuple[UUID | None, UUID | None] | None:
+    """Lease one row immediately before processing its external side effect."""
     now = datetime.now(UTC)
     lease_until = now + timedelta(seconds=settings.outbox_lease_seconds)
     async with sm() as session:
-        rows = (
-            (
-                await session.execute(
-                    select(OutboxEvent)
-                    .where(
-                        OutboxEvent.deleted_at.is_(None),
-                        or_(
-                            (
-                                (OutboxEvent.status == OutboxEventStatus.PENDING)
-                                & (OutboxEvent.available_at <= now)
-                            ),
-                            (
-                                (OutboxEvent.status == OutboxEventStatus.PROCESSING)
-                                & or_(
-                                    OutboxEvent.locked_until.is_(None),
-                                    OutboxEvent.locked_until < now,
-                                )
-                            ),
+        event = (
+            await session.execute(
+                select(OutboxEvent)
+                .where(
+                    OutboxEvent.deleted_at.is_(None),
+                    or_(
+                        (
+                            (OutboxEvent.status == OutboxEventStatus.PENDING)
+                            & (OutboxEvent.available_at <= now)
                         ),
-                    )
-                    .order_by(OutboxEvent.created_at, OutboxEvent.id)
-                    .limit(settings.outbox_batch_size)
-                    .with_for_update(skip_locked=True)
+                        (
+                            (OutboxEvent.status == OutboxEventStatus.PROCESSING)
+                            & or_(
+                                OutboxEvent.locked_until.is_(None),
+                                OutboxEvent.locked_until < now,
+                            )
+                        ),
+                    ),
                 )
+                .order_by(OutboxEvent.created_at, OutboxEvent.id)
+                .limit(1)
+                .with_for_update(skip_locked=True)
             )
-            .scalars()
-            .all()
-        )
-        claimed: list[tuple[UUID, UUID]] = []
-        for event in rows:
-            if event.attempts >= settings.outbox_max_attempts:
-                event.status = OutboxEventStatus.FAILED
-                event.last_error = event.last_error or "processing_lease_expired"
-                _clear_claim(event)
-                _log.warning(
-                    "outbox.claim-exhausted",
-                    event_id=str(event.id),
-                    attempts=event.attempts,
-                )
-                continue
-            token = uuid4()
-            event.status = OutboxEventStatus.PROCESSING
-            event.dispatch_token = token
-            event.locked_until = lease_until
-            event.attempts += 1
-            claimed.append((event.id, token))
+        ).scalar_one_or_none()
+        if event is None:
+            return None
+        if event.attempts >= settings.outbox_max_attempts:
+            event.status = OutboxEventStatus.FAILED
+            event.last_error = event.last_error or "processing_lease_expired"
+            _clear_claim(event)
+            _log.warning(
+                "outbox.claim-exhausted",
+                event_id=str(event.id),
+                attempts=event.attempts,
+            )
+            await session.commit()
+            return (None, None)
+        token = uuid4()
+        event.status = OutboxEventStatus.PROCESSING
+        event.dispatch_token = token
+        event.locked_until = lease_until
+        event.attempts += 1
         await session.commit()
-        return claimed
+        return (event.id, token)
 
 
 async def _process_one(

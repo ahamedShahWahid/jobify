@@ -18,7 +18,7 @@ from structlog.testing import capture_logs
 from jobify.db.models import OutboxEvent, OutboxEventKind, OutboxEventStatus
 from jobify_worker.celery_app import settings
 from jobify_worker.tasks.sweep_outbox import (
-    _claim,
+    _claim_one,
     _complete,
     _record_failure,
     _sweep_outbox_async,
@@ -68,11 +68,11 @@ async def test_claim_reclaims_processing_event_with_future_available_at(
     await session.commit()
     monkeypatch.setattr(settings, "outbox_batch_size", 1)
 
-    claims = await _claim(_make_sm(session))
+    claim = await _claim_one(_make_sm(session))
 
     await session.refresh(event)
     assert event.dispatch_token is not None
-    assert claims == [(event.id, event.dispatch_token)]
+    assert claim == (event.id, event.dispatch_token)
 
 
 @pytest.mark.asyncio
@@ -188,6 +188,88 @@ async def test_sweep_isolates_failed_event_from_rest_of_batch(
     assert healthy.dispatch_token is None
 
 
+@pytest.mark.integration
+async def test_slow_outbox_side_effect_does_not_preclaim_later_rows(
+    migrated_db: str,
+) -> None:
+    engine = create_async_engine(migrated_db, poolclass=NullPool)
+    sm = async_sessionmaker(engine, expire_on_commit=False)
+    event_ids: list[UUID] = []
+    first_delete_started = asyncio.Event()
+    release_first_delete = asyncio.Event()
+
+    class _SlowFirstStorage(FakeStorage):
+        async def delete(self, key: str) -> None:
+            if key == "review/first.pdf":
+                first_delete_started.set()
+                await release_first_delete.wait()
+            await super().delete(key)
+
+    try:
+        async with sm() as seed:
+            first = OutboxEvent(
+                kind=OutboxEventKind.BLOB_DELETE,
+                created_at=datetime(2000, 1, 1, tzinfo=UTC),
+                payload={"storage_key": "review/first.pdf"},
+            )
+            second = OutboxEvent(
+                kind=OutboxEventKind.BLOB_DELETE,
+                created_at=datetime(2000, 1, 2, tzinfo=UTC),
+                payload={"storage_key": "review/second.pdf"},
+            )
+            seed.add_all([first, second])
+            await seed.commit()
+            event_ids = [first.id, second.id]
+
+        async with sm() as isolation_session:
+            async with isolation_session.begin():
+                await isolation_session.execute(
+                    select(OutboxEvent.id).where(OutboxEvent.id.not_in(event_ids)).with_for_update()
+                )
+                first_sweep = asyncio.create_task(
+                    _sweep_outbox_async(
+                        sm=sm,
+                        storage=_SlowFirstStorage(),
+                        dispatch=lambda _name, _args: None,
+                    )
+                )
+                await asyncio.wait_for(first_delete_started.wait(), timeout=5)
+
+                async with sm() as inspect_session:
+                    later = await inspect_session.get(OutboxEvent, event_ids[1])
+                    assert later is not None
+                    assert later.status == OutboxEventStatus.PENDING
+                    assert later.dispatch_token is None
+                    assert later.locked_until is None
+
+                second_storage = FakeStorage()
+                await _sweep_outbox_async(
+                    sm=sm,
+                    storage=second_storage,
+                    dispatch=lambda _name, _args: None,
+                )
+                assert second_storage.deleted == ["review/second.pdf"]
+                release_first_delete.set()
+                await asyncio.wait_for(first_sweep, timeout=5)
+
+        async with sm() as verify:
+            rows = list(
+                (
+                    await verify.execute(select(OutboxEvent).where(OutboxEvent.id.in_(event_ids)))
+                ).scalars()
+            )
+            assert {row.status for row in rows} == {OutboxEventStatus.COMPLETED}
+            assert {row.attempts for row in rows} == {1}
+            assert all(row.dispatch_token is None and row.locked_until is None for row in rows)
+    finally:
+        release_first_delete.set()
+        if event_ids:
+            async with sm() as cleanup:
+                await cleanup.execute(delete(OutboxEvent).where(OutboxEvent.id.in_(event_ids)))
+                await cleanup.commit()
+        await engine.dispose()
+
+
 @pytest.mark.asyncio
 async def test_claim_exhaustion_is_logged_without_payload(
     session: AsyncSession,
@@ -286,11 +368,11 @@ async def test_concurrent_claimers_claim_event_once(
                 )
                 async with asyncio.timeout(5):
                     first, second = await asyncio.gather(
-                        _claim(claim_sm),
-                        _claim(claim_sm),
+                        _claim_one(claim_sm),
+                        _claim_one(claim_sm),
                     )
 
-        claims = first + second
+        claims = [claim for claim in (first, second) if claim is not None]
         assert first_selected.is_set()
         assert second_selected.is_set()
         assert execute_count == 2

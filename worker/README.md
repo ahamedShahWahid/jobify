@@ -22,6 +22,9 @@ process alongside the worker — it only enqueues, it doesn't execute:
 `sweep_outbox` runs every `JOBIFY_OUTBOX_SWEEP_INTERVAL_SECONDS` seconds
 (default 5). API and worker transactions write task dispatch and blob cleanup
 intents to `outbox_events`; the sweeper delivers them with leases and retries.
+Both durable sweepers claim one row immediately before its side effect, then
+repeat up to the configured batch size. This prevents later rows from spending
+their lease waiting behind a slow provider or broker call.
 After fixing the cause of terminal failures, requeue them with:
 
     uv run --env-file=.env jobify-requeue-outbox --dry-run
@@ -72,6 +75,16 @@ In addition to database, Redis, storage, and logging variables in `.env`:
 | `JOBIFY_OUTBOX_RETENTION_DAYS` | `30` | Terminal outbox retention before cleanup |
 | `JOBIFY_OUTBOX_CLEANUP_BATCH_SIZE` | `1000` | Terminal rows physically deleted per cleanup run |
 | `JOBIFY_SCORE_BATCH_SIZE` | `100` | Applicant/job pairs processed per task batch |
+
+### Notification lease rollout
+
+Migration `0023` keeps notification rows already in `dispatching` state and
+quarantines them for 7,500 seconds. That interval exceeds the maximum supported
+7,200-second worker hard limit plus a five-minute rollout margin, so a new
+token-aware worker cannot immediately duplicate a non-idempotent send still
+running in a pre-token worker. The rows retain a null token and become eligible
+for ordinary lease recovery only after the quarantine expires. Deploy the
+migration before replacing the old worker pool.
 
 `JOBIFY_GEMINI_API_KEY` is required for Gemini embeddings or the LLM explainer.
 SES additionally requires `JOBIFY_EMAIL_CHANNEL=ses` and a verified

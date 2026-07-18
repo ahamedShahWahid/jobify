@@ -3,7 +3,7 @@
 The sweeper implements the outbox-pattern fan-out for the notifications table.
 It is designed to be called on demand (or via Celery Beat when worker infra
 hardens). Multiple concurrent sweeper instances are safe: ``SKIP LOCKED``
-ensures disjoint batches.
+ensures each one-at-a-time claim owns a distinct row.
 
 State machine per row:
     pending -> dispatching -> sent      (success path)
@@ -87,7 +87,7 @@ async def _sweep_notifications_async(
     email_channel: EmailChannel | None = None,
     batch_size: int | None = None,
 ) -> None:
-    """Async body — claim a batch of pending notifications and dispatch each one.
+    """Claim and dispatch at most ``batch_size`` notifications one at a time.
 
     Production callers (the Celery task) pass nothing; this resolves the real
     sessionmaker, email channel, and batch size from settings.
@@ -101,11 +101,16 @@ async def _sweep_notifications_async(
         batch_size if batch_size is not None else _worker_settings.notify_batch_size
     )
 
-    claims = await _claim_notifications(sm, batch_size=effective_batch_size)
-    _log.info("sweep.batch-claimed", count=len(claims))
-
-    # --- Per-notification dispatch (each in its own session) ---
-    for notification_id, dispatch_token in claims:
+    claimed_count = 0
+    for _ in range(effective_batch_size):
+        claim = await _claim_notification(sm)
+        if claim is None:
+            break
+        notification_id, dispatch_token = claim
+        if notification_id is None or dispatch_token is None:
+            # An exhausted row was terminally failed and consumed this batch slot.
+            continue
+        claimed_count += 1
         try:
             await _dispatch_one(
                 session_maker=sm,
@@ -116,22 +121,22 @@ async def _sweep_notifications_async(
         except Exception:
             # The lease makes this recoverable: a later sweep reclaims the row.
             _log.exception("sweep.dispatch-unexpected", notification_id=str(notification_id))
+    _log.info("sweep.batch-claimed", count=claimed_count)
 
 
-async def _claim_notifications(
+async def _claim_notification(
     session_maker: async_sessionmaker[AsyncSession],
-    *,
-    batch_size: int,
-) -> list[tuple[UUID, UUID]]:
-    """Lease due pending rows and reclaim expired dispatches.
+) -> tuple[UUID | None, UUID | None] | None:
+    """Lease one due row immediately before its provider side effect.
 
     A per-claim token prevents a slow, stale worker from completing a row after
     another worker has reclaimed it. Attempts increment at claim time so repeated
-    worker crashes eventually become terminal instead of looping forever.
+    worker crashes eventually become terminal instead of looping forever. The
+    ``(None, None)`` outcome means an exhausted row consumed the current batch
+    slot; ``None`` means no claimable row exists.
     """
     now = datetime.now(UTC)
     lease_until = now + timedelta(seconds=_worker_settings.notify_lease_seconds)
-    claims: list[tuple[UUID, UUID]] = []
     async with session_maker() as session:
         stmt = (
             select(Notification)
@@ -152,30 +157,31 @@ async def _claim_notifications(
                 ),
             )
             .order_by(Notification.send_after.asc(), Notification.id.asc())
-            .limit(batch_size)
+            .limit(1)
             .with_for_update(skip_locked=True)
         )
-        rows = (await session.execute(stmt)).scalars().all()
-        for notification in rows:
-            if notification.attempts >= _worker_settings.notify_max_attempts:
-                _log.warning(
-                    "sweep.claim-exhausted",
-                    notification_id=str(notification.id),
-                    attempts=notification.attempts,
-                )
-                notification.status = NotificationStatus.FAILED
-                notification.last_error = notification.last_error or "dispatch_lease_expired"
-                notification.dispatch_token = None
-                notification.locked_until = None
-                continue
-            token = uuid4()
-            notification.status = NotificationStatus.DISPATCHING
-            notification.attempts += 1
-            notification.dispatch_token = token
-            notification.locked_until = lease_until
-            claims.append((notification.id, token))
+        notification = (await session.execute(stmt)).scalar_one_or_none()
+        if notification is None:
+            return None
+        if notification.attempts >= _worker_settings.notify_max_attempts:
+            _log.warning(
+                "sweep.claim-exhausted",
+                notification_id=str(notification.id),
+                attempts=notification.attempts,
+            )
+            notification.status = NotificationStatus.FAILED
+            notification.last_error = notification.last_error or "dispatch_lease_expired"
+            notification.dispatch_token = None
+            notification.locked_until = None
+            await session.commit()
+            return (None, None)
+        token = uuid4()
+        notification.status = NotificationStatus.DISPATCHING
+        notification.attempts += 1
+        notification.dispatch_token = token
+        notification.locked_until = lease_until
         await session.commit()
-    return claims
+        return (notification.id, token)
 
 
 async def _dispatch_one(
