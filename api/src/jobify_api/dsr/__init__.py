@@ -24,6 +24,7 @@ from jobify.db.models import (
     ApplicantEmbedding,
     ApplicantPreferences,
     Application,
+    ApplicationStageEvent,
     AuditLog,
     Employer,
     EmployerInvite,
@@ -67,6 +68,9 @@ class UserExport(BaseModel):
     resumes: list[dict[str, Any]] = []
     applicant_embedding: dict[str, Any] | None = None
     applications: list[dict[str, Any]] = []
+    # ALL stage-transition events for the applicant's applications, no
+    # deleted_at filter — export convention, matching applications above.
+    application_stage_events: list[dict[str, Any]] = []
     saved_jobs: list[dict[str, Any]] = []
     matches: list[dict[str, Any]] = []
     match_feedback: list[dict[str, Any]] = []
@@ -233,6 +237,7 @@ async def build_user_export(
     resumes: list[dict[str, Any]] = []
     embedding_dict: dict[str, Any] | None = None
     applications: list[dict[str, Any]] = []
+    application_stage_events: list[dict[str, Any]] = []
     saved_jobs: list[dict[str, Any]] = []
     matches: list[dict[str, Any]] = []
     match_feedback: list[dict[str, Any]] = []
@@ -272,6 +277,22 @@ async def build_user_export(
             for a in (
                 await session.execute(
                     select(Application).where(Application.applicant_id == applicant_id)
+                )
+            )
+            .scalars()
+            .all()
+        ]
+        application_stage_events = [
+            _row_to_dict(r)
+            for r in (
+                await session.execute(
+                    select(ApplicationStageEvent)
+                    .join(
+                        Application,
+                        Application.id == ApplicationStageEvent.application_id,
+                    )
+                    .where(Application.applicant_id == applicant_id)
+                    .order_by(ApplicationStageEvent.created_at)
                 )
             )
             .scalars()
@@ -399,6 +420,7 @@ async def build_user_export(
         resumes=resumes,
         applicant_embedding=embedding_dict,
         applications=applications,
+        application_stage_events=application_stage_events,
         saved_jobs=saved_jobs,
         matches=matches,
         match_feedback=match_feedback,

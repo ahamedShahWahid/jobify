@@ -28,6 +28,7 @@ def test_user_export_top_level_fields() -> None:
         "resumes",
         "applicant_embedding",
         "applications",
+        "application_stage_events",
         "saved_jobs",
         "matches",
         "match_feedback",

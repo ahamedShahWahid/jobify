@@ -62,8 +62,12 @@ EXPECTED_PII_TABLES: frozenset[str] = frozenset(
 #   are returned in the right-of-access export. `audit_logs` survives via
 #   actor_user_id ON DELETE SET NULL; applications/matches are anonymized
 #   aggregates kept after the applicant is tombstoned; jobs belong to the
-#   employer, not the user.
-_EXPORT_ONLY_TABLES: frozenset[str] = frozenset({"applications", "matches", "audit_logs", "jobs"})
+#   employer, not the user; application_stage_events is append-only history
+#   on the (kept) application, surviving the same way audit_logs does
+#   (actor_user_id ON DELETE SET NULL).
+_EXPORT_ONLY_TABLES: frozenset[str] = frozenset(
+    {"applications", "matches", "audit_logs", "jobs", "application_stage_events"}
+)
 #   DELETE-ONLY: session secrets — hard-deleted on erasure, and deliberately
 #   REDACTED from the export (see _REDACTIONS / _REDACTED_COLUMN_NAMES), so
 #   they appear in the deleter but never in the export.
