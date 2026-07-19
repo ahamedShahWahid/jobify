@@ -239,20 +239,23 @@ async def test_export_includes_application_stage_events_ascending(
     await session.flush()
 
     now = datetime.now(UTC)
-    session.add(
-        ApplicationStageEvent(
-            application_id=application.id,
-            from_stage="applied",
-            to_stage="shortlisted",
-            created_at=now,
-        )
-    )
+    # Insertion order deliberately DIVERGES from chronological order — the
+    # later event is added first — so an export query missing its ORDER BY
+    # cannot coincidentally pass by matching insertion/heap order.
     session.add(
         ApplicationStageEvent(
             application_id=application.id,
             from_stage="shortlisted",
             to_stage="interview",
             created_at=now + timedelta(seconds=1),
+        )
+    )
+    session.add(
+        ApplicationStageEvent(
+            application_id=application.id,
+            from_stage="applied",
+            to_stage="shortlisted",
+            created_at=now,
         )
     )
 
