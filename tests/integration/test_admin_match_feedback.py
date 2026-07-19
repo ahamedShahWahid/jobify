@@ -199,3 +199,25 @@ async def test_summary_zero_denominator_share_is_null(
     r = await async_client.get("/v1/admin/match-feedback/summary", headers=_token_headers(admin))
     assert r.status_code == 200
     assert r.json()["all_time"]["share"] is None
+
+
+async def test_list_keeps_rating_when_match_soft_deleted(
+    async_client: AsyncClient, session: AsyncSession
+) -> None:
+    """ON-clause regression pin: a soft-deleted match must not drop the rating
+    row from the list — it lists with null score/explanation instead."""
+    admin = await _make_admin(session)
+    _, applicant = await _make_applicant(session, email=f"{uuid.uuid4()}@example.com")
+    job, _ = await _make_job_and_employer(session, employer_name=f"E{uuid.uuid4()}")
+    match = await _make_match(session, applicant_id=applicant.id, job_id=job.id, total_score=0.8)
+    session.add(MatchFeedback(applicant_id=applicant.id, job_id=job.id, rating="up"))
+    match.deleted_at = datetime.now(UTC)
+    await session.commit()
+
+    r = await async_client.get("/v1/admin/match-feedback", headers=_token_headers(admin))
+    assert r.status_code == 200
+    items = r.json()["items"]
+    assert len(items) == 1
+    assert items[0]["rating"] == "up"
+    assert items[0]["total_score"] is None
+    assert items[0]["explanation"] is None
