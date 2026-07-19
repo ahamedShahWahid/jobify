@@ -159,11 +159,6 @@ async def withdraw_application(
     ).scalar_one()
 
 
-RECRUITER_SETTABLE_STAGES: frozenset[str] = frozenset(
-    {"shortlisted", "interview", "offer", "hired", "rejected"}
-)
-
-
 class StageChangeError(Exception):
     def __init__(self, status_code: int, detail: str) -> None:
         self.status_code = status_code
@@ -209,6 +204,8 @@ async def change_application_stage(
                 Application.id == application_id,
                 Application.job_id == job.id,
                 Application.deleted_at.is_(None),
+                Applicant.deleted_at.is_(None),
+                Employer.deleted_at.is_(None),
             )
         )
     ).first()

@@ -112,7 +112,7 @@ async def _setup(
 
 
 async def test_stage_change_happy_path(async_client: AsyncClient, session: AsyncSession) -> None:
-    recruiter, _, job, _, _, application = await _setup(session)
+    recruiter, _, job, applicant_user, _, application = await _setup(session)
     r = await async_client.patch(
         f"/v1/jobs/{job.id}/applications/{application.id}/stage",
         json={"stage": "shortlisted"},
@@ -146,6 +146,7 @@ async def test_stage_change_happy_path(async_client: AsyncClient, session: Async
     )
     assert len(notifs) == 2  # EMAIL + IN_APP
     assert {n.channel.value for n in notifs} == {"email", "in_app"}
+    assert all(n.user_id == applicant_user.id for n in notifs)
     assert notifs[0].payload["stage"] == "shortlisted"
     assert notifs[0].payload["job_title"] == job.title
 
@@ -171,24 +172,53 @@ async def test_same_stage_noop_writes_nothing(
         json={"stage": "interview"},
         headers=h,
     )
+
+    async def _counts() -> tuple[int, int, int]:
+        events = (
+            (
+                await session.execute(
+                    select(ApplicationStageEvent).where(
+                        ApplicationStageEvent.application_id == application.id
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        notifs = (
+            (
+                await session.execute(
+                    select(Notification).where(Notification.kind == "application_stage_changed")
+                )
+            )
+            .scalars()
+            .all()
+        )
+        audit = (
+            (
+                await session.execute(
+                    select(AuditLog).where(AuditLog.action == "application.stage_changed")
+                )
+            )
+            .scalars()
+            .all()
+        )
+        return len(events), len(notifs), len(audit)
+
+    baseline_events, baseline_notifs, baseline_audit = await _counts()
+    assert (baseline_events, baseline_notifs, baseline_audit) == (1, 2, 1)
+
     r2 = await async_client.patch(
         f"/v1/jobs/{job.id}/applications/{application.id}/stage",
         json={"stage": "interview"},
         headers=h,
     )
     assert r2.status_code == 200
-    events = (
-        (
-            await session.execute(
-                select(ApplicationStageEvent).where(
-                    ApplicationStageEvent.application_id == application.id
-                )
-            )
-        )
-        .scalars()
-        .all()
-    )
-    assert len(events) == 1  # second call wrote no event
+
+    events_after, notifs_after, audit_after = await _counts()
+    assert events_after == 1  # second call wrote no event
+    assert notifs_after == baseline_notifs  # no new notifications
+    assert audit_after == baseline_audit  # no new audit row
 
 
 async def test_free_movement_including_backwards(
