@@ -125,6 +125,146 @@
         "title": "AdminEmployerRead",
         "type": "object"
       },
+      "AdminMatchFeedbackListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminMatchFeedbackRead"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "AdminMatchFeedbackListResponse",
+        "type": "object"
+      },
+      "AdminMatchFeedbackRead": {
+        "properties": {
+          "applicant_id": {
+            "format": "uuid",
+            "title": "Applicant Id",
+            "type": "string"
+          },
+          "applicant_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applicant Name"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "employer_name": {
+            "title": "Employer Name",
+            "type": "string"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "job_id": {
+            "format": "uuid",
+            "title": "Job Id",
+            "type": "string"
+          },
+          "job_title": {
+            "title": "Job Title",
+            "type": "string"
+          },
+          "rating": {
+            "enum": [
+              "up",
+              "down"
+            ],
+            "title": "Rating",
+            "type": "string"
+          },
+          "total_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Score"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "rating",
+          "created_at",
+          "updated_at",
+          "job_id",
+          "job_title",
+          "employer_name",
+          "applicant_id",
+          "applicant_name",
+          "total_score",
+          "explanation"
+        ],
+        "title": "AdminMatchFeedbackRead",
+        "type": "object"
+      },
+      "AdminMatchFeedbackSummary": {
+        "properties": {
+          "all_time": {
+            "$ref": "#/components/schemas/FeedbackWindowStats"
+          },
+          "last_30d": {
+            "$ref": "#/components/schemas/FeedbackWindowStats"
+          }
+        },
+        "required": [
+          "all_time",
+          "last_30d"
+        ],
+        "title": "AdminMatchFeedbackSummary",
+        "type": "object"
+      },
       "ApplicantOfJobRow": {
         "properties": {
           "applicant_id": {
@@ -829,6 +969,36 @@
           "next_cursor"
         ],
         "title": "FeedResponse",
+        "type": "object"
+      },
+      "FeedbackWindowStats": {
+        "properties": {
+          "down": {
+            "title": "Down",
+            "type": "integer"
+          },
+          "share": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share"
+          },
+          "up": {
+            "title": "Up",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "up",
+          "down",
+          "share"
+        ],
+        "title": "FeedbackWindowStats",
         "type": "object"
       },
       "GoogleSignInRequest": {
@@ -3058,6 +3228,108 @@
           }
         },
         "summary": "Verify Employer",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/v1/admin/match-feedback": {
+      "get": {
+        "operationId": "list_match_feedback_v1_admin_match_feedback_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "rating",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "up",
+                    "down"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rating"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminMatchFeedbackListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Match Feedback",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/v1/admin/match-feedback/summary": {
+      "get": {
+        "operationId": "match_feedback_summary_v1_admin_match_feedback_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminMatchFeedbackSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Match Feedback Summary",
         "tags": [
           "admin"
         ]
