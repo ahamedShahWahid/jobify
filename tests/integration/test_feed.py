@@ -386,3 +386,39 @@ async def test_feed_surfaces_my_feedback_up(
     items = r.json()["items"]
     assert len(items) == 1
     assert items[0]["match"]["my_feedback"] == "up"
+
+
+@pytest.mark.integration
+async def test_feed_etag_changes_on_feedback_change(
+    session: AsyncSession, async_client: AsyncClient
+) -> None:
+    """Rating a match 'up' must invalidate the ETag even though it changes
+    neither `Match.updated_at` nor the item count — MatchFeedback.updated_at
+    must be folded into max_updated_at."""
+    user, applicant = await _make_applicant(session, email="etagfeedback@example.com")
+    j, _ = await _make_job_and_employer(session, employer_name="EtagFeedbackCo")
+    await _make_match(session, applicant_id=applicant.id, job_id=j.id, total_score=0.9)
+    await session.commit()
+
+    r1 = await async_client.get("/v1/feed", headers=_token_headers(user))
+    assert r1.status_code == 200
+    etag_before = r1.headers["ETag"]
+
+    # Within the savepoint-shared test transaction, server-side `func.now()`
+    # is the transaction start time (Postgres now()/CURRENT_TIMESTAMP), not
+    # the statement time — so it won't differ from the match's own
+    # updated_at. Set it explicitly, mirroring
+    # test_feed_etag_changes_on_match_update.
+    fb = await _make_feedback(session, applicant_id=applicant.id, job_id=j.id, rating="up")
+    fb.updated_at = datetime.now(UTC)
+    await session.commit()
+
+    r2 = await async_client.get(
+        "/v1/feed",
+        headers={**_token_headers(user), "If-None-Match": etag_before},
+    )
+    assert r2.status_code == 200
+    assert r2.headers["ETag"] != etag_before
+    items = r2.json()["items"]
+    assert len(items) == 1
+    assert items[0]["match"]["my_feedback"] == "up"

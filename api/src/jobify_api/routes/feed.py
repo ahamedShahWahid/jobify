@@ -95,7 +95,7 @@ async def get_feed(
     # turn the outer join inner and a soft-deleted (cleared) rating would
     # silently drop the row.
     stmt = (
-        select(Match, Job, Employer, MatchFeedback.rating)
+        select(Match, Job, Employer, MatchFeedback.rating, MatchFeedback.updated_at)
         .join(Job, Job.id == Match.job_id)
         .join(Employer, Employer.id == Job.employer_id)
         .outerjoin(
@@ -136,7 +136,7 @@ async def get_feed(
 
     items: list[FeedItemRead] = []
     max_updated_at: datetime | None = None
-    for match, job, employer, my_rating in rows:
+    for match, job, employer, my_rating, feedback_updated_at in rows:
         match_read = MatchRead.model_validate(match).model_copy(update={"my_feedback": my_rating})
         items.append(
             FeedItemRead(
@@ -151,6 +151,10 @@ async def get_feed(
         )
         if max_updated_at is None or match.updated_at > max_updated_at:
             max_updated_at = match.updated_at
+        if feedback_updated_at is not None and (
+            max_updated_at is None or feedback_updated_at > max_updated_at
+        ):
+            max_updated_at = feedback_updated_at
 
     next_cursor: str | None = None
     if has_more and rows:
