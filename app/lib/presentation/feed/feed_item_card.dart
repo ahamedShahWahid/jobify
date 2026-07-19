@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:jobify_app/data/feed/feed_dto.dart';
+import 'package:jobify_app/data/feed/match_feedback_rating.dart';
 import 'package:jobify_app/data/jobs/job_status.dart';
 import 'package:jobify_app/presentation/theme/jobify_colors.dart';
 import 'package:jobify_app/presentation/theme/jobify_radii.dart';
@@ -16,6 +17,9 @@ class FeedItemCard extends StatelessWidget {
     this.match,
     this.explanation,
     this.showScore = true,
+    this.myFeedback,
+    this.onThumbUp,
+    this.onThumbDown,
     super.key,
   });
 
@@ -25,6 +29,9 @@ class FeedItemCard extends StatelessWidget {
   final ExplanationDto? explanation;
   final VoidCallback onTap;
   final bool showScore;
+  final MatchFeedbackRating? myFeedback;
+  final VoidCallback? onThumbUp;
+  final VoidCallback? onThumbDown;
 
   String _ago(DateTime d) {
     final delta = DateTime.now().toUtc().difference(d.toUtc());
@@ -92,13 +99,40 @@ class FeedItemCard extends StatelessWidget {
                 ],
               ],
               const SizedBox(height: JobifySpacing.md),
-              Text(
-                meta,
-                style: JobifyTypography.mono(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w400,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      meta,
+                      style: JobifyTypography.mono(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  if (!isClosed &&
+                      onThumbUp != null &&
+                      onThumbDown != null) ...[
+                    IconButton(
+                      tooltip: 'Good match',
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(
+                        myFeedback == MatchFeedbackRating.up
+                            ? Icons.thumb_up
+                            : Icons.thumb_up_outlined,
+                        size: 18,
+                      ),
+                      onPressed: onThumbUp,
+                    ),
+                    IconButton(
+                      tooltip: 'Not interested',
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.thumb_down_outlined, size: 18),
+                      onPressed: onThumbDown,
+                    ),
+                  ],
+                ],
               ),
             ],
           ),

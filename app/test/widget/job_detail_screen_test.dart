@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jobify_app/data/feed/feed_dto.dart';
+import 'package:jobify_app/data/feed/match_feedback_dto.dart';
+import 'package:jobify_app/data/feed/match_feedback_rating.dart';
 import 'package:jobify_app/data/feed/match_generator.dart';
 import 'package:jobify_app/data/jobs/application_source.dart';
 import 'package:jobify_app/data/jobs/application_status.dart';
@@ -37,6 +39,20 @@ class _FakeJobsRepo implements JobsRepository {
       );
   @override
   Future<void> unsave(String id) async {}
+  @override
+  Future<MatchFeedbackDto> rateMatch(
+    String id,
+    MatchFeedbackRating rating,
+  ) async =>
+      MatchFeedbackDto(
+        id: 'f1',
+        jobId: id,
+        rating: rating,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+  @override
+  Future<void> clearMatchFeedback(String id) async {}
 }
 
 JobDetailDto _detail({ApplicationDto? app, SavedJobDto? saved}) => JobDetailDto(

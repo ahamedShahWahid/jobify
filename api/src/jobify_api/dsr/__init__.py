@@ -1,7 +1,7 @@
 """DSR export builder — DPDP § 11 right-of-access.
 
 Exports:
-    UserExport      — Pydantic v2 envelope model (18 top-level fields).
+    UserExport      — Pydantic v2 envelope model (22 top-level fields).
     build_user_export — async read-only assembly function.
 
 This module does NOT write audit rows. The route handler (routes/dsr.py)
@@ -30,6 +30,7 @@ from jobify.db.models import (
     EmployerUser,
     Job,
     Match,
+    MatchFeedback,
     Notification,
     OAuthIdentity,
     Resume,
@@ -68,6 +69,7 @@ class UserExport(BaseModel):
     applications: list[dict[str, Any]] = []
     saved_jobs: list[dict[str, Any]] = []
     matches: list[dict[str, Any]] = []
+    match_feedback: list[dict[str, Any]] = []
     notifications: list[dict[str, Any]] = []
     user_consents: list[dict[str, Any]] = []
     audit_history: list[dict[str, Any]] = []
@@ -233,6 +235,7 @@ async def build_user_export(
     applications: list[dict[str, Any]] = []
     saved_jobs: list[dict[str, Any]] = []
     matches: list[dict[str, Any]] = []
+    match_feedback: list[dict[str, Any]] = []
     applicant_preferences: list[dict[str, Any]] = []
 
     if applicant_row is not None:
@@ -286,6 +289,16 @@ async def build_user_export(
             _row_to_dict(m)
             for m in (
                 await session.execute(select(Match).where(Match.applicant_id == applicant_id))
+            )
+            .scalars()
+            .all()
+        ]
+        match_feedback = [
+            _row_to_dict(r)
+            for r in (
+                await session.execute(
+                    select(MatchFeedback).where(MatchFeedback.applicant_id == applicant_id)
+                )
             )
             .scalars()
             .all()
@@ -388,6 +401,7 @@ async def build_user_export(
         applications=applications,
         saved_jobs=saved_jobs,
         matches=matches,
+        match_feedback=match_feedback,
         notifications=notifications,
         user_consents=user_consents,
         audit_history=audit_history,

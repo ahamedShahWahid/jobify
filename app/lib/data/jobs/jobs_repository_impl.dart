@@ -4,6 +4,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:jobify_app/data/api/error_mapping.dart';
 import 'package:jobify_app/data/api/dio_provider.dart';
+import 'package:jobify_app/data/feed/match_feedback_dto.dart';
+import 'package:jobify_app/data/feed/match_feedback_rating.dart';
 import 'package:jobify_app/data/jobs/application_source.dart';
 import 'package:jobify_app/data/jobs/jobs_api.dart';
 import 'package:jobify_app/data/jobs/jobs_dto.dart';
@@ -55,6 +57,27 @@ class JobsRepositoryImpl implements JobsRepository {
   Future<void> unsave(String jobId) async {
     try {
       await _api.unsave(jobId);
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
+  @override
+  Future<MatchFeedbackDto> rateMatch(
+    String jobId,
+    MatchFeedbackRating rating,
+  ) async {
+    try {
+      return await _api.rateMatch(jobId, rating.wireValue);
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
+  @override
+  Future<void> clearMatchFeedback(String jobId) async {
+    try {
+      await _api.clearMatchFeedback(jobId);
     } on DioException catch (e) {
       throw mapDioException(e);
     }

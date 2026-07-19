@@ -770,6 +770,67 @@ class SavedJob(Base):
     )
 
 
+class MatchFeedbackRating(StrEnum):
+    """Applicant verdict on a surfaced match. Stored as varchar+CHECK (the
+    consent-scope / desired_role precedent — adding a value is a Python edit,
+    not a PG-enum migration)."""
+
+    UP = "up"
+    DOWN = "down"
+
+
+class MatchFeedback(Base):
+    """Applicant thumbs up/down on a surfaced match — see the 2026-07-19
+    match-feedback design doc.
+
+    Keyed on (applicant_id, job_id) — the same stable identity ``matches``
+    uses — NOT match_id, so a rating survives match-row rescore UPSERTs.
+    One live row per pair (partial unique); re-rating UPDATEs the row;
+    clearing soft-deletes it (a re-rate after clear inserts a fresh row,
+    like saved_jobs). ``rating='down'`` excludes the job from that
+    applicant's /v1/feed.
+    """
+
+    __tablename__ = "match_feedback"
+
+    id: Mapped[UuidPK]
+    applicant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("jobify.applicants.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    job_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("jobify.jobs.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    rating: Mapped[str] = mapped_column(String(8), nullable=False)
+    created_at: Mapped[CreatedAt]
+    updated_at: Mapped[UpdatedAt]
+    deleted_at: Mapped[DeletedAt]
+
+    __table_args__ = (
+        CheckConstraint(
+            "rating IN ('up', 'down')",
+            name="ck_match_feedback_rating",
+        ),
+        Index(
+            "ix_match_feedback_applicant_job_live",
+            "applicant_id",
+            "job_id",
+            unique=True,
+            postgresql_where="deleted_at IS NULL",
+        ),
+        Index(
+            "ix_match_feedback_rating_created_at",
+            "rating",
+            text("created_at DESC"),
+            postgresql_where="deleted_at IS NULL",
+        ),
+        {"schema": "jobify"},
+    )
+
+
 class NotificationStatus(StrEnum):
     PENDING = "pending"
     DISPATCHING = "dispatching"

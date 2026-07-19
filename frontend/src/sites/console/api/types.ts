@@ -101,3 +101,39 @@ export interface EmployerVerificationCounts {
   verified: number;
   rejected: number;
 }
+
+// ---- /v1/admin/match-feedback — mirrors
+// api/src/jobify_api/routes/admin/match_feedback.py ---------------
+
+export type MatchFeedbackRating = "up" | "down";
+
+export interface AdminMatchFeedbackRow {
+  id: string;
+  rating: MatchFeedbackRating;
+  created_at: string;
+  updated_at: string;
+  job_id: string;
+  job_title: string;
+  employer_name: string;
+  applicant_id: string;
+  applicant_name: string | null;
+  total_score: number | null;
+  explanation: { fit?: string; caveat?: string } | null;
+}
+
+export interface AdminMatchFeedbackPage {
+  items: AdminMatchFeedbackRow[];
+  next_cursor: string | null;
+}
+
+export interface MatchFeedbackWindowStats {
+  up: number;
+  down: number;
+  /** up / (up + down); null when nothing rated yet. */
+  share: number | null;
+}
+
+export interface AdminMatchFeedbackSummary {
+  all_time: MatchFeedbackWindowStats;
+  last_30d: MatchFeedbackWindowStats;
+}

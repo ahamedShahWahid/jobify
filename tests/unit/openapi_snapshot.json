@@ -125,6 +125,146 @@
         "title": "AdminEmployerRead",
         "type": "object"
       },
+      "AdminMatchFeedbackListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminMatchFeedbackRead"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "AdminMatchFeedbackListResponse",
+        "type": "object"
+      },
+      "AdminMatchFeedbackRead": {
+        "properties": {
+          "applicant_id": {
+            "format": "uuid",
+            "title": "Applicant Id",
+            "type": "string"
+          },
+          "applicant_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applicant Name"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "employer_name": {
+            "title": "Employer Name",
+            "type": "string"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "job_id": {
+            "format": "uuid",
+            "title": "Job Id",
+            "type": "string"
+          },
+          "job_title": {
+            "title": "Job Title",
+            "type": "string"
+          },
+          "rating": {
+            "enum": [
+              "up",
+              "down"
+            ],
+            "title": "Rating",
+            "type": "string"
+          },
+          "total_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Score"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "rating",
+          "created_at",
+          "updated_at",
+          "job_id",
+          "job_title",
+          "employer_name",
+          "applicant_id",
+          "applicant_name",
+          "total_score",
+          "explanation"
+        ],
+        "title": "AdminMatchFeedbackRead",
+        "type": "object"
+      },
+      "AdminMatchFeedbackSummary": {
+        "properties": {
+          "all_time": {
+            "$ref": "#/components/schemas/FeedbackWindowStats"
+          },
+          "last_30d": {
+            "$ref": "#/components/schemas/FeedbackWindowStats"
+          }
+        },
+        "required": [
+          "all_time",
+          "last_30d"
+        ],
+        "title": "AdminMatchFeedbackSummary",
+        "type": "object"
+      },
       "ApplicantOfJobRow": {
         "properties": {
           "applicant_id": {
@@ -831,6 +971,36 @@
         "title": "FeedResponse",
         "type": "object"
       },
+      "FeedbackWindowStats": {
+        "properties": {
+          "down": {
+            "title": "Down",
+            "type": "integer"
+          },
+          "share": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share"
+          },
+          "up": {
+            "title": "Up",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "up",
+          "down",
+          "share"
+        ],
+        "title": "FeedbackWindowStats",
+        "type": "object"
+      },
       "GoogleSignInRequest": {
         "properties": {
           "id_token": {
@@ -1414,6 +1584,65 @@
         "title": "LogoutRequest",
         "type": "object"
       },
+      "MatchFeedbackRead": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "job_id": {
+            "format": "uuid",
+            "title": "Job Id",
+            "type": "string"
+          },
+          "rating": {
+            "enum": [
+              "up",
+              "down"
+            ],
+            "title": "Rating",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "job_id",
+          "rating",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "MatchFeedbackRead",
+        "type": "object"
+      },
+      "MatchFeedbackWrite": {
+        "additionalProperties": false,
+        "properties": {
+          "rating": {
+            "enum": [
+              "up",
+              "down"
+            ],
+            "title": "Rating",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rating"
+        ],
+        "title": "MatchFeedbackWrite",
+        "type": "object"
+      },
       "MatchRead": {
         "properties": {
           "components": {
@@ -1441,6 +1670,21 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "my_feedback": {
+            "anyOf": [
+              {
+                "enum": [
+                  "up",
+                  "down"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "My Feedback"
           },
           "structured_score": {
             "title": "Structured Score",
@@ -2989,6 +3233,108 @@
         ]
       }
     },
+    "/v1/admin/match-feedback": {
+      "get": {
+        "operationId": "list_match_feedback_v1_admin_match_feedback_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "rating",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "up",
+                    "down"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rating"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminMatchFeedbackListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Match Feedback",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/v1/admin/match-feedback/summary": {
+      "get": {
+        "operationId": "match_feedback_summary_v1_admin_match_feedback_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminMatchFeedbackSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Match Feedback Summary",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/v1/admin/users/{user_id}/suspend": {
       "delete": {
         "operationId": "unsuspend_user_v1_admin_users__user_id__suspend_delete",
@@ -4414,6 +4760,95 @@
         "summary": "Apply To Job",
         "tags": [
           "applications"
+        ]
+      }
+    },
+    "/v1/jobs/{job_id}/match-feedback": {
+      "delete": {
+        "description": "Clear the rating (soft-delete). 204 whether or not a live row existed \u2014\nthe UI calls this optimistically (Undo). Error ladder: 401 \u2192 403 only.",
+        "operationId": "delete_match_feedback_v1_jobs__job_id__match_feedback_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Match Feedback",
+        "tags": [
+          "match_feedback"
+        ]
+      },
+      "put": {
+        "description": "Rate the current applicant's surfaced match for this job (idempotent upsert).\n\nError ladder: 401 (auth) \u2192 403 (role) \u2192 404 (no live surfaced match).",
+        "operationId": "put_match_feedback_v1_jobs__job_id__match_feedback_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatchFeedbackWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchFeedbackRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Match Feedback",
+        "tags": [
+          "match_feedback"
         ]
       }
     },

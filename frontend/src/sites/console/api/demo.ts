@@ -2,6 +2,9 @@ import type { ConsoleClient } from "./client";
 import { ApiError } from "./client";
 import type {
   AdminAnalyticsSummary,
+  AdminMatchFeedbackPage,
+  AdminMatchFeedbackRow,
+  AdminMatchFeedbackSummary,
   AdminUserRead,
   AuditLogFilters,
   AuditLogListResponse,
@@ -10,6 +13,7 @@ import type {
   EmployerVerificationCounts,
   EmployerVerificationRow,
   EmployerVerificationStatus,
+  MatchFeedbackRating,
   MeResponse,
 } from "./types";
 
@@ -123,6 +127,81 @@ const verificationQueue: EmployerVerificationRow[] = [
   mkVerification("Skylar Mediaworks", "skylar.media", "admin@skylar-different.com", "19SKYLR3344Q1Z1", "rejected", 9, {
     daysAgo: 8,
     reason: "Contact email domain does not match the stated company domain.",
+  }),
+];
+
+// ---- match feedback (Match QA admin page) -----------------------
+//
+// Mirrors GET /v1/admin/match-feedback + /summary. One row has a null
+// applicant_name (DSR-tombstoned applicant) and one has a null total_score +
+// explanation (the match row was soft-deleted since the feedback was left —
+// the live route's outer join degrades the same way). The summary below is
+// derived FROM this array so the numbers always agree with the list.
+
+const mkFeedback = (
+  ageDays: number,
+  rating: MatchFeedbackRating,
+  jobTitle: string,
+  employerName: string,
+  applicantName: string | null,
+  totalScore: number | null,
+  explanation: { fit?: string; caveat?: string } | null,
+): AdminMatchFeedbackRow => {
+  const createdAt = daysAgo(ageDays);
+  return {
+    id: uuid(),
+    rating,
+    created_at: createdAt,
+    updated_at: createdAt,
+    job_id: uuid(),
+    job_title: jobTitle,
+    employer_name: employerName,
+    applicant_id: uuid(),
+    applicant_name: applicantName,
+    total_score: totalScore,
+    explanation,
+  };
+};
+
+const matchFeedback: AdminMatchFeedbackRow[] = [
+  mkFeedback(2, "up", "Senior Backend Engineer", "Northwind Logistics", "Priya Sharma", 0.87, {
+    fit: "Strong Python + distributed-systems overlap with the role's core stack.",
+  }),
+  mkFeedback(3, "down", "Product Designer", "Tessellate Studio", "Rahul Verma", 0.42, {
+    fit: "Some portfolio overlap in visual design.",
+    caveat: "Limited enterprise SaaS experience.",
+  }),
+  mkFeedback(5, "up", "Data Analyst", "Quantum Foundry", null, 0.79, {
+    fit: "SQL + dashboarding skills line up well with the JD.",
+  }),
+  mkFeedback(6, "down", "DevOps Engineer", "Greenleaf Agritech", "Ananya Iyer", 0.55, {
+    fit: "Some Kubernetes exposure from a prior internship.",
+    caveat: "No on-call/incident-response experience.",
+  }),
+  mkFeedback(8, "up", "Frontend Engineer", "Meridian Analytics", "Karan Mehta", 0.91, {
+    fit: "React + TypeScript depth matches the stack closely.",
+  }),
+  mkFeedback(10, "up", "Backend Engineer", "Skylar Mediaworks", "Divya Nair", null, null),
+  mkFeedback(12, "down", "QA Engineer", "Brightpath Tutoring", "Farhan Khan", 0.38, {
+    fit: "Manual-testing background covers the basics.",
+    caveat: "No test-automation framework experience.",
+  }),
+  mkFeedback(15, "up", "ML Engineer", "Quantum Foundry", "Sneha Reddy", 0.83, {
+    fit: "Hands-on ML pipeline experience at a comparable scale.",
+  }),
+  mkFeedback(20, "down", "Product Manager", "Northwind Logistics", "Vikram Rao", 0.47, {
+    fit: "General PM background transfers partially.",
+    caveat: "No B2B logistics domain experience.",
+  }),
+  mkFeedback(25, "up", "Backend Engineer", "Meridian Analytics", "Neha Joshi", 0.88, {
+    fit: "Strong systems-design fundamentals for this level.",
+  }),
+  mkFeedback(35, "up", "Data Engineer", "Greenleaf Agritech", "Arjun Nair", 0.81, {
+    fit: "ETL pipeline experience directly transfers.",
+  }),
+  mkFeedback(45, "down", "Sales Executive", "Skylar Mediaworks", "Ritu Kapoor", 0.35, {
+    fit: "Some B2B sales background.",
+    caveat: "No SaaS sales experience.",
   }),
 ];
 
@@ -316,5 +395,36 @@ export class DemoClient implements ConsoleClient {
       created_at: at,
     });
     return row;
+  }
+
+  async listMatchFeedback(
+    rating: MatchFeedbackRating | "all",
+    cursor?: string,
+  ): Promise<AdminMatchFeedbackPage> {
+    await delay();
+    const rows = matchFeedback
+      .filter((row) => rating === "all" || row.rating === rating)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+    const start = cursor ? Number(cursor) : 0;
+    const limit = 10;
+    return {
+      items: rows.slice(start, start + limit),
+      next_cursor: start + limit < rows.length ? String(start + limit) : null,
+    };
+  }
+
+  async matchFeedbackSummary(): Promise<AdminMatchFeedbackSummary> {
+    await delay();
+    const cutoff = Date.now() - 30 * 86_400_000;
+    const stats = (rows: AdminMatchFeedbackRow[]) => {
+      const up = rows.filter((r) => r.rating === "up").length;
+      const down = rows.filter((r) => r.rating === "down").length;
+      const total = up + down;
+      return { up, down, share: total ? Math.round((up / total) * 10_000) / 10_000 : null };
+    };
+    return {
+      all_time: stats(matchFeedback),
+      last_30d: stats(matchFeedback.filter((row) => Date.parse(row.created_at) >= cutoff)),
+    };
   }
 }

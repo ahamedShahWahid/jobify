@@ -9,6 +9,7 @@ const NAV = [
   { to: `${CONSOLE_BASE}/admin/audit`, idx: "01", label: "Audit explorer" },
   { to: `${CONSOLE_BASE}/admin/users`, idx: "02", label: "User actions" },
   { to: `${CONSOLE_BASE}/admin/verification`, idx: "03", label: "Verification" },
+  { to: `${CONSOLE_BASE}/admin/match-qa`, idx: "04", label: "Match QA" },
 ];
 
 export function Shell() {

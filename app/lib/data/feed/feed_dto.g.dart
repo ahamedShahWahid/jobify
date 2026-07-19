@@ -45,6 +45,9 @@ MatchSummaryDto _$MatchSummaryDtoFromJson(Map<String, dynamic> json) =>
       surfacedAt: json['surfaced_at'] == null
           ? null
           : DateTime.parse(json['surfaced_at'] as String),
+      myFeedback: $enumDecodeNullable(
+          _$MatchFeedbackRatingEnumMap, json['my_feedback'],
+          unknownValue: MatchFeedbackRating.unknown),
     );
 
 Map<String, dynamic> _$MatchSummaryDtoToJson(MatchSummaryDto instance) =>
@@ -54,7 +57,14 @@ Map<String, dynamic> _$MatchSummaryDtoToJson(MatchSummaryDto instance) =>
       'components': instance.scoreComponents,
       'explanation': instance.explanation?.toJson(),
       'surfaced_at': instance.surfacedAt?.toIso8601String(),
+      'my_feedback': _$MatchFeedbackRatingEnumMap[instance.myFeedback],
     };
+
+const _$MatchFeedbackRatingEnumMap = {
+  MatchFeedbackRating.up: 'up',
+  MatchFeedbackRating.down: 'down',
+  MatchFeedbackRating.unknown: 'unknown',
+};
 
 ExplanationDto _$ExplanationDtoFromJson(Map<String, dynamic> json) =>
     ExplanationDto(

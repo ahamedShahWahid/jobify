@@ -13,6 +13,8 @@ import 'package:jobify_app/data/jobs/applications_repository.dart';
 import 'package:jobify_app/data/jobs/applications_repository_impl.dart';
 import 'package:jobify_app/data/jobs/job_status.dart';
 import 'package:jobify_app/data/jobs/jobs_dto.dart';
+import 'package:jobify_app/data/jobs/jobs_repository.dart';
+import 'package:jobify_app/data/jobs/jobs_repository_impl.dart';
 import 'package:jobify_app/data/jobs/saved_jobs_repository.dart';
 import 'package:jobify_app/data/jobs/saved_jobs_repository_impl.dart';
 import 'package:jobify_app/data/preferences/desired_role.dart';
@@ -27,6 +29,8 @@ import 'package:jobify_app/data/resume/resume_repository_impl.dart';
 import 'package:jobify_app/presentation/feed/feed_item_card.dart';
 import 'package:jobify_app/presentation/feed/feed_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../helpers/fake_repositories.dart';
 
 class _FakeFeedRepo implements FeedRepository {
   _FakeFeedRepo(this.page);
@@ -147,6 +151,7 @@ Widget _wrap(
   Object? resume = _unsetResume,
   PreferencesDto prefs = _completePrefs,
   ResumeRepository? resumeRepo,
+  JobsRepository? jobsRepo,
 }) {
   final resolvedResume = identical(resume, _unsetResume)
       ? _completeResumeDto
@@ -159,6 +164,7 @@ Widget _wrap(
       preferencesRepositoryProvider.overrideWithValue(_FakePrefsRepo(prefs)),
       applicationsRepositoryProvider.overrideWithValue(_FakeApplicationsRepo()),
       savedJobsRepositoryProvider.overrideWithValue(_FakeSavedJobsRepo()),
+      if (jobsRepo != null) jobsRepositoryProvider.overrideWithValue(jobsRepo),
     ],
     child: MaterialApp(
       theme: ThemeData.light(useMaterial3: true),
@@ -204,6 +210,42 @@ Widget _wrapCard(FeedItemDto item) => MediaQuery(
         ),
       ),
     );
+
+/// Two open-job feed items (ids j1/j2) for the thumbs-feedback tests — a
+/// dedicated helper rather than reusing `_cardItem` (which single-card tests
+/// depend on staying at its current shape).
+List<FeedItemDto> _thumbTestItems() => [
+      FeedItemDto(
+        match: const MatchSummaryDto(
+          id: 'm1',
+          totalScore: 0.8,
+          scoreComponents: {},
+        ),
+        job: JobSummaryDto(
+          id: 'j1',
+          title: 'Backend Engineer',
+          locations: const ['BLR'],
+          status: JobStatus.open,
+          postedAt: DateTime.parse('2026-05-18T00:00:00Z'),
+        ),
+        employer: const EmployerSummaryDto(id: 'e1', name: 'Acme Co'),
+      ),
+      FeedItemDto(
+        match: const MatchSummaryDto(
+          id: 'm2',
+          totalScore: 0.7,
+          scoreComponents: {},
+        ),
+        job: JobSummaryDto(
+          id: 'j2',
+          title: 'Frontend Engineer',
+          locations: const ['MUM'],
+          status: JobStatus.open,
+          postedAt: DateTime.parse('2026-05-19T00:00:00Z'),
+        ),
+        employer: const EmployerSummaryDto(id: 'e2', name: 'Beta Co'),
+      ),
+    ];
 
 void main() {
   setUp(() {
@@ -428,5 +470,106 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.textContaining('new match'), findsNothing);
+  });
+
+  group('thumbs feedback', () {
+    testWidgets('thumb-down removes the card and shows Undo snackbar',
+        (tester) async {
+      final items = _thumbTestItems();
+      final fakeJobsRepo = FakeJobsRepository(
+        detail: JobDetailDto(job: items[0].job, employer: items[0].employer),
+      );
+      await tester.pumpWidget(
+        _wrap(
+          const FeedScreen(),
+          repo: _FakeFeedRepo(FeedPageDto(items: items)),
+          jobsRepo: fakeJobsRepo,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Not interested').first);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FeedItemCard), findsOneWidget);
+      expect(find.text('Hidden from your feed'), findsOneWidget);
+      expect(find.text('Undo'), findsOneWidget);
+      expect(fakeJobsRepo.ratedDown, contains('j1'));
+    });
+
+    testWidgets('thumb-down restores the card when the API call fails',
+        (tester) async {
+      final items = _thumbTestItems();
+      final fakeJobsRepo = FakeJobsRepository(
+        detail: JobDetailDto(job: items[0].job, employer: items[0].employer),
+      )..rateMatchError = 'boom';
+      await tester.pumpWidget(
+        _wrap(
+          const FeedScreen(),
+          repo: _FakeFeedRepo(FeedPageDto(items: items)),
+          jobsRepo: fakeJobsRepo,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Not interested').first);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FeedItemCard), findsNWidgets(2)); // rolled back
+    });
+
+    testWidgets('thumb-up fills the icon and keeps the card', (tester) async {
+      final items = _thumbTestItems();
+      final fakeJobsRepo = FakeJobsRepository(
+        detail: JobDetailDto(job: items[0].job, employer: items[0].employer),
+      );
+      await tester.pumpWidget(
+        _wrap(
+          const FeedScreen(),
+          repo: _FakeFeedRepo(FeedPageDto(items: items)),
+          jobsRepo: fakeJobsRepo,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Good match').first);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FeedItemCard), findsNWidgets(2));
+      expect(find.byIcon(Icons.thumb_up), findsOneWidget); // filled variant
+      expect(fakeJobsRepo.ratedUp, contains('j1'));
+    });
+
+    testWidgets('tapping Undo clears the feedback and refetches the card list',
+        (tester) async {
+      final items = _thumbTestItems();
+      final fakeJobsRepo = FakeJobsRepository(
+        detail: JobDetailDto(job: items[0].job, employer: items[0].employer),
+      );
+      await tester.pumpWidget(
+        _wrap(
+          const FeedScreen(),
+          repo: _FakeFeedRepo(FeedPageDto(items: items)),
+          jobsRepo: fakeJobsRepo,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Not interested').first);
+      await tester.pumpAndSettle();
+      // Optimistically hidden.
+      expect(find.byType(FeedItemCard), findsOneWidget);
+
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+
+      expect(fakeJobsRepo.clearedFeedback, contains('j1'));
+      // undoDown() refetches page 1 from the (unfiltered) fake feed repo, so
+      // the card comes back — proves this is a real refetch, not just a
+      // local state patch.
+      expect(find.byType(FeedItemCard), findsNWidgets(2));
+      // Clear succeeded — no error snackbar should have been shown.
+      expect(find.text("Couldn't save your rating"), findsNothing);
+    });
   });
 }

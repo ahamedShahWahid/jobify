@@ -69,6 +69,7 @@ _MATCH_READ_KEYS = {
     "components",
     "explanation",
     "surfaced_at",
+    "my_feedback",
 }
 
 # Slim DTOs introduced for JobDetailResponse (PR #23).

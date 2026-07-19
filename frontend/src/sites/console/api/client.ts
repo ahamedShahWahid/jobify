@@ -2,6 +2,8 @@ import { BaseHttpClient } from "../../../shared/api/transport";
 export { ApiError, errorMessage, TokenStore } from "../../../shared/api/transport";
 
 import type {
+  AdminMatchFeedbackPage,
+  AdminMatchFeedbackSummary,
   AdminUserRead,
   AdminAnalyticsSummary,
   AuditLogFilters,
@@ -10,6 +12,7 @@ import type {
   EmployerVerificationCounts,
   EmployerVerificationRow,
   EmployerVerificationStatus,
+  MatchFeedbackRating,
   MeResponse,
 } from "./types";
 
@@ -35,6 +38,14 @@ export interface ConsoleClient {
   employerVerificationCounts(): Promise<EmployerVerificationCounts>;
   verifyEmployer(employerId: string): Promise<EmployerVerificationRow>;
   rejectEmployer(employerId: string, reason: string): Promise<EmployerVerificationRow>;
+
+  // Match QA (admin) — GET /v1/admin/match-feedback (?rating filter, cursor) +
+  // GET /v1/admin/match-feedback/summary (the BRD match-relevance metric).
+  listMatchFeedback(
+    rating: MatchFeedbackRating | "all",
+    cursor?: string,
+  ): Promise<AdminMatchFeedbackPage>;
+  matchFeedbackSummary(): Promise<AdminMatchFeedbackSummary>;
 }
 
 export class HttpClient extends BaseHttpClient implements ConsoleClient {
@@ -82,5 +93,20 @@ export class HttpClient extends BaseHttpClient implements ConsoleClient {
 
   rejectEmployer(employerId: string, reason: string): Promise<EmployerVerificationRow> {
     return this.request("POST", `/v1/admin/employers/${employerId}/reject`, { reason });
+  }
+
+  listMatchFeedback(
+    rating: MatchFeedbackRating | "all",
+    cursor?: string,
+  ): Promise<AdminMatchFeedbackPage> {
+    const params = new URLSearchParams();
+    if (rating !== "all") params.set("rating", rating);
+    if (cursor) params.set("cursor", cursor);
+    const qs = params.toString();
+    return this.request("GET", `/v1/admin/match-feedback${qs ? `?${qs}` : ""}`);
+  }
+
+  matchFeedbackSummary(): Promise<AdminMatchFeedbackSummary> {
+    return this.request("GET", "/v1/admin/match-feedback/summary");
   }
 }

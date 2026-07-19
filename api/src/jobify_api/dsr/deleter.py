@@ -29,6 +29,7 @@ from jobify.db.models import (
     Employer,
     EmployerInvite,
     EmployerUser,
+    MatchFeedback,
     Notification,
     OAuthIdentity,
     RefreshToken,
@@ -173,6 +174,12 @@ async def delete_user_data(
         )
         counts["saved_jobs"] = r.rowcount or 0
 
+        # 7a. Match feedback — applicant thumbs on surfaced matches.
+        r = await session.execute(  # type: ignore[assignment]
+            delete(MatchFeedback).where(MatchFeedback.applicant_id == applicant_id)
+        )
+        counts["match_feedback"] = r.rowcount or 0
+
         # 7b. Preferences row — hard-delete (same pattern as saved_jobs /
         # applicant_embeddings; nothing here is an anonymized aggregate
         # worth keeping once the applicant is scrubbed).
@@ -233,6 +240,7 @@ async def delete_user_data(
     else:
         now = datetime.now(UTC)
         counts["saved_jobs"] = 0
+        counts["match_feedback"] = 0
         counts["applicant_preferences"] = 0
         counts["applicant_embeddings"] = 0
         counts["resumes_scrubbed"] = 0

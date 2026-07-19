@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -27,6 +28,10 @@ class MatchRead(BaseModel):
     components: dict[str, float] = Field(validation_alias="score_components")
     surfaced_at: datetime | None
     explanation: dict[str, str] | None
+    # The CURRENT applicant's rating on this match; None = unrated. Populated
+    # by /v1/feed (only "up"/None survive there — "down" is excluded) and
+    # /v1/jobs/{id} (any value). Absent from any recruiter/admin reuse.
+    my_feedback: Literal["up", "down"] | None = None
 
 
 class EmployerRead(BaseModel):

@@ -7,6 +7,8 @@ import 'package:jobify_app/data/dsr/dsr_dto.dart';
 import 'package:jobify_app/data/dsr/dsr_repository.dart';
 import 'package:jobify_app/data/feed/feed_dto.dart';
 import 'package:jobify_app/data/feed/feed_repository.dart';
+import 'package:jobify_app/data/feed/match_feedback_dto.dart';
+import 'package:jobify_app/data/feed/match_feedback_rating.dart';
 import 'package:jobify_app/data/jobs/application_source.dart';
 import 'package:jobify_app/data/jobs/application_status.dart';
 import 'package:jobify_app/data/jobs/applications_repository.dart';
@@ -82,6 +84,16 @@ class FakeJobsRepository implements JobsRepository {
   FakeJobsRepository({required JobDetailDto detail}) : _detail = detail;
   JobDetailDto _detail;
 
+  /// Job ids passed to `rateMatch(id, up)`/`rateMatch(id, down)` — recorded
+  /// even when [rateMatchError] makes the call throw.
+  final List<String> ratedUp = [];
+  final List<String> ratedDown = [];
+  final List<String> clearedFeedback = [];
+
+  /// When set, `rateMatch` throws this (wrapped in an Exception) instead of
+  /// succeeding — lets tests exercise the optimistic-rollback path.
+  Object? rateMatchError;
+
   @override
   Future<JobDetailDto> fetchById(String id) async => _detail;
 
@@ -116,6 +128,50 @@ class FakeJobsRepository implements JobsRepository {
   @override
   Future<void> unsave(String jobId) async {
     _detail = _detail.copyWith(savedJob: null);
+  }
+
+  @override
+  Future<MatchFeedbackDto> rateMatch(
+    String jobId,
+    MatchFeedbackRating rating,
+  ) async {
+    if (rating == MatchFeedbackRating.up) {
+      ratedUp.add(jobId);
+    } else if (rating == MatchFeedbackRating.down) {
+      ratedDown.add(jobId);
+    }
+    final err = rateMatchError;
+    if (err != null) throw Exception(err.toString());
+    final now = DateTime.now();
+    _applyMyFeedback(rating);
+    return MatchFeedbackDto(
+      id: 'f1',
+      jobId: jobId,
+      rating: rating,
+      createdAt: now,
+      updatedAt: now,
+    );
+  }
+
+  @override
+  Future<void> clearMatchFeedback(String jobId) async {
+    clearedFeedback.add(jobId);
+    _applyMyFeedback(null);
+  }
+
+  void _applyMyFeedback(MatchFeedbackRating? myFeedback) {
+    final m = _detail.match;
+    if (m == null) return;
+    _detail = _detail.copyWith(
+      match: MatchSummaryDto(
+        id: m.id,
+        totalScore: m.totalScore,
+        scoreComponents: m.scoreComponents,
+        explanation: m.explanation,
+        surfacedAt: m.surfacedAt,
+        myFeedback: myFeedback,
+      ),
+    );
   }
 }
 

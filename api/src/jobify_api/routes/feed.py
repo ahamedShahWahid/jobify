@@ -17,10 +17,18 @@ from decimal import Decimal
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response
-from sqlalchemy import literal, select, tuple_
+from sqlalchemy import and_, literal, or_, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from jobify.db.models import Employer, Job, JobStatus, Match, User
+from jobify.db.models import (
+    Employer,
+    Job,
+    JobStatus,
+    Match,
+    MatchFeedback,
+    MatchFeedbackRating,
+    User,
+)
 from jobify_api.auth.dependencies import (
     current_user,
 )
@@ -80,11 +88,24 @@ async def get_feed(
         except ValueError:
             raise HTTPException(status_code=400, detail="invalid_cursor") from None
 
-    # Query: match JOIN job JOIN employer; surfaced + live + open.
+    # Query: match JOIN job JOIN employer; surfaced + live + open. One outer
+    # join to the live feedback row does double duty: rating='down' EXCLUDES
+    # the job; rating='up' is surfaced as match.my_feedback. The deleted_at
+    # and key predicates MUST stay in the ON clause — in WHERE they would
+    # turn the outer join inner and a soft-deleted (cleared) rating would
+    # silently drop the row.
     stmt = (
-        select(Match, Job, Employer)
+        select(Match, Job, Employer, MatchFeedback.rating, MatchFeedback.updated_at)
         .join(Job, Job.id == Match.job_id)
         .join(Employer, Employer.id == Job.employer_id)
+        .outerjoin(
+            MatchFeedback,
+            and_(
+                MatchFeedback.applicant_id == Match.applicant_id,
+                MatchFeedback.job_id == Match.job_id,
+                MatchFeedback.deleted_at.is_(None),
+            ),
+        )
         .where(
             Match.applicant_id == applicant.id,
             Match.deleted_at.is_(None),
@@ -92,6 +113,10 @@ async def get_feed(
             Job.deleted_at.is_(None),
             Job.status == JobStatus.OPEN,
             Employer.deleted_at.is_(None),
+            or_(
+                MatchFeedback.id.is_(None),
+                MatchFeedback.rating != MatchFeedbackRating.DOWN.value,
+            ),
         )
         .order_by(Match.total_score.desc(), Match.id.desc())
         .limit(limit + 1)  # peek-one
@@ -111,10 +136,11 @@ async def get_feed(
 
     items: list[FeedItemRead] = []
     max_updated_at: datetime | None = None
-    for match, job, employer in rows:
+    for match, job, employer, my_rating, feedback_updated_at in rows:
+        match_read = MatchRead.model_validate(match).model_copy(update={"my_feedback": my_rating})
         items.append(
             FeedItemRead(
-                match=MatchRead.model_validate(match),
+                match=match_read,
                 job=JobRead.from_job_and_employer(job, employer),
                 employer=EmployerRead(
                     id=employer.id,
@@ -125,6 +151,10 @@ async def get_feed(
         )
         if max_updated_at is None or match.updated_at > max_updated_at:
             max_updated_at = match.updated_at
+        if feedback_updated_at is not None and (
+            max_updated_at is None or feedback_updated_at > max_updated_at
+        ):
+            max_updated_at = feedback_updated_at
 
     next_cursor: str | None = None
     if has_more and rows:

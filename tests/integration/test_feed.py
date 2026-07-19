@@ -16,6 +16,7 @@ from jobify.db.models import (
     Job,
     JobStatus,
     Match,
+    MatchFeedback,
     User,
     UserRole,
 )
@@ -313,3 +314,111 @@ async def test_feed_soft_deleted_applicant_gets_500(
     r = await async_client.get("/v1/feed", headers=_token_headers(user))
     assert r.status_code == 500
     assert r.json()["detail"] == "applicant_missing"
+
+
+async def _make_feedback(
+    session: AsyncSession,
+    *,
+    applicant_id: uuid.UUID,
+    job_id: uuid.UUID,
+    rating: str,
+    soft_deleted: bool = False,
+) -> MatchFeedback:
+    fb = MatchFeedback(
+        applicant_id=applicant_id,
+        job_id=job_id,
+        rating=rating,
+        deleted_at=datetime.now(UTC) if soft_deleted else None,
+    )
+    session.add(fb)
+    await session.flush()
+    return fb
+
+
+@pytest.mark.integration
+async def test_feed_hides_thumbs_down_job(async_client: AsyncClient, session: AsyncSession) -> None:
+    user, applicant = await _make_applicant(session, email=f"{uuid.uuid4()}@example.com")
+    job_a, _ = await _make_job_and_employer(session, title="A", employer_name=f"E{uuid.uuid4()}")
+    job_b, _ = await _make_job_and_employer(session, title="B", employer_name=f"E{uuid.uuid4()}")
+    await _make_match(session, applicant_id=applicant.id, job_id=job_a.id, total_score=0.9)
+    await _make_match(session, applicant_id=applicant.id, job_id=job_b.id, total_score=0.8)
+    await _make_feedback(session, applicant_id=applicant.id, job_id=job_a.id, rating="down")
+    await session.commit()
+
+    r = await async_client.get("/v1/feed", headers=_token_headers(user))
+    assert r.status_code == 200
+    titles = [it["job"]["title"] for it in r.json()["items"]]
+    assert titles == ["B"]
+
+
+@pytest.mark.integration
+async def test_feed_keeps_job_when_down_feedback_is_soft_deleted(
+    async_client: AsyncClient, session: AsyncSession
+) -> None:
+    """Outer-join degrade path: a CLEARED thumbs-down must not hide the job."""
+    user, applicant = await _make_applicant(session, email=f"{uuid.uuid4()}@example.com")
+    job, _ = await _make_job_and_employer(session, employer_name=f"E{uuid.uuid4()}")
+    await _make_match(session, applicant_id=applicant.id, job_id=job.id, total_score=0.9)
+    await _make_feedback(
+        session, applicant_id=applicant.id, job_id=job.id, rating="down", soft_deleted=True
+    )
+    await session.commit()
+
+    r = await async_client.get("/v1/feed", headers=_token_headers(user))
+    assert r.status_code == 200
+    items = r.json()["items"]
+    assert len(items) == 1
+    assert items[0]["match"]["my_feedback"] is None
+
+
+@pytest.mark.integration
+async def test_feed_surfaces_my_feedback_up(
+    async_client: AsyncClient, session: AsyncSession
+) -> None:
+    user, applicant = await _make_applicant(session, email=f"{uuid.uuid4()}@example.com")
+    job, _ = await _make_job_and_employer(session, employer_name=f"E{uuid.uuid4()}")
+    await _make_match(session, applicant_id=applicant.id, job_id=job.id, total_score=0.9)
+    await _make_feedback(session, applicant_id=applicant.id, job_id=job.id, rating="up")
+    await session.commit()
+
+    r = await async_client.get("/v1/feed", headers=_token_headers(user))
+    assert r.status_code == 200
+    items = r.json()["items"]
+    assert len(items) == 1
+    assert items[0]["match"]["my_feedback"] == "up"
+
+
+@pytest.mark.integration
+async def test_feed_etag_changes_on_feedback_change(
+    session: AsyncSession, async_client: AsyncClient
+) -> None:
+    """Rating a match 'up' must invalidate the ETag even though it changes
+    neither `Match.updated_at` nor the item count — MatchFeedback.updated_at
+    must be folded into max_updated_at."""
+    user, applicant = await _make_applicant(session, email="etagfeedback@example.com")
+    j, _ = await _make_job_and_employer(session, employer_name="EtagFeedbackCo")
+    await _make_match(session, applicant_id=applicant.id, job_id=j.id, total_score=0.9)
+    await session.commit()
+
+    r1 = await async_client.get("/v1/feed", headers=_token_headers(user))
+    assert r1.status_code == 200
+    etag_before = r1.headers["ETag"]
+
+    # Within the savepoint-shared test transaction, server-side `func.now()`
+    # is the transaction start time (Postgres now()/CURRENT_TIMESTAMP), not
+    # the statement time — so it won't differ from the match's own
+    # updated_at. Set it explicitly, mirroring
+    # test_feed_etag_changes_on_match_update.
+    fb = await _make_feedback(session, applicant_id=applicant.id, job_id=j.id, rating="up")
+    fb.updated_at = datetime.now(UTC)
+    await session.commit()
+
+    r2 = await async_client.get(
+        "/v1/feed",
+        headers={**_token_headers(user), "If-None-Match": etag_before},
+    )
+    assert r2.status_code == 200
+    assert r2.headers["ETag"] != etag_before
+    items = r2.json()["items"]
+    assert len(items) == 1
+    assert items[0]["match"]["my_feedback"] == "up"

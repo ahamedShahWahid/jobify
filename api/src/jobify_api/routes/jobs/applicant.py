@@ -13,7 +13,16 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from jobify.db.models import Application, Employer, Job, JobStatus, Match, SavedJob, User
+from jobify.db.models import (
+    Application,
+    Employer,
+    Job,
+    JobStatus,
+    Match,
+    MatchFeedback,
+    SavedJob,
+    User,
+)
 from jobify_api.auth.dependencies import current_user
 from jobify_api.auth.dependencies import require_applicant as _require_applicant
 from jobify_api.dependencies import get_session
@@ -67,6 +76,18 @@ async def get_job_detail(
         )
     ).scalar_one_or_none()
 
+    my_feedback_row = None
+    if match is not None:
+        my_feedback_row = (
+            await session.execute(
+                select(MatchFeedback).where(
+                    MatchFeedback.applicant_id == applicant.id,
+                    MatchFeedback.job_id == job_id,
+                    MatchFeedback.deleted_at.is_(None),
+                )
+            )
+        ).scalar_one_or_none()
+
     # Current applicant's live application for this job (any status — applied
     # or withdrawn — see CLAUDE.md "Applications + saved jobs routes": withdraw
     # does NOT soft-delete, it flips status). The Flutter ActionBar uses
@@ -98,6 +119,8 @@ async def get_job_detail(
     etag_parts: list[object] = [job.id, job.updated_at]
     if match is not None:
         etag_parts.append(match.updated_at)
+    if my_feedback_row is not None:
+        etag_parts.append(my_feedback_row.updated_at)
     if application is not None:
         etag_parts.append(application.updated_at)
     if saved_job is not None:
@@ -114,7 +137,15 @@ async def get_job_detail(
             name=employer.name,
             verified=employer.verified_at is not None,
         ),
-        match=MatchRead.model_validate(match) if match is not None else None,
+        match=(
+            MatchRead.model_validate(match).model_copy(
+                update={
+                    "my_feedback": my_feedback_row.rating if my_feedback_row is not None else None
+                }
+            )
+            if match is not None
+            else None
+        ),
         application=(
             JobDetailApplicationRead.model_validate(application)
             if application is not None
