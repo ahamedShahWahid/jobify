@@ -146,6 +146,11 @@ _REDACTED_COLUMN_NAMES: frozenset[str] = frozenset(
         # RefreshToken table is never queried by this module, but defensive
         # in case future code reaches in.
         "token_hash",
+        # Internal actor identity — never disclosed to the data subject;
+        # stage events / future actor-stamped rows (design spec
+        # 2026-07-19-application-stages-design.md: "Actor identity is NOT
+        # exposed to the applicant").
+        "actor_user_id",
     }
 )
 
