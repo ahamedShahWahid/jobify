@@ -30,6 +30,7 @@ def test_user_export_top_level_fields() -> None:
         "applications",
         "saved_jobs",
         "matches",
+        "match_feedback",
         "notifications",
         "user_consents",
         "audit_history",

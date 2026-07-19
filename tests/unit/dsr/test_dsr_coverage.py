@@ -52,6 +52,7 @@ EXPECTED_PII_TABLES: frozenset[str] = frozenset(
         "notifications",
         "saved_jobs",
         "user_consents",
+        "match_feedback",
     }
 )
 
