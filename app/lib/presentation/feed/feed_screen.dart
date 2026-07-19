@@ -80,6 +80,39 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     super.dispose();
   }
 
+  Future<void> _rateUp(String jobId) async {
+    try {
+      await ref.read(feedControllerProvider.notifier).rateUp(jobId);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Couldn't save your rating")),
+      );
+    }
+  }
+
+  Future<void> _rateDown(String jobId) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(feedControllerProvider.notifier).rateDown(jobId);
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text("Couldn't save your rating")),
+      );
+      return;
+    }
+    messenger.showSnackBar(
+      SnackBar(
+        content: const Text('Hidden from your feed'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () =>
+              ref.read(feedControllerProvider.notifier).undoDown(jobId),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final value = ref.watch(feedControllerProvider);
@@ -175,6 +208,9 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                             context.go('${Routes.feed}/jobs/${item.job.id}'),
                         match: item.match,
                         explanation: item.match.explanation,
+                        myFeedback: item.match.myFeedback,
+                        onThumbUp: () => _rateUp(item.job.id),
+                        onThumbDown: () => _rateDown(item.job.id),
                       ),
                     );
                   },
