@@ -79,6 +79,19 @@ export function ShortId({ id, onPick }: { id: string; onPick?: (id: string) => v
   );
 }
 
+/** Match-score bar (0–1). Reuses the `.scorebar` styling. */
+export function ScoreBar({ score }: { score: number | null }) {
+  if (score === null) return <span className="dim">—</span>;
+  return (
+    <span className="scorebar">
+      <span className="track">
+        <span className="fill" style={{ width: `${Math.round(score * 100)}%` }} />
+      </span>
+      <span className="num">{score.toFixed(2)}</span>
+    </span>
+  );
+}
+
 export function JsonView({ value }: { value: unknown }) {
   return <pre className="json-view">{JSON.stringify(value, null, 2)}</pre>;
 }

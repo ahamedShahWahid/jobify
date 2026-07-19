@@ -5,6 +5,7 @@ import "./styles/console.css";
 import { Shell } from "./components/Shell";
 import { Analytics } from "./pages/admin/Analytics";
 import { AuditExplorer } from "./pages/admin/AuditExplorer";
+import { MatchQA } from "./pages/admin/MatchQA";
 import { UserActions } from "./pages/admin/UserActions";
 import { Verification } from "./pages/admin/Verification";
 import { Settings } from "./pages/Settings";
@@ -87,6 +88,7 @@ export function ConsoleRoutes() {
           <Route path={`${CONSOLE_BASE}/admin/audit`} element={<AuditExplorer />} />
           <Route path={`${CONSOLE_BASE}/admin/users`} element={<UserActions />} />
           <Route path={`${CONSOLE_BASE}/admin/verification`} element={<Verification />} />
+          <Route path={`${CONSOLE_BASE}/admin/match-qa`} element={<MatchQA />} />
         </Route>
       </Route>
       <Route path={`${CONSOLE_BASE}/*`} element={<Navigate to={`${CONSOLE_BASE}/signin`} replace />} />
