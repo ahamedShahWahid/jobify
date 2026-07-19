@@ -1,7 +1,7 @@
 """DSR export builder — DPDP § 11 right-of-access.
 
 Exports:
-    UserExport      — Pydantic v2 envelope model (18 top-level fields).
+    UserExport      — Pydantic v2 envelope model (22 top-level fields).
     build_user_export — async read-only assembly function.
 
 This module does NOT write audit rows. The route handler (routes/dsr.py)

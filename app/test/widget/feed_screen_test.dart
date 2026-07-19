@@ -539,5 +539,37 @@ void main() {
       expect(find.byIcon(Icons.thumb_up), findsOneWidget); // filled variant
       expect(fakeJobsRepo.ratedUp, contains('j1'));
     });
+
+    testWidgets('tapping Undo clears the feedback and refetches the card list',
+        (tester) async {
+      final items = _thumbTestItems();
+      final fakeJobsRepo = FakeJobsRepository(
+        detail: JobDetailDto(job: items[0].job, employer: items[0].employer),
+      );
+      await tester.pumpWidget(
+        _wrap(
+          const FeedScreen(),
+          repo: _FakeFeedRepo(FeedPageDto(items: items)),
+          jobsRepo: fakeJobsRepo,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Not interested').first);
+      await tester.pumpAndSettle();
+      // Optimistically hidden.
+      expect(find.byType(FeedItemCard), findsOneWidget);
+
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+
+      expect(fakeJobsRepo.clearedFeedback, contains('j1'));
+      // undoDown() refetches page 1 from the (unfiltered) fake feed repo, so
+      // the card comes back — proves this is a real refetch, not just a
+      // local state patch.
+      expect(find.byType(FeedItemCard), findsNWidgets(2));
+      // Clear succeeded — no error snackbar should have been shown.
+      expect(find.text("Couldn't save your rating"), findsNothing);
+    });
   });
 }

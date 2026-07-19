@@ -201,6 +201,21 @@ async def test_put_404_when_match_not_surfaced(
     assert r.status_code == 404
 
 
+async def test_put_404_when_job_closed(async_client: AsyncClient, session: AsyncSession) -> None:
+    user, applicant = await _make_applicant(session, email=f"{uuid.uuid4()}@example.com")
+    job, _ = await _make_job_and_employer(session, status_value=JobStatus.CLOSED)
+    await _make_match(
+        session, applicant_id=applicant.id, job_id=job.id, total_score=0.8, surfaced=True
+    )
+    await session.commit()
+    r = await async_client.put(
+        f"/v1/jobs/{job.id}/match-feedback",
+        json={"rating": "up"},
+        headers=_token_headers(user),
+    )
+    assert r.status_code == 404
+
+
 async def test_put_404_when_no_match_at_all(
     async_client: AsyncClient, session: AsyncSession
 ) -> None:

@@ -106,11 +106,21 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         content: const Text('Hidden from your feed'),
         action: SnackBarAction(
           label: 'Undo',
-          onPressed: () =>
-              ref.read(feedControllerProvider.notifier).undoDown(jobId),
+          onPressed: () => unawaited(_undoDown(jobId)),
         ),
       ),
     );
+  }
+
+  Future<void> _undoDown(String jobId) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(feedControllerProvider.notifier).undoDown(jobId);
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text("Couldn't save your rating")),
+      );
+    }
   }
 
   @override

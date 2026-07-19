@@ -3,8 +3,8 @@
 PUT    /v1/jobs/{job_id}/match-feedback  {"rating": "up"|"down"} → 200 stored row.
 DELETE /v1/jobs/{job_id}/match-feedback  → 204 (soft-delete; no-op if absent).
 
-A rating requires a live, SURFACED match on a live job — uniform 404 otherwise
-(never leaks job existence). rating='down' excludes the job from /v1/feed
+A rating requires a live, SURFACED match on a live OPEN job — uniform 404
+otherwise (never leaks job existence). rating='down' excludes the job from /v1/feed
 (see routes/feed.py). Keyed on (applicant_id, job_id): re-rate UPDATEs the
 live row; re-rate after DELETE inserts a fresh row (saved_jobs precedent).
 """
@@ -22,7 +22,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from jobify.db.models import Job, Match, MatchFeedback, User
+from jobify.db.models import Job, JobStatus, Match, MatchFeedback, User
 from jobify_api.auth.dependencies import current_user
 from jobify_api.auth.dependencies import require_applicant as _require_applicant
 from jobify_api.dependencies import get_session
@@ -50,7 +50,7 @@ class MatchFeedbackRead(BaseModel):
 async def _load_surfaced_match(
     session: AsyncSession, *, applicant_id: uuid.UUID, job_id: uuid.UUID
 ) -> Match | None:
-    """The applicant's live surfaced match on a live job — or None (→ 404)."""
+    """The applicant's live surfaced match on a live, OPEN job — or None (→ 404)."""
     return (
         await session.execute(
             select(Match)
@@ -61,6 +61,7 @@ async def _load_surfaced_match(
                 Match.deleted_at.is_(None),
                 Match.surfaced_at.is_not(None),
                 Job.deleted_at.is_(None),
+                Job.status == JobStatus.OPEN,
             )
         )
     ).scalar_one_or_none()

@@ -35,6 +35,13 @@ const clientContract = {
     "created_at", "email", "employer_id", "expires_at", "id",
     "invited_by_user_id", "role", "status",
   ],
+  AdminMatchFeedbackRead: [
+    "applicant_id", "applicant_name", "created_at", "employer_name",
+    "explanation", "id", "job_id", "job_title", "rating", "total_score",
+    "updated_at",
+  ],
+  AdminMatchFeedbackSummary: ["all_time", "last_30d"],
+  FeedbackWindowStats: ["down", "share", "up"],
 };
 
 for (const [schemaName, expected] of Object.entries(clientContract)) {
