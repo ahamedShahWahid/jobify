@@ -28,7 +28,7 @@ run as parallel tracks off the critical path.
 
 | # | Slice | Size | Acceptance criterion served |
 |---|-------|------|-----------------------------|
-| 1 | **Match feedback capture + admin Match QA** — thumbs up/down on surfaced matches, admin QA view. New table ⇒ wire into DSR export/delete + contract-pin test. | S–M | Match relevance ≥ 75 % (starts the data clock — highest cost of delay) |
+| 1 | ✅ **SHIPPED 2026-07-19 (PR #62)** — Match feedback capture + admin Match QA: thumbs up/down on surfaced matches (down hides from feed), `match_feedback` table DSR-wired, admin Match QA console page with the relevance metric. | S–M | Match relevance ≥ 75 % (data clock now running) |
 | 2 | **Push notifications (FCM)** — device-token table (⇒ DSR wiring), FCM channel adapter beside SES, Flutter integration. | M–L | Core BRD applicant feature ("notifies the applicant when high-quality matches appear") |
 | 3 | **LLM resume parsing** — Gemini impl behind the existing parser Protocol (`integrations/parser`), library parser as fallback, gold-dataset growth, F1 gate 0.85 → 0.90. | M | Parse F1 ≥ 0.90 |
 | 4 | **P5 launch phase** — pick deploy target (ap-south-1-adjacent: Fly BOM / Render SIN / EC2), containerize, hosted non-prod, load test, security review, Lighthouse pass. | L | p95 ≤ 400 ms · zero P0/P1 · re-verify 10-min first match |
