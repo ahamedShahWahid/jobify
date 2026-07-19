@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jobify_app/core/error/exceptions.dart';
 import 'package:jobify_app/data/feed/feed_dto.dart';
+import 'package:jobify_app/data/feed/match_feedback_rating.dart';
 import 'package:jobify_app/data/feed/match_generator.dart';
 import 'package:jobify_app/data/jobs/jobs_dto.dart';
 import 'package:jobify_app/presentation/job_detail/action_bar.dart';
 import 'package:jobify_app/presentation/job_detail/apply_to_job_controller.dart';
 import 'package:jobify_app/presentation/job_detail/job_detail_controller.dart';
+import 'package:jobify_app/presentation/job_detail/match_feedback_controller.dart';
 import 'package:jobify_app/presentation/job_detail/save_job_controller.dart';
 import 'package:jobify_app/presentation/job_detail/unsave_job_controller.dart';
 import 'package:jobify_app/presentation/theme/jobify_colors.dart';
@@ -94,6 +96,10 @@ class JobDetailScreen extends ConsumerWidget {
                     if (d.match != null) ...[
                       const SizedBox(height: JobifySpacing.lg),
                       _MatchCard(match: d.match!),
+                      _MatchFeedbackRow(
+                        jobId: d.job.id,
+                        current: d.match!.myFeedback,
+                      ),
                     ],
                     if (d.job.description != null) ...[
                       const SizedBox(height: JobifySpacing.xl),
@@ -185,6 +191,66 @@ class _MatchCard extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _MatchFeedbackRow extends ConsumerWidget {
+  const _MatchFeedbackRow({required this.jobId, required this.current});
+
+  final String jobId;
+  final MatchFeedbackRating? current;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final pending = ref.watch(matchFeedbackControllerProvider(jobId)).isLoading;
+    final notifier = ref.read(matchFeedbackControllerProvider(jobId).notifier);
+
+    void toggle(MatchFeedbackRating rating) {
+      if (pending) return;
+      if (current == rating) {
+        notifier.clear(); // tapping the active thumb clears the rating
+      } else {
+        notifier.rate(rating);
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: JobifySpacing.md),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Was this match right for you?',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Good match',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              current == MatchFeedbackRating.up
+                  ? Icons.thumb_up
+                  : Icons.thumb_up_outlined,
+              size: 20,
+            ),
+            onPressed: pending ? null : () => toggle(MatchFeedbackRating.up),
+          ),
+          IconButton(
+            tooltip: 'Not interested',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              current == MatchFeedbackRating.down
+                  ? Icons.thumb_down
+                  : Icons.thumb_down_outlined,
+              size: 20,
+            ),
+            onPressed: pending ? null : () => toggle(MatchFeedbackRating.down),
+          ),
+        ],
       ),
     );
   }
