@@ -14,6 +14,13 @@ Every domain table: `id` (uuid4), `created_at`, `updated_at`, `deleted_at TIMEST
 - **`desired_role` is varchar in DB, `RoleCategory` StrEnum at the boundary** (same precedent as consent scopes — adding a value is a plain Python enum edit, no PG-enum migration). It is **capture-only**: scoring reads `locations`/`expected_ctc`/`years_experience`, never `desired_role` — its absence from the rescore triggers is deliberate.
 - `expected_ctc >= 0` enforced by DB CHECK (`ck_applicant_preferences_expected_ctc_nonneg`); upper bound + locations cardinality (≤10, each ≤100 chars) enforced at the API boundary only.
 
+## Match feedback (`match_feedback`) — spec `2026-07-19-match-feedback-design.md`
+
+- **Keyed on `(applicant_id, job_id)`, NOT match_id** — ratings must survive match-row rescore UPSERTs. One live row per pair (partial-unique `ix_match_feedback_applicant_job_live`); re-rate UPDATEs, clear soft-deletes, re-rate-after-clear inserts fresh (saved_jobs precedent).
+- **`rating` is varchar+CHECK (`'up'/'down'`), `MatchFeedbackRating` StrEnum at the boundary** — same no-PG-enum precedent as consent scopes/desired_role.
+- **PII: DSR-wired** — exported AND hard-deleted; pinned in `EXPECTED_PII_TABLES` (`tests/unit/dsr/test_dsr_coverage.py`).
+- `rating='down'` excludes the job from that applicant's `/v1/feed` (see `api/CLAUDE.md`).
+
 ## Audit logs (`audit_log()`) — spec `2026-05-28-audit-logs-substrate-design.md`
 
 - **Append-only, caller-owns-txn:** flushes one row in the caller's txn (no commit, no fire-and-forget; rolls back with the business action). The **documented exception** to soft-delete: `AuditLog` skips the `Created/Updated/DeletedAt` types and never filters `deleted_at IS NULL`. No UPDATE/DELETE.
