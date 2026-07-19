@@ -1501,6 +1501,21 @@
             "title": "Id",
             "type": "string"
           },
+          "my_feedback": {
+            "anyOf": [
+              {
+                "enum": [
+                  "up",
+                  "down"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "My Feedback"
+          },
           "structured_score": {
             "title": "Structured Score",
             "type": "number"

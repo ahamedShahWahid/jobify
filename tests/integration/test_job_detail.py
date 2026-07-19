@@ -16,6 +16,7 @@ from jobify.db.models import (
     Job,
     JobStatus,
     Match,
+    MatchFeedback,
     SavedJob,
     User,
     UserRole,
@@ -401,3 +402,36 @@ async def test_job_detail_soft_deleted_applicant_gets_500(
     r = await async_client.get(f"/v1/jobs/{j.id}", headers=_token_headers(user))
     assert r.status_code == 500
     assert r.json()["detail"] == "applicant_missing"
+
+
+@pytest.mark.integration
+async def test_job_detail_surfaces_my_feedback_down(
+    session: AsyncSession, async_client: AsyncClient
+) -> None:
+    user, applicant = await _make_applicant(session, email="jd-feedback-down@example.com")
+    j, _ = await _make_job_and_employer(session, employer_name="FeedbackDownCo")
+    session.add(
+        Match(
+            applicant_id=applicant.id,
+            job_id=j.id,
+            vector_score=0.8,
+            structured_score=0.8,
+            total_score=0.8,
+            score_components={"location": 1.0, "exp": 1.0, "ctc": 0.4},
+            model_versions={},
+            surfaced_at=datetime.now(UTC),
+            explanation={
+                "fit": "test",
+                "caveat": "",
+                "generator": "templated",
+                "generator_version": "1",
+            },
+        )
+    )
+    fb = MatchFeedback(applicant_id=applicant.id, job_id=j.id, rating="down")
+    session.add(fb)
+    await session.commit()
+
+    r = await async_client.get(f"/v1/jobs/{j.id}", headers=_token_headers(user))
+    assert r.status_code == 200
+    assert r.json()["match"]["my_feedback"] == "down"
