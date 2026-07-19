@@ -1,3 +1,4 @@
+import 'package:jobify_app/data/feed/match_feedback_rating.dart';
 import 'package:jobify_app/data/feed/match_generator.dart';
 import 'package:jobify_app/data/jobs/job_status.dart';
 import 'package:json_annotation/json_annotation.dart';
@@ -46,6 +47,7 @@ class MatchSummaryDto {
     required this.scoreComponents,
     this.explanation,
     this.surfacedAt,
+    this.myFeedback,
   });
 
   factory MatchSummaryDto.fromJson(Map<String, dynamic> json) =>
@@ -59,6 +61,11 @@ class MatchSummaryDto {
   final Map<String, dynamic> scoreComponents;
   final ExplanationDto? explanation;
   final DateTime? surfacedAt;
+
+  /// The current applicant's rating; null = unrated. Only `up`/null appear in
+  /// the feed (down is server-excluded); job detail may carry `down`.
+  @JsonKey(unknownEnumValue: MatchFeedbackRating.unknown)
+  final MatchFeedbackRating? myFeedback;
 
   Map<String, dynamic> toJson() => _$MatchSummaryDtoToJson(this);
 }

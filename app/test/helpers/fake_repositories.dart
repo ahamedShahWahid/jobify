@@ -7,6 +7,8 @@ import 'package:jobify_app/data/dsr/dsr_dto.dart';
 import 'package:jobify_app/data/dsr/dsr_repository.dart';
 import 'package:jobify_app/data/feed/feed_dto.dart';
 import 'package:jobify_app/data/feed/feed_repository.dart';
+import 'package:jobify_app/data/feed/match_feedback_dto.dart';
+import 'package:jobify_app/data/feed/match_feedback_rating.dart';
 import 'package:jobify_app/data/jobs/application_source.dart';
 import 'package:jobify_app/data/jobs/application_status.dart';
 import 'package:jobify_app/data/jobs/applications_repository.dart';
@@ -116,6 +118,42 @@ class FakeJobsRepository implements JobsRepository {
   @override
   Future<void> unsave(String jobId) async {
     _detail = _detail.copyWith(savedJob: null);
+  }
+
+  @override
+  Future<MatchFeedbackDto> rateMatch(
+    String jobId,
+    MatchFeedbackRating rating,
+  ) async {
+    final now = DateTime.now();
+    _applyMyFeedback(rating);
+    return MatchFeedbackDto(
+      id: 'f1',
+      jobId: jobId,
+      rating: rating,
+      createdAt: now,
+      updatedAt: now,
+    );
+  }
+
+  @override
+  Future<void> clearMatchFeedback(String jobId) async {
+    _applyMyFeedback(null);
+  }
+
+  void _applyMyFeedback(MatchFeedbackRating? myFeedback) {
+    final m = _detail.match;
+    if (m == null) return;
+    _detail = _detail.copyWith(
+      match: MatchSummaryDto(
+        id: m.id,
+        totalScore: m.totalScore,
+        scoreComponents: m.scoreComponents,
+        explanation: m.explanation,
+        surfacedAt: m.surfacedAt,
+        myFeedback: myFeedback,
+      ),
+    );
   }
 }
 
