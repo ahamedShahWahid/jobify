@@ -33,6 +33,7 @@ from jobify_api.routes import (
     health,
     invites,
     jobs,
+    match_feedback,
     me,
     metrics,
     notifications,
@@ -105,6 +106,7 @@ def create_app() -> FastAPI:
     app.include_router(jobs.router)
     app.include_router(applications.router)
     app.include_router(saved_jobs.router)
+    app.include_router(match_feedback.router)
     app.include_router(notifications.router)
     app.include_router(consents.router)
     app.include_router(dsr.router)

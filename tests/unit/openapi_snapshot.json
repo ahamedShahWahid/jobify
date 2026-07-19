@@ -1414,6 +1414,65 @@
         "title": "LogoutRequest",
         "type": "object"
       },
+      "MatchFeedbackRead": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "job_id": {
+            "format": "uuid",
+            "title": "Job Id",
+            "type": "string"
+          },
+          "rating": {
+            "enum": [
+              "up",
+              "down"
+            ],
+            "title": "Rating",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "job_id",
+          "rating",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "MatchFeedbackRead",
+        "type": "object"
+      },
+      "MatchFeedbackWrite": {
+        "additionalProperties": false,
+        "properties": {
+          "rating": {
+            "enum": [
+              "up",
+              "down"
+            ],
+            "title": "Rating",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rating"
+        ],
+        "title": "MatchFeedbackWrite",
+        "type": "object"
+      },
       "MatchRead": {
         "properties": {
           "components": {
@@ -4414,6 +4473,95 @@
         "summary": "Apply To Job",
         "tags": [
           "applications"
+        ]
+      }
+    },
+    "/v1/jobs/{job_id}/match-feedback": {
+      "delete": {
+        "description": "Clear the rating (soft-delete). 204 whether or not a live row existed \u2014\nthe UI calls this optimistically (Undo). Error ladder: 401 \u2192 403 only.",
+        "operationId": "delete_match_feedback_v1_jobs__job_id__match_feedback_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Match Feedback",
+        "tags": [
+          "match_feedback"
+        ]
+      },
+      "put": {
+        "description": "Rate the current applicant's surfaced match for this job (idempotent upsert).\n\nError ladder: 401 (auth) \u2192 403 (role) \u2192 404 (no live surfaced match).",
+        "operationId": "put_match_feedback_v1_jobs__job_id__match_feedback_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatchFeedbackWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchFeedbackRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Match Feedback",
+        "tags": [
+          "match_feedback"
         ]
       }
     },
