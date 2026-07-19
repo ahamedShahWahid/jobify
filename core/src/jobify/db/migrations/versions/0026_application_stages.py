@@ -78,12 +78,8 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
         ),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
-        sa.CheckConstraint(
-            f"from_stage IN {_VOCAB}", name="ck_application_stage_events_from"
-        ),
-        sa.CheckConstraint(
-            f"to_stage IN {_VOCAB}", name="ck_application_stage_events_to"
-        ),
+        sa.CheckConstraint(f"from_stage IN {_VOCAB}", name="ck_application_stage_events_from"),
+        sa.CheckConstraint(f"to_stage IN {_VOCAB}", name="ck_application_stage_events_to"),
         schema="jobify",
     )
     op.create_index(
@@ -102,7 +98,5 @@ def downgrade() -> None:
         schema="jobify",
     )
     op.drop_table("application_stage_events", schema="jobify")
-    op.drop_constraint(
-        "ck_applications_stage", "applications", schema="jobify", type_="check"
-    )
+    op.drop_constraint("ck_applications_stage", "applications", schema="jobify", type_="check")
     op.drop_column("applications", "stage", schema="jobify")
