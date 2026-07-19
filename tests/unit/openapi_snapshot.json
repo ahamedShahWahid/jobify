@@ -329,6 +329,10 @@
             ],
             "title": "Match Score"
           },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -340,6 +344,7 @@
           "display_name",
           "email",
           "status",
+          "stage",
           "applied_at",
           "match_score",
           "match_explanation"
@@ -508,6 +513,10 @@
             "title": "Source",
             "type": "string"
           },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -522,6 +531,7 @@
           "id",
           "job_id",
           "status",
+          "stage",
           "source",
           "created_at",
           "updated_at"
@@ -1263,6 +1273,10 @@
             "title": "Source",
             "type": "string"
           },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -1277,6 +1291,7 @@
           "id",
           "job_id",
           "status",
+          "stage",
           "source",
           "created_at",
           "updated_at"

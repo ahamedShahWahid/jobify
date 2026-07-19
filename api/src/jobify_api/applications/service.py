@@ -13,6 +13,7 @@ from jobify.audit import audit_log
 from jobify.db.models import (
     Applicant,
     Application,
+    ApplicationStage,
     ApplicationStageEvent,
     ApplicationStatus,
     Employer,
@@ -75,16 +76,27 @@ async def apply_to_open_job(
     if existing is not None:
         if existing.status == ApplicationStatus.APPLIED:
             return ApplyOutcome(application=existing, created=False)
+        old_stage = existing.stage
         await session.execute(
             update(Application)
             .where(Application.id == existing.id)
             .values(
                 status=ApplicationStatus.APPLIED,
+                stage=ApplicationStage.APPLIED.value,
                 source=source,
                 created_at=func.now(),
                 updated_at=func.now(),
             )
         )
+        if old_stage != ApplicationStage.APPLIED.value:
+            session.add(
+                ApplicationStageEvent(
+                    application_id=existing.id,
+                    from_stage=old_stage,
+                    to_stage=ApplicationStage.APPLIED.value,
+                    actor_user_id=user_id,
+                )
+            )
         await session.commit()
         refreshed = (
             await session.execute(select(Application).where(Application.id == existing.id))

@@ -303,6 +303,7 @@ class ApplicantOfJobRow(BaseModel):
     display_name: str | None
     email: str | None
     status: str
+    stage: str
     applied_at: datetime
     match_score: float | None
     match_explanation: dict[str, str] | None
@@ -380,6 +381,7 @@ async def list_applicants_for_job(
                 display_name=applicant.full_name,
                 email=u.email,
                 status=app_row.status,
+                stage=app_row.stage,
                 applied_at=app_row.created_at,
                 match_score=float(match.total_score) if match is not None else None,
                 match_explanation=match.explanation if match is not None else None,
