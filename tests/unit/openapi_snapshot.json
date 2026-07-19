@@ -2616,6 +2616,52 @@
         "title": "SignInUser",
         "type": "object"
       },
+      "StageChangeRead": {
+        "properties": {
+          "application_id": {
+            "format": "uuid",
+            "title": "Application Id",
+            "type": "string"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "application_id",
+          "stage",
+          "updated_at"
+        ],
+        "title": "StageChangeRead",
+        "type": "object"
+      },
+      "StageChangeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "stage": {
+            "enum": [
+              "shortlisted",
+              "interview",
+              "offer",
+              "hired",
+              "rejected"
+            ],
+            "title": "Stage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stage"
+        ],
+        "title": "StageChangeRequest",
+        "type": "object"
+      },
       "SuspendRequest": {
         "additionalProperties": false,
         "properties": {
@@ -4704,6 +4750,70 @@
           }
         },
         "summary": "List Applicants For Job",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/v1/jobs/{job_id}/applications/{application_id}/stage": {
+      "patch": {
+        "description": "Move a candidate through the hiring pipeline.\n\nLadder: 401 -> 403/404 (_load_recruiter_job, uniform) -> 404 (application\nnot under this job) -> 409 application_withdrawn -> 422 (Literal).\nSame-stage PATCH is a 200 no-op.",
+        "operationId": "change_stage_v1_jobs__job_id__applications__application_id__stage_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StageChangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StageChangeRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Stage",
         "tags": [
           "jobs"
         ]

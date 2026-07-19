@@ -34,6 +34,10 @@ from jobify.db.models import (
     Match,
     User,
 )
+from jobify_api.applications.service import (
+    StageChangeError,
+    change_application_stage,
+)
 from jobify_api.auth.dependencies import (
     _require_recruiter,
     _require_recruiter_at_employer,
@@ -412,3 +416,58 @@ async def list_applicants_for_job(
     await session.commit()
 
     return ApplicantsOfJobPage(items=items, next_cursor=next_cursor)
+
+
+# ---------------------------------------------------------------------------
+# PATCH /v1/jobs/{job_id}/applications/{application_id}/stage — recruiter
+# moves a candidate through the hiring pipeline
+# ---------------------------------------------------------------------------
+
+
+class StageChangeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    stage: Literal["shortlisted", "interview", "offer", "hired", "rejected"]
+
+
+class StageChangeRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    application_id: uuid.UUID
+    stage: str
+    updated_at: datetime
+
+
+@router.patch(
+    "/jobs/{job_id}/applications/{application_id}/stage",
+    response_model=StageChangeRead,
+)
+async def change_stage(
+    job_id: uuid.UUID,
+    application_id: uuid.UUID,
+    body: StageChangeRequest,
+    user: User = Depends(current_user),  # noqa: B008
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> StageChangeRead:
+    """Move a candidate through the hiring pipeline.
+
+    Ladder: 401 -> 403/404 (_load_recruiter_job, uniform) -> 404 (application
+    not under this job) -> 409 application_withdrawn -> 422 (Literal).
+    Same-stage PATCH is a 200 no-op.
+    """
+    job = await _load_recruiter_job(job_id, user, session)
+    try:
+        application = await change_application_stage(
+            session,
+            job=job,
+            application_id=application_id,
+            actor=user,
+            target_stage=body.stage,
+        )
+    except StageChangeError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return StageChangeRead(
+        application_id=application.id,
+        stage=application.stage,
+        updated_at=application.updated_at,
+    )
