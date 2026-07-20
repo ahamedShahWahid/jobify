@@ -94,14 +94,18 @@ class _JobApplicantsScreenState extends ConsumerState<JobApplicantsScreen> {
       await ref
           .read(recruiterApplicantsControllerProvider(widget.jobId).notifier)
           .setStage(applicationId, stage);
-    } catch (e) {
-      final withdrew = e.toString().contains('application_withdrawn');
+    } on ApiException catch (e) {
+      final withdrew = e.slug == 'application_withdrawn';
       messenger.showSnackBar(
         SnackBar(
           content: Text(
             withdrew ? 'Candidate withdrew' : "Couldn't update the stage",
           ),
         ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text("Couldn't update the stage")),
       );
     }
   }

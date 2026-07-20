@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:jobify_app/core/error/exceptions.dart';
 import 'package:jobify_app/data/jobs/applicant_of_job_dto.dart';
 import 'package:jobify_app/data/jobs/application_stage.dart';
 import 'package:jobify_app/data/jobs/recruiter_job_dto.dart';
@@ -31,7 +32,9 @@ class FakeRecruiterJobsRepository implements RecruiterJobsRepository {
   /// call order.
   final List<(String, String, ApplicationStage)> stagesSet = [];
 
-  /// When set, `setStage` records the call then throws `Exception(err)`.
+  /// When set, `setStage` records the call then throws an [ApiException]
+  /// whose `slug` is `err.toString()` — mirrors the real repo's
+  /// `mapDioException` mapping so callers can discriminate on `.slug`.
   Object? setStageError;
 
   @override
@@ -87,7 +90,9 @@ class FakeRecruiterJobsRepository implements RecruiterJobsRepository {
   ) async {
     stagesSet.add((jobId, applicationId, stage));
     final err = setStageError;
-    if (err != null) throw Exception(err.toString());
+    if (err != null) {
+      throw ApiException(statusCode: 409, slug: err.toString());
+    }
   }
 }
 

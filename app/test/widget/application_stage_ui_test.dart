@@ -165,6 +165,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
+    expect(find.text('Timeline'), findsNothing);
   });
 
   test('notificationTitle handles application_stage_changed', () {

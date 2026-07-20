@@ -422,7 +422,10 @@ async def get_application_timeline(
                     ApplicationStageEvent.application_id == application_id,
                     ApplicationStageEvent.deleted_at.is_(None),
                 )
-                .order_by(ApplicationStageEvent.created_at.asc())
+                .order_by(
+                    ApplicationStageEvent.created_at.asc(),
+                    ApplicationStageEvent.id.asc(),
+                )
             )
         )
         .scalars()

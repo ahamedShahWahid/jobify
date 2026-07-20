@@ -274,6 +274,18 @@ async def test_uniform_404_other_employers_application(
     assert r.status_code == 404
 
 
+async def test_stage_patch_unknown_application_404(
+    async_client: AsyncClient, session: AsyncSession
+) -> None:
+    recruiter, _, job, _, _, _ = await _setup(session)
+    r = await async_client.patch(
+        f"/v1/jobs/{job.id}/applications/{uuid.uuid4()}/stage",
+        json={"stage": "shortlisted"},
+        headers=_token_headers(recruiter),
+    )
+    assert r.status_code == 404
+
+
 async def test_applicant_role_gets_403_or_404(
     async_client: AsyncClient, session: AsyncSession
 ) -> None:

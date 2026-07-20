@@ -354,6 +354,7 @@ async def list_applicants_for_job(
             Application.job_id == job_id,
             Application.deleted_at.is_(None),
             Application.status == "applied",
+            Applicant.deleted_at.is_(None),
         )
         .order_by(Application.created_at.desc(), Application.id.desc())
     )

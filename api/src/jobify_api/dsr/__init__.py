@@ -297,7 +297,10 @@ async def build_user_export(
                         Application.id == ApplicationStageEvent.application_id,
                     )
                     .where(Application.applicant_id == applicant_id)
-                    .order_by(ApplicationStageEvent.created_at)
+                    .order_by(
+                        ApplicationStageEvent.created_at,
+                        ApplicationStageEvent.id,
+                    )
                 )
             )
             .scalars()
