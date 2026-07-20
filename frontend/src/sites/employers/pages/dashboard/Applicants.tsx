@@ -1,6 +1,7 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import type { ApplicantsOfJobPage } from "../../api/types";
+import { errorMessage } from "../../api/client";
+import type { ApplicantsOfJobPage, ApplicationStage } from "../../api/types";
 import { EmptyState, ErrorNotice, ScoreBar, ShortId, Stamp } from "../../components/bits";
 import { usePagedFetch } from "../../paging/usePagedFetch";
 import { useSession } from "../../session";
@@ -8,6 +9,8 @@ import { useSession } from "../../session";
 export function Applicants() {
   const { client } = useSession();
   const { jobId } = useParams<{ jobId: string }>();
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [stageError, setStageError] = useState<string | null>(null);
 
   const fetcher = useCallback(
     (cursor: string | undefined): Promise<ApplicantsOfJobPage> =>
@@ -16,7 +19,24 @@ export function Applicants() {
         : Promise.resolve({ items: [], next_cursor: null }),
     [client, jobId],
   );
-  const { rows, nextCursor, busy, error, loadMore } = usePagedFetch(fetcher, jobId ?? "");
+  const { rows, nextCursor, busy, error, loadMore, reload } = usePagedFetch(fetcher, jobId ?? "");
+
+  const changeStage = async (
+    applicationId: string,
+    stage: Exclude<ApplicationStage, "applied">,
+  ) => {
+    if (!jobId) return;
+    setSavingId(applicationId);
+    setStageError(null);
+    try {
+      await client.setApplicationStage(jobId, applicationId, stage);
+      reload();
+    } catch (e) {
+      setStageError(errorMessage(e));
+    } finally {
+      setSavingId(null);
+    }
+  };
 
   return (
     <>
@@ -38,13 +58,14 @@ export function Applicants() {
       </div>
 
       <ErrorNotice error={error} />
+      <ErrorNotice error={stageError} />
 
       <div className="table-wrap rise">
         <table className="console">
           <thead>
             <tr>
               <th>Applicant</th>
-              <th>Status</th>
+              <th>Stage</th>
               <th>Applied</th>
               <th>Match</th>
               <th>Why / caveat</th>
@@ -60,10 +81,32 @@ export function Applicants() {
                   </div>
                 </td>
                 <td>
-                  {row.status === "applied" ? (
-                    <span className="chip ok">applied</span>
+                  {row.status === "withdrawn" ? (
+                    <span className="chip">withdrawn</span>
                   ) : (
-                    <span className="chip">{row.status}</span>
+                    <select
+                      value={row.stage}
+                      disabled={savingId === row.application_id}
+                      onChange={(e) =>
+                        void changeStage(
+                          row.application_id,
+                          e.target.value as Exclude<ApplicationStage, "applied">,
+                        )
+                      }
+                    >
+                      {row.stage === "applied" && (
+                        <option value="applied" disabled>
+                          applied
+                        </option>
+                      )}
+                      {(["shortlisted", "interview", "offer", "hired", "rejected"] as const).map(
+                        (s) => (
+                          <option key={s} value={s}>
+                            {s === "rejected" ? "not selected" : s}
+                          </option>
+                        ),
+                      )}
+                    </select>
                   )}
                 </td>
                 <td>

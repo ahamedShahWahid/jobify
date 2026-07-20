@@ -62,12 +62,27 @@ export interface JobPatch {
   status?: "open" | "closed";
 }
 
+export type ApplicationStage =
+  | "applied"
+  | "shortlisted"
+  | "interview"
+  | "offer"
+  | "hired"
+  | "rejected";
+
+export interface StageChangeRead {
+  application_id: string;
+  stage: ApplicationStage;
+  updated_at: string;
+}
+
 export interface ApplicantOfJobRow {
   application_id: string;
   applicant_id: string;
   display_name: string | null;
   email: string | null;
   status: string;
+  stage: ApplicationStage;
   applied_at: string;
   match_score: number | null;
   match_explanation: Record<string, string> | null;

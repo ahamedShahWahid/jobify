@@ -27,9 +27,11 @@ const clientContract = {
   ],
   ApplicantOfJobRow: [
     "applicant_id", "application_id", "applied_at", "display_name", "email",
-    "match_explanation", "match_score", "status",
+    "match_explanation", "match_score", "stage", "status",
   ],
   ApplicantsOfJobPage: ["items", "next_cursor"],
+  StageChangeRequest: ["stage"],
+  StageChangeRead: ["application_id", "stage", "updated_at"],
   MemberRead: ["added_at", "display_name", "email", "role", "user_id"],
   InviteRead: [
     "created_at", "email", "employer_id", "expires_at", "id",
