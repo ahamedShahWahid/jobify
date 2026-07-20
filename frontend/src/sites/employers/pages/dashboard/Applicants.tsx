@@ -85,6 +85,7 @@ export function Applicants() {
                     <span className="chip">withdrawn</span>
                   ) : (
                     <select
+                      className="stage-select"
                       value={row.stage}
                       disabled={savingId === row.application_id}
                       onChange={(e) =>
