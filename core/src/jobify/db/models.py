@@ -672,6 +672,23 @@ class ApplicationStatus(StrEnum):
     WITHDRAWN = "withdrawn"
 
 
+class ApplicationStage(StrEnum):
+    """Recruiter-owned hiring pipeline stage — see the 2026-07-19
+    application-stages design doc. ``status`` stays the applicant-owned
+    lifecycle (applied/withdrawn); ``stage`` is the recruiter pipeline.
+    varchar+CHECK in DB (house rule — no new native PG enums)."""
+
+    APPLIED = "applied"
+    SHORTLISTED = "shortlisted"
+    INTERVIEW = "interview"
+    OFFER = "offer"
+    HIRED = "hired"
+    REJECTED = "rejected"
+
+
+_STAGE_VOCAB_SQL = "('applied','shortlisted','interview','offer','hired','rejected')"
+
+
 class Application(Base):
     """Applicant x job application — see spec §5 and the P3.0 design doc.
 
@@ -706,11 +723,21 @@ class Application(Base):
         server_default=ApplicationStatus.APPLIED.value,
     )
     source: Mapped[str] = mapped_column(String(32), nullable=False, server_default="feed")
+    stage: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default=ApplicationStage.APPLIED.value,
+        server_default=ApplicationStage.APPLIED.value,
+    )
     created_at: Mapped[CreatedAt]
     updated_at: Mapped[UpdatedAt]
     deleted_at: Mapped[DeletedAt]
 
     __table_args__ = (
+        CheckConstraint(
+            f"stage IN {_STAGE_VOCAB_SQL}",
+            name="ck_applications_stage",
+        ),
         Index(
             "ix_applications_applicant_job_live",
             "applicant_id",
@@ -721,6 +748,54 @@ class Application(Base):
         Index(
             "ix_applications_applicant_created_at",
             "applicant_id",
+            text("created_at DESC"),
+            postgresql_where="deleted_at IS NULL",
+        ),
+        {"schema": "jobify"},
+    )
+
+
+class ApplicationStageEvent(Base):
+    """One row per stage transition — powers the applicant's timeline.
+
+    Append-only in practice (soft-delete columns exist per house convention;
+    live reads still filter ``deleted_at IS NULL``). ``actor_user_id`` is
+    ``SET NULL`` on user deletion (survives DSR like audit rows) and is NEVER
+    exposed to the applicant. Re-apply after withdraw writes a
+    ``(<old> -> applied)`` event with the applicant as actor.
+    """
+
+    __tablename__ = "application_stage_events"
+
+    id: Mapped[UuidPK]
+    application_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("jobify.applications.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    from_stage: Mapped[str] = mapped_column(String(16), nullable=False)
+    to_stage: Mapped[str] = mapped_column(String(16), nullable=False)
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("jobify.users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_at: Mapped[CreatedAt]
+    updated_at: Mapped[UpdatedAt]
+    deleted_at: Mapped[DeletedAt]
+
+    __table_args__ = (
+        CheckConstraint(
+            f"from_stage IN {_STAGE_VOCAB_SQL}",
+            name="ck_application_stage_events_from",
+        ),
+        CheckConstraint(
+            f"to_stage IN {_STAGE_VOCAB_SQL}",
+            name="ck_application_stage_events_to",
+        ),
+        Index(
+            "ix_application_stage_events_app_created",
+            "application_id",
             text("created_at DESC"),
             postgresql_where="deleted_at IS NULL",
         ),

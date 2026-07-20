@@ -7,12 +7,14 @@ from datetime import UTC, datetime
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobify.db.models import (
     Applicant,
     Application,
+    ApplicationStage,
+    ApplicationStageEvent,
     ApplicationStatus,
     Employer,
     Job,
@@ -157,6 +159,59 @@ async def test_apply_reapply_after_withdraw_updates_same_row_to_applied(
     # Same row id (approach b — row-id stable per spec Decision #2).
     assert body3["id"] == original_id
     assert body3["status"] == "applied"
+
+
+@pytest.mark.integration
+async def test_apply_reapply_resets_stage_and_records_event(
+    session: AsyncSession, async_client: AsyncClient
+) -> None:
+    """Apply -> recruiter bumps stage -> withdraw -> re-apply resets stage=applied
+    and records a (<old> -> applied) stage event with the applicant as actor."""
+    user, applicant = await _make_applicant(session, email="apply-reapply-stage@example.com")
+    job, _ = await _make_job_and_employer(session, employer_name="ApplyReapplyStageCo")
+    await session.commit()
+
+    headers = _token_headers(user)
+
+    r1 = await async_client.post(f"/v1/jobs/{job.id}/apply", headers=headers)
+    assert r1.status_code == 201
+    app_id = r1.json()["id"]
+
+    # Recruiter-side stage bump, written directly (no recruiter route needed here).
+    await session.execute(
+        update(Application)
+        .where(Application.id == uuid.UUID(app_id))
+        .values(stage=ApplicationStage.INTERVIEW.value)
+    )
+    await session.commit()
+
+    r2 = await async_client.patch(
+        f"/v1/applications/{app_id}",
+        json={"status": "withdrawn"},
+        headers=headers,
+    )
+    assert r2.status_code == 200
+
+    r3 = await async_client.post(f"/v1/jobs/{job.id}/apply", headers=headers)
+    assert r3.status_code == 200  # same-row re-apply
+    body3 = r3.json()
+    assert body3["id"] == app_id
+    assert body3["stage"] == "applied"
+
+    events = (
+        (
+            await session.execute(
+                select(ApplicationStageEvent).where(
+                    ApplicationStageEvent.application_id == uuid.UUID(app_id)
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert ("interview", "applied") in [(e.from_stage, e.to_stage) for e in events]
+    reset_event = next(e for e in events if e.from_stage == "interview")
+    assert reset_event.actor_user_id == user.id
 
 
 @pytest.mark.integration

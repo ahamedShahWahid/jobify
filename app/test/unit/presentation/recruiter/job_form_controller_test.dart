@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jobify_app/core/error/exceptions.dart';
 import 'package:jobify_app/data/jobs/applicant_of_job_dto.dart';
+import 'package:jobify_app/data/jobs/application_stage.dart';
 import 'package:jobify_app/data/jobs/recruiter_job_dto.dart';
 import 'package:jobify_app/data/jobs/recruiter_jobs_api.dart';
 import 'package:jobify_app/data/jobs/recruiter_jobs_repository.dart';
@@ -75,6 +76,14 @@ class _FakeRepo implements RecruiterJobsRepository {
 
   @override
   Future<ResumeDownload> downloadResume(String applicationId) async =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> setStage(
+    String jobId,
+    String applicationId,
+    ApplicationStage stage,
+  ) async =>
       throw UnimplementedError();
 }
 

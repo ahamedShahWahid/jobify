@@ -112,6 +112,7 @@ class JobDetailApplicationRead(BaseModel):
     id: uuid.UUID
     job_id: uuid.UUID
     status: str  # "applied" | "withdrawn"
+    stage: str  # recruiter pipeline: applied|shortlisted|interview|offer|hired|rejected
     source: str
     created_at: datetime
     updated_at: datetime

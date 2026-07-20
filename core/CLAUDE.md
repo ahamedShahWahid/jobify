@@ -21,6 +21,12 @@ Every domain table: `id` (uuid4), `created_at`, `updated_at`, `deleted_at TIMEST
 - **PII: DSR-wired** — exported AND hard-deleted; pinned in `EXPECTED_PII_TABLES` (`tests/unit/dsr/test_dsr_coverage.py`).
 - `rating='down'` excludes the job from that applicant's `/v1/feed` (see `api/CLAUDE.md`).
 
+## Application stages (`applications.stage` + `application_stage_events`) — spec `2026-07-19-application-stages-design.md`
+
+- **`status` = applicant lifecycle (applied/withdrawn); `stage` = recruiter pipeline** (varchar+CHECK `applied|shortlisted|interview|offer|hired|rejected`; `ApplicationStage` StrEnum at the boundary — the native-enum `status` is legacy, don't copy it). Withdrawal freezes stage; **re-apply resets stage to `applied` and writes a stage event with the applicant as actor**.
+- **`application_stage_events` powers the applicant timeline** — append-only in practice, `actor_user_id` SET NULL (survives DSR), actor NEVER exposed to the applicant. DSR class: **export-only** (like `applications`) — exported, kept on delete; pinned in `_EXPORT_ONLY_TABLES`.
+- **Every real transition, one txn:** structlog → `audit_log("application.stage_changed")` → event row → Notification (kind `application_stage_changed`, EMAIL + IN_APP). Same-stage PATCH = 200 no-op with none of those. Rejection copy is neutral ("moved forward with other candidates"); applicant-facing label is "Not selected".
+
 ## Audit logs (`audit_log()`) — spec `2026-05-28-audit-logs-substrate-design.md`
 
 - **Append-only, caller-owns-txn:** flushes one row in the caller's txn (no commit, no fire-and-forget; rolls back with the business action). The **documented exception** to soft-delete: `AuditLog` skips the `Created/Updated/DeletedAt` types and never filters `deleted_at IS NULL`. No UPDATE/DELETE.

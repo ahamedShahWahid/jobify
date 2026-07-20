@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:jobify_app/core/format/date_formats.dart';
+import 'package:jobify_app/data/jobs/application_stage.dart';
 import 'package:jobify_app/data/jobs/application_status.dart';
+import 'package:jobify_app/data/jobs/jobs_dto.dart';
 import 'package:jobify_app/presentation/applications/applications_controller.dart';
 import 'package:jobify_app/presentation/routing/routes.dart';
 import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
@@ -98,7 +100,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                                 style: Theme.of(context).textTheme.labelLarge,
                               ),
                             ),
-                            _StatusPill(status: item.application.status),
+                            _StagePill(application: item.application),
                           ],
                         ),
                         const SizedBox(height: JobifySpacing.sm),
@@ -138,23 +140,47 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
   }
 }
 
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.status});
-  final ApplicationStatus status;
+/// Applicant-facing stage copy — spec-locked (rejected -> "Not selected",
+/// unknown -> "In progress"). Reused by the job-detail application timeline.
+String stageLabel(ApplicationStage stage) => switch (stage) {
+      ApplicationStage.applied => 'Applied',
+      ApplicationStage.shortlisted => 'Shortlisted',
+      ApplicationStage.interview => 'Interview',
+      ApplicationStage.offer => 'Offer',
+      ApplicationStage.hired => 'Hired',
+      ApplicationStage.rejected => 'Not selected',
+      ApplicationStage.unknown => 'In progress',
+    };
+
+class _StagePill extends StatelessWidget {
+  const _StagePill({required this.application});
+  final ApplicationDto application;
   @override
   Widget build(BuildContext context) {
     final c = Theme.of(context);
-    final (label, bg, fg) = status == ApplicationStatus.applied
+    final (label, bg, fg) = application.status == ApplicationStatus.withdrawn
         ? (
-            'Applied',
-            c.colorScheme.primaryContainer,
-            c.colorScheme.onPrimaryContainer,
-          )
-        : (
             'Withdrawn',
             c.colorScheme.surfaceContainerHighest,
             c.colorScheme.onSurfaceVariant,
-          );
+          )
+        : switch (application.stage) {
+            ApplicationStage.offer || ApplicationStage.hired => (
+                stageLabel(application.stage),
+                c.colorScheme.tertiaryContainer,
+                c.colorScheme.onTertiaryContainer,
+              ),
+            ApplicationStage.rejected => (
+                stageLabel(application.stage),
+                c.colorScheme.surfaceContainerHighest,
+                c.colorScheme.onSurfaceVariant,
+              ),
+            _ => (
+                stageLabel(application.stage),
+                c.colorScheme.primaryContainer,
+                c.colorScheme.onPrimaryContainer,
+              ),
+          };
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: JobifySpacing.sm,

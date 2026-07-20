@@ -533,6 +533,26 @@
   font-size: 11px;
   color: var(--ink-soft);
 }
+.surface-employers .dash .stage-select {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--paper-2);
+  border: 1px solid var(--line-strong);
+  padding: 5px 8px;
+  outline: none;
+  transition:
+    border-color 130ms,
+    box-shadow 130ms;
+}
+.surface-employers .dash .stage-select:focus {
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand-blue) 38%, transparent);
+}
+.surface-employers .dash .stage-select:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
 /* score bars */
 .surface-employers .dash .scorebar {

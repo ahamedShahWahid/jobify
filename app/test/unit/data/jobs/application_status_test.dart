@@ -11,6 +11,7 @@ void main() {
       'job_id': 'j1',
       'status': 'applied',
       'source': 'feed',
+      'stage': 'applied',
       'created_at': '2026-05-01T00:00:00Z',
       'updated_at': '2026-05-01T00:00:00Z',
     });
@@ -21,6 +22,7 @@ void main() {
       'job_id': 'j1',
       'status': 'withdrawn',
       'source': 'detail',
+      'stage': 'applied',
       'created_at': '2026-05-01T00:00:00Z',
       'updated_at': '2026-05-02T00:00:00Z',
     });
@@ -33,6 +35,7 @@ void main() {
       'job_id': 'j1',
       'status': 'expired',
       'source': 'feed',
+      'stage': 'applied',
       'created_at': '2026-05-01T00:00:00Z',
       'updated_at': '2026-05-01T00:00:00Z',
     });

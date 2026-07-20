@@ -19,12 +19,14 @@ from urllib.parse import quote
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobify.audit import audit_log
 from jobify.db.models import (
     Application,
+    ApplicationStageEvent,
     Employer,
     EmployerUser,
     Job,
@@ -369,3 +371,64 @@ async def recruiter_download_application_resume(
         media_type=resume.content_type,
         headers={"Content-Disposition": _content_disposition_attachment(resume.original_filename)},
     )
+
+
+# ---------------------------------------------------------------------------
+# GET /v1/applications/{application_id}/timeline — applicant's stage journey
+# ---------------------------------------------------------------------------
+
+
+class StageEventRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    from_stage: str
+    to_stage: str
+    created_at: datetime
+
+
+class ApplicationTimelineResponse(BaseModel):
+    items: list[StageEventRead]
+
+
+@router.get(
+    "/applications/{application_id}/timeline",
+    response_model=ApplicationTimelineResponse,
+)
+async def get_application_timeline(
+    application_id: uuid.UUID,
+    user: User = Depends(current_user),  # noqa: B008
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> ApplicationTimelineResponse:
+    """The applicant's stage journey. Owner-only (token identity), uniform
+    404 across unknown-id and other-owner; actor identity never exposed."""
+    applicant = await _require_applicant(user, session)
+    owned = (
+        await session.execute(
+            select(Application.id).where(
+                Application.id == application_id,
+                Application.applicant_id == applicant.id,
+                Application.deleted_at.is_(None),
+            )
+        )
+    ).scalar_one_or_none()
+    if owned is None:
+        raise HTTPException(status_code=404, detail="application_not_found")
+
+    events = (
+        (
+            await session.execute(
+                select(ApplicationStageEvent)
+                .where(
+                    ApplicationStageEvent.application_id == application_id,
+                    ApplicationStageEvent.deleted_at.is_(None),
+                )
+                .order_by(
+                    ApplicationStageEvent.created_at.asc(),
+                    ApplicationStageEvent.id.asc(),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return ApplicationTimelineResponse(items=[StageEventRead.model_validate(e) for e in events])

@@ -94,4 +94,29 @@ def _render(kind: str, payload: dict[str, Any]) -> tuple[str, str]:
             f"You're invited to join {employer} on Jobify",
             f"{employer} invited you to join their Jobify team as {role}. Open Jobify to respond.",
         )
+    if kind == "application_stage_changed":
+        title = str(payload.get("job_title", "the role"))
+        employer = str(payload.get("employer_name", "the employer"))
+        stage = str(payload.get("stage", ""))
+        if stage == "rejected":
+            return (
+                f"Update on your application — {title}",
+                f"The employer moved forward with other candidates for {title} at {employer}.",
+            )
+        if stage == "hired":
+            return (
+                f"Congratulations — {title} at {employer}",
+                f"You've been hired for {title} at {employer}. "
+                "The employer will be in touch with next steps.",
+            )
+        stage_line = {
+            "shortlisted": "You've been shortlisted",
+            "interview": "You've moved to the interview stage",
+            "offer": "You have an offer",
+        }
+        line = stage_line.get(stage, "Your application was updated")
+        return (
+            f"{line} — {title}",
+            f"{line} for {title} at {employer}. Open Jobify for details.",
+        )
     return ("Jobify notification", f"You have a new Jobify notification: {kind}.")

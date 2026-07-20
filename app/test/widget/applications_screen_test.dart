@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jobify_app/data/feed/feed_dto.dart';
 import 'package:jobify_app/data/jobs/application_source.dart';
+import 'package:jobify_app/data/jobs/application_stage.dart';
 import 'package:jobify_app/data/jobs/application_status.dart';
 import 'package:jobify_app/data/jobs/applications_repository.dart';
 import 'package:jobify_app/data/jobs/applications_repository_impl.dart';
@@ -21,6 +22,9 @@ class _FakeRepo implements ApplicationsRepository {
       page;
   @override
   Future<ApplicationDto> withdraw(String id) async =>
+      throw UnimplementedError();
+  @override
+  Future<List<StageEventDto>> fetchTimeline(String applicationId) async =>
       throw UnimplementedError();
 }
 
@@ -55,6 +59,7 @@ void main() {
           jobId: 'j1',
           status: ApplicationStatus.applied,
           source: ApplicationSource.feed,
+          stage: ApplicationStage.applied,
           createdAt: DateTime(2026, 5),
           updatedAt: DateTime(2026, 5),
         ),
@@ -73,6 +78,7 @@ void main() {
           jobId: 'j2',
           status: ApplicationStatus.withdrawn,
           source: ApplicationSource.feed,
+          stage: ApplicationStage.applied,
           createdAt: DateTime(2026, 4, 20),
           updatedAt: DateTime(2026, 5, 5),
         ),

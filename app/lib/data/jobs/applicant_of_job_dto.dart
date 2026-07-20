@@ -1,3 +1,4 @@
+import 'package:jobify_app/data/jobs/application_stage.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'applicant_of_job_dto.g.dart';
@@ -9,6 +10,7 @@ class ApplicantOfJobDto {
     required this.applicationId,
     required this.applicantId,
     required this.status,
+    required this.stage,
     required this.appliedAt,
     this.displayName,
     this.email,
@@ -30,6 +32,9 @@ class ApplicantOfJobDto {
 
   final String? email;
   final String status;
+
+  @JsonKey(unknownEnumValue: ApplicationStage.unknown)
+  final ApplicationStage stage;
 
   @JsonKey(name: 'applied_at')
   final DateTime appliedAt;

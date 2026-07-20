@@ -6,6 +6,7 @@ import 'package:jobify_app/data/feed/match_feedback_dto.dart';
 import 'package:jobify_app/data/feed/match_feedback_rating.dart';
 import 'package:jobify_app/data/feed/match_generator.dart';
 import 'package:jobify_app/data/jobs/application_source.dart';
+import 'package:jobify_app/data/jobs/application_stage.dart';
 import 'package:jobify_app/data/jobs/application_status.dart';
 import 'package:jobify_app/data/jobs/job_status.dart';
 import 'package:jobify_app/data/jobs/jobs_dto.dart';
@@ -28,6 +29,7 @@ class _FakeJobsRepo implements JobsRepository {
         jobId: id,
         status: ApplicationStatus.applied,
         source: source,
+        stage: ApplicationStage.applied,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -107,6 +109,7 @@ void main() {
       jobId: 'j1',
       status: ApplicationStatus.applied,
       source: ApplicationSource.feed,
+      stage: ApplicationStage.applied,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );

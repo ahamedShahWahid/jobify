@@ -3,6 +3,7 @@ export { ApiError, errorMessage, TokenStore } from "../../../shared/api/transpor
 
 import type {
   ApplicantsOfJobPage,
+  ApplicationStage,
   EmployerCreate,
   EmployerRead,
   InviteRead,
@@ -12,6 +13,7 @@ import type {
   MeResponse,
   MemberRead,
   RecruiterJobsPage,
+  StageChangeRead,
 } from "./types";
 
 /** Employer API client interface. */
@@ -25,6 +27,11 @@ export interface EmployerClient {
   patchJob(jobId: string, payload: JobPatch): Promise<JobRead>;
   deleteJob(jobId: string): Promise<void>;
   listJobApplicants(jobId: string, cursor?: string): Promise<ApplicantsOfJobPage>;
+  setApplicationStage(
+    jobId: string,
+    applicationId: string,
+    stage: Exclude<ApplicationStage, "applied">,
+  ): Promise<StageChangeRead>;
 
   myEmployers(): Promise<EmployerRead[]>;
   createEmployer(payload: EmployerCreate): Promise<EmployerRead>;
@@ -67,6 +74,18 @@ export class HttpClient extends BaseHttpClient implements EmployerClient {
   listJobApplicants(jobId: string, cursor?: string): Promise<ApplicantsOfJobPage> {
     const qs = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
     return this.request("GET", `/v1/jobs/${jobId}/applicants${qs}`);
+  }
+
+  setApplicationStage(
+    jobId: string,
+    applicationId: string,
+    stage: Exclude<ApplicationStage, "applied">,
+  ): Promise<StageChangeRead> {
+    return this.request(
+      "PATCH",
+      `/v1/jobs/${jobId}/applications/${applicationId}/stage`,
+      { stage },
+    );
   }
 
   myEmployers(): Promise<EmployerRead[]> {

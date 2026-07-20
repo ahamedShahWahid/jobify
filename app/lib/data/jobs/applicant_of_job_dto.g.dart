@@ -11,6 +11,8 @@ ApplicantOfJobDto _$ApplicantOfJobDtoFromJson(Map<String, dynamic> json) =>
       applicationId: json['application_id'] as String,
       applicantId: json['applicant_id'] as String,
       status: json['status'] as String,
+      stage: $enumDecode(_$ApplicationStageEnumMap, json['stage'],
+          unknownValue: ApplicationStage.unknown),
       appliedAt: DateTime.parse(json['applied_at'] as String),
       displayName: json['display_name'] as String?,
       email: json['email'] as String?,
@@ -28,10 +30,21 @@ Map<String, dynamic> _$ApplicantOfJobDtoToJson(ApplicantOfJobDto instance) =>
       'display_name': instance.displayName,
       'email': instance.email,
       'status': instance.status,
+      'stage': _$ApplicationStageEnumMap[instance.stage]!,
       'applied_at': instance.appliedAt.toIso8601String(),
       'match_score': instance.matchScore,
       'match_explanation': instance.matchExplanation,
     };
+
+const _$ApplicationStageEnumMap = {
+  ApplicationStage.applied: 'applied',
+  ApplicationStage.shortlisted: 'shortlisted',
+  ApplicationStage.interview: 'interview',
+  ApplicationStage.offer: 'offer',
+  ApplicationStage.hired: 'hired',
+  ApplicationStage.rejected: 'rejected',
+  ApplicationStage.unknown: 'unknown',
+};
 
 ApplicantsOfJobPageDto _$ApplicantsOfJobPageDtoFromJson(
         Map<String, dynamic> json) =>

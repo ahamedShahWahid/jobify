@@ -329,6 +329,10 @@
             ],
             "title": "Match Score"
           },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -340,6 +344,7 @@
           "display_name",
           "email",
           "status",
+          "stage",
           "applied_at",
           "match_score",
           "match_explanation"
@@ -508,6 +513,10 @@
             "title": "Source",
             "type": "string"
           },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -522,11 +531,28 @@
           "id",
           "job_id",
           "status",
+          "stage",
           "source",
           "created_at",
           "updated_at"
         ],
         "title": "ApplicationRead",
+        "type": "object"
+      },
+      "ApplicationTimelineResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StageEventRead"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ApplicationTimelineResponse",
         "type": "object"
       },
       "AuditAnalyticsRead": {
@@ -1263,6 +1289,10 @@
             "title": "Source",
             "type": "string"
           },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -1277,6 +1307,7 @@
           "id",
           "job_id",
           "status",
+          "stage",
           "source",
           "created_at",
           "updated_at"
@@ -2616,6 +2647,76 @@
         "title": "SignInUser",
         "type": "object"
       },
+      "StageChangeRead": {
+        "properties": {
+          "application_id": {
+            "format": "uuid",
+            "title": "Application Id",
+            "type": "string"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "application_id",
+          "stage",
+          "updated_at"
+        ],
+        "title": "StageChangeRead",
+        "type": "object"
+      },
+      "StageChangeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "stage": {
+            "enum": [
+              "shortlisted",
+              "interview",
+              "offer",
+              "hired",
+              "rejected"
+            ],
+            "title": "Stage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stage"
+        ],
+        "title": "StageChangeRequest",
+        "type": "object"
+      },
+      "StageEventRead": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "from_stage": {
+            "title": "From Stage",
+            "type": "string"
+          },
+          "to_stage": {
+            "title": "To Stage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from_stage",
+          "to_stage",
+          "created_at"
+        ],
+        "title": "StageEventRead",
+        "type": "object"
+      },
       "SuspendRequest": {
         "additionalProperties": false,
         "properties": {
@@ -3796,6 +3897,50 @@
         ]
       }
     },
+    "/v1/applications/{application_id}/timeline": {
+      "get": {
+        "description": "The applicant's stage journey. Owner-only (token identity), uniform\n404 across unknown-id and other-owner; actor identity never exposed.",
+        "operationId": "get_application_timeline_v1_applications__application_id__timeline_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationTimelineResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Application Timeline",
+        "tags": [
+          "applications"
+        ]
+      }
+    },
     "/v1/auth/logout": {
       "post": {
         "operationId": "logout_v1_auth_logout_post",
@@ -4704,6 +4849,70 @@
           }
         },
         "summary": "List Applicants For Job",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/v1/jobs/{job_id}/applications/{application_id}/stage": {
+      "patch": {
+        "description": "Move a candidate through the hiring pipeline.\n\nLadder: 401 -> 403/404 (_load_recruiter_job, uniform) -> 404 (application\nnot under this job) -> 409 application_withdrawn -> 422 (Literal).\nSame-stage PATCH is a 200 no-op.",
+        "operationId": "change_stage_v1_jobs__job_id__applications__application_id__stage_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StageChangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StageChangeRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Stage",
         "tags": [
           "jobs"
         ]

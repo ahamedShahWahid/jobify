@@ -80,6 +80,19 @@ class RecruiterJobsApi {
     return ApplicantsOfJobPageDto.fromJson(res.data!);
   }
 
+  /// PATCH /v1/jobs/{jobId}/applications/{applicationId}/stage — transition
+  /// an applicant's pipeline stage.
+  Future<void> setStage(
+    String jobId,
+    String applicationId,
+    String stage,
+  ) async {
+    await _dio.patch<dynamic>(
+      '/v1/jobs/$jobId/applications/$applicationId/stage',
+      data: {'stage': stage},
+    );
+  }
+
   /// GET /v1/applications/{applicationId}/resume — binary resume download.
   ///
   /// Parses the filename from the `content-disposition` response header

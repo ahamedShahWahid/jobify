@@ -28,6 +28,7 @@ def test_user_export_top_level_fields() -> None:
         "resumes",
         "applicant_embedding",
         "applications",
+        "application_stage_events",
         "saved_jobs",
         "matches",
         "match_feedback",
@@ -61,6 +62,7 @@ def test_row_to_dict_drops_redacted_columns() -> None:
         refresh_token="DO_NOT_LEAK_REFRESH",
         password_hash="DO_NOT_LEAK_HASH",
         token_hash="DO_NOT_LEAK_REFRESH_HASH",
+        actor_user_id="DO_NOT_LEAK_ACTOR",
         # Suffix-pattern denylist hits — future-proofing
         webhook_signing_secret="DO_NOT_LEAK_WEBHOOK",
         api_key_password="DO_NOT_LEAK_PW",
@@ -79,6 +81,7 @@ def test_row_to_dict_drops_redacted_columns() -> None:
         "refresh_token",
         "password_hash",
         "token_hash",
+        "actor_user_id",
         "webhook_signing_secret",
         "api_key_password",
     ):

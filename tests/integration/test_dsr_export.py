@@ -23,6 +23,8 @@ from jobify.consent import seed_default_consents
 from jobify.db.models import (
     Applicant,
     ApplicantPreferences,
+    Application,
+    ApplicationStageEvent,
     AuditLog,
     Employer,
     EmployerInvite,
@@ -204,6 +206,102 @@ async def test_export_includes_live_and_soft_deleted_preferences_rows(
     prefs = resp.json()["applicant_preferences"]
     assert len(prefs) == 2
     assert sorted(p["deleted_at"] is not None for p in prefs) == [False, True]
+
+
+@pytest.mark.asyncio
+async def test_export_includes_application_stage_events_ascending(
+    async_client: AsyncClient, session: AsyncSession
+) -> None:
+    """application_stage_events is export-only: exported under the user's
+    applications history, ascending by created_at, actor identity never
+    disclosed to the applicant (design spec 2026-07-19). A second
+    applicant's own application + stage event must never leak in."""
+    from datetime import UTC, datetime, timedelta
+
+    user, applicant, token = await _make_applicant(session)
+    emp_name = f"E-{uuid4().hex[:6]}"
+    employer = Employer(name=emp_name, name_norm=emp_name.lower())
+    session.add(employer)
+    await session.flush()
+    job = Job(
+        employer_id=employer.id,
+        title="Backend Engineer",
+        description="DSR stage-events test job.",
+        locations=["Remote"],
+        status=JobStatus.OPEN,
+        min_exp_years=1,
+        max_exp_years=5,
+    )
+    session.add(job)
+    await session.flush()
+    application = Application(applicant_id=applicant.id, job_id=job.id)
+    session.add(application)
+    await session.flush()
+
+    now = datetime.now(UTC)
+    # Insertion order deliberately DIVERGES from chronological order — the
+    # later event is added first — so an export query missing its ORDER BY
+    # cannot coincidentally pass by matching insertion/heap order.
+    session.add(
+        ApplicationStageEvent(
+            application_id=application.id,
+            from_stage="shortlisted",
+            to_stage="interview",
+            created_at=now + timedelta(seconds=1),
+        )
+    )
+    session.add(
+        ApplicationStageEvent(
+            application_id=application.id,
+            from_stage="applied",
+            to_stage="shortlisted",
+            created_at=now,
+        )
+    )
+
+    # Negative control: another applicant's own application + stage event
+    # must not appear in this applicant's export.
+    _other_user, other_applicant, _other_token = await _make_applicant(session)
+    other_job = Job(
+        employer_id=employer.id,
+        title="Other Role",
+        description="Other applicant's job.",
+        locations=["Remote"],
+        status=JobStatus.OPEN,
+        min_exp_years=1,
+        max_exp_years=5,
+    )
+    session.add(other_job)
+    await session.flush()
+    other_application = Application(applicant_id=other_applicant.id, job_id=other_job.id)
+    session.add(other_application)
+    await session.flush()
+    session.add(
+        ApplicationStageEvent(
+            application_id=other_application.id,
+            from_stage="applied",
+            to_stage="rejected",
+            created_at=now,
+        )
+    )
+    await session.commit()
+
+    resp = await async_client.post(
+        "/v1/me/dsr/export",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    events = body["application_stage_events"]
+    assert len(events) == 2
+    assert [(e["from_stage"], e["to_stage"]) for e in events] == [
+        ("applied", "shortlisted"),
+        ("shortlisted", "interview"),
+    ]
+    # actor_user_id is redacted — internal actor identity, never disclosed
+    # to the data subject.
+    assert "actor_user_id" not in events[0]
+    assert all(e["application_id"] != str(other_application.id) for e in events)
 
 
 @pytest.mark.asyncio

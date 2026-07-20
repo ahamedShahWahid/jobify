@@ -56,6 +56,7 @@ void main() {
       'job_id': 'j1',
       'status': 'applied',
       'source': 'feed',
+      'stage': 'applied',
       'created_at': '2026-05-21T12:00:00Z',
       'updated_at': '2026-05-21T12:00:00Z',
     });

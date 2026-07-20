@@ -111,6 +111,9 @@ class _FakeApplicationsRepo implements ApplicationsRepository {
   @override
   Future<ApplicationDto> withdraw(String applicationId) async =>
       throw UnimplementedError();
+  @override
+  Future<List<StageEventDto>> fetchTimeline(String applicationId) async =>
+      throw UnimplementedError();
 }
 
 class _FakeSavedJobsRepo implements SavedJobsRepository {

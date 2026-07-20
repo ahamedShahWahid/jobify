@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 
+import 'package:jobify_app/core/error/exceptions.dart';
 import 'package:jobify_app/data/jobs/applicant_of_job_dto.dart';
+import 'package:jobify_app/data/jobs/application_stage.dart';
 import 'package:jobify_app/data/jobs/recruiter_job_dto.dart';
 import 'package:jobify_app/data/jobs/recruiter_jobs_api.dart';
 import 'package:jobify_app/data/jobs/recruiter_jobs_repository.dart';
@@ -25,6 +27,15 @@ class FakeRecruiterJobsRepository implements RecruiterJobsRepository {
   Map<String, dynamic>? patchedBody;
   String? deletedId;
   String? downloadedApplicationId;
+
+  /// (jobId, applicationId, stage) triples passed to `setStage`, recorded in
+  /// call order.
+  final List<(String, String, ApplicationStage)> stagesSet = [];
+
+  /// When set, `setStage` records the call then throws an [ApiException]
+  /// whose `slug` is `err.toString()` — mirrors the real repo's
+  /// `mapDioException` mapping so callers can discriminate on `.slug`.
+  Object? setStageError;
 
   @override
   Future<RecruiterJobsPageDto> listMyJobs({
@@ -70,6 +81,19 @@ class FakeRecruiterJobsRepository implements RecruiterJobsRepository {
           contentType: 'application/pdf',
         );
   }
+
+  @override
+  Future<void> setStage(
+    String jobId,
+    String applicationId,
+    ApplicationStage stage,
+  ) async {
+    stagesSet.add((jobId, applicationId, stage));
+    final err = setStageError;
+    if (err != null) {
+      throw ApiException(statusCode: 409, slug: err.toString());
+    }
+  }
 }
 
 /// Test factory for a [RecruiterJobDto] with sensible defaults.
@@ -108,6 +132,7 @@ ApplicantOfJobDto fakeApplicantOfJob({
   String? displayName = 'Alice Candidate',
   String? email = 'alice@example.com',
   String status = 'applied',
+  ApplicationStage stage = ApplicationStage.applied,
   double? matchScore = 0.82,
   Map<String, String>? matchExplanation = const {'fit': 'Strong skills match.'},
 }) =>
@@ -117,6 +142,7 @@ ApplicantOfJobDto fakeApplicantOfJob({
       displayName: displayName,
       email: email,
       status: status,
+      stage: stage,
       appliedAt: DateTime.utc(2026),
       matchScore: matchScore,
       matchExplanation: matchExplanation,

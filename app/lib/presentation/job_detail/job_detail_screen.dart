@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jobify_app/core/error/exceptions.dart';
+import 'package:jobify_app/core/format/date_formats.dart';
 import 'package:jobify_app/data/feed/feed_dto.dart';
 import 'package:jobify_app/data/feed/match_feedback_rating.dart';
 import 'package:jobify_app/data/feed/match_generator.dart';
 import 'package:jobify_app/data/jobs/jobs_dto.dart';
+import 'package:jobify_app/presentation/applications/applications_screen.dart'
+    show stageLabel;
 import 'package:jobify_app/presentation/job_detail/action_bar.dart';
+import 'package:jobify_app/presentation/job_detail/application_timeline_controller.dart';
 import 'package:jobify_app/presentation/job_detail/apply_to_job_controller.dart';
 import 'package:jobify_app/presentation/job_detail/job_detail_controller.dart';
 import 'package:jobify_app/presentation/job_detail/match_feedback_controller.dart';
@@ -93,6 +97,12 @@ class JobDetailScreen extends ConsumerWidget {
                       d.job.locations.join(', '),
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
+                    if (d.application != null) ...[
+                      const SizedBox(height: JobifySpacing.lg),
+                      _ApplicationTimeline(
+                        applicationId: d.application!.id,
+                      ),
+                    ],
                     if (d.match != null) ...[
                       const SizedBox(height: JobifySpacing.lg),
                       _MatchCard(match: d.match!),
@@ -252,6 +262,54 @@ class _MatchFeedbackRow extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Compact stage-change history for one application. Degrades to nothing
+/// (leaving the stage chip elsewhere as the sole status signal) while
+/// loading, on error, or when there are no events yet — spec rule.
+class _ApplicationTimeline extends ConsumerWidget {
+  const _ApplicationTimeline({required this.applicationId});
+  final String applicationId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final events = ref.watch(applicationTimelineProvider(applicationId));
+    return events.maybeWhen(
+      data: (items) {
+        if (items.isEmpty) return const SizedBox.shrink();
+        final theme = Theme.of(context);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Timeline', style: theme.textTheme.titleMedium),
+            const SizedBox(height: JobifySpacing.sm),
+            for (final e in items)
+              Padding(
+                padding: const EdgeInsets.only(bottom: JobifySpacing.xs),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        stageLabel(e.toStage),
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ),
+                    Text(
+                      jobifyShortDateFormat.format(e.createdAt),
+                      style: JobifyTypography.mono(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
     );
   }
 }
