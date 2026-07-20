@@ -6,6 +6,8 @@ Applicant iOS + Android + Web. `lib/data/` + `lib/presentation/` + `lib/core/` (
 
 **Design standard: `docs/design-system.md`** — the full catalogue (Clear Sky palette, typography ramp, radii, brand canvas, shared philosophy, hard rules). Read it before styling any screen.
 
+**No LLM/AI API calls from the app — ever.** All AI work (parsing, embeddings, match explanations) is backend-only behind the Jobify REST API; the app never holds an AI-provider key. The only external hosts it may contact are Google sign-in (`accounts.google.com`) and `google_fonts`' font fetch. `MatchGenerator`'s `llm` value is a provenance tag on server-generated explanations, not a call. A feature needing new AI behavior adds a backend endpoint, not a client-side call.
+
 ## Non-obvious bits
 
 - **Refresh-on-401 interceptor** (`lib/data/api/refresh_on_401_interceptor.dart`) is the most important code: single-flight via `Completer<String>?`. Tests are the canonical spec — keep passing. **Cleanup order:** `_inFlight = null` BEFORE `complete()` (else a synchronous continuation re-enters `onError` on a stale completer).

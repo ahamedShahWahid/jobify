@@ -6,6 +6,8 @@ Load-bearing invariants for the web app: two route-prefixed surfaces under one H
 
 **Recruiter ops moved from `/console` to `/employers` (2026-07)** — console is jobify-internal (admin) only now; a recruiter should never reach it. Recruiter pages live at `src/sites/employers/pages/dashboard/`, with their own `session.tsx` and `api/client.ts` independent from console's. Console's routes/links are built from `CONSOLE_BASE` (`src/sites/console/base.ts`) rather than hardcoded `/console/...` strings, so it's ready to move to its own subdomain later.
 
+**No LLM/AI API calls from the client — ever.** All AI work (parsing, embeddings, match explanations) is backend-only, behind the Jobify REST API: the `google-genai` SDK lives in `core` and runs in the worker. The client never holds an AI-provider key and never contacts an AI host; the only external host it may contact is `accounts.google.com` (sign-in). Client-side "LLM" strings are metadata/copy only (the `generator` provenance tag, marketing stamps). A slice that needs new AI behavior adds a backend endpoint, not a client-side call.
+
 > These are the shared-HashRouter pitfalls — things that silently send users to the wrong surface or leak styles across surfaces.
 
 - **One app, two sibling route subtrees** — `index.html` → `src/main.tsx` → `src/App.tsx` mounts each surface's route fragment under one `<HashRouter>`. Both ship in one static `dist/`; they are NOT separate builds. Each surface mounts its own `SessionProvider` (sessions are independent per surface).
