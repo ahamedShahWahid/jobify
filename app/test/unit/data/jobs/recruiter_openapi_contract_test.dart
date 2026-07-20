@@ -35,6 +35,7 @@ void main() {
         'email',
         'match_explanation',
         'match_score',
+        'stage',
         'status',
       },
       'ApplicantsOfJobPage': {'items', 'next_cursor'},

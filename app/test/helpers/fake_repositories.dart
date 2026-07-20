@@ -10,6 +10,7 @@ import 'package:jobify_app/data/feed/feed_repository.dart';
 import 'package:jobify_app/data/feed/match_feedback_dto.dart';
 import 'package:jobify_app/data/feed/match_feedback_rating.dart';
 import 'package:jobify_app/data/jobs/application_source.dart';
+import 'package:jobify_app/data/jobs/application_stage.dart';
 import 'package:jobify_app/data/jobs/application_status.dart';
 import 'package:jobify_app/data/jobs/applications_repository.dart';
 import 'package:jobify_app/data/jobs/jobs_dto.dart';
@@ -107,6 +108,7 @@ class FakeJobsRepository implements JobsRepository {
       jobId: jobId,
       status: ApplicationStatus.applied,
       source: source,
+      stage: ApplicationStage.applied,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );
@@ -176,6 +178,13 @@ class FakeJobsRepository implements JobsRepository {
 }
 
 class FakeApplicationsRepository implements ApplicationsRepository {
+  /// Configured timeline events keyed by application id — set before the
+  /// call to control what `fetchTimeline` returns.
+  final Map<String, List<StageEventDto>> timelines = {};
+
+  /// Application ids passed to `fetchTimeline`, recorded in call order.
+  final List<String> fetchedTimelineIds = [];
+
   @override
   Future<ApplicationsPageDto> fetchPage({
     String? cursor,
@@ -189,9 +198,16 @@ class FakeApplicationsRepository implements ApplicationsRepository {
         jobId: 'j1',
         status: ApplicationStatus.withdrawn,
         source: ApplicationSource.feed,
+        stage: ApplicationStage.applied,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
+
+  @override
+  Future<List<StageEventDto>> fetchTimeline(String applicationId) async {
+    fetchedTimelineIds.add(applicationId);
+    return timelines[applicationId] ?? [];
+  }
 }
 
 class FakeSavedJobsRepository implements SavedJobsRepository {

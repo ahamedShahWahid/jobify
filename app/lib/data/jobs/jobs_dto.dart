@@ -2,6 +2,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'package:jobify_app/data/feed/feed_dto.dart';
 import 'package:jobify_app/data/jobs/application_source.dart';
+import 'package:jobify_app/data/jobs/application_stage.dart';
 import 'package:jobify_app/data/jobs/application_status.dart';
 
 part 'jobs_dto.freezed.dart';
@@ -28,6 +29,7 @@ class ApplicationDto {
     required this.jobId,
     required this.status,
     required this.source,
+    required this.stage,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -41,6 +43,8 @@ class ApplicationDto {
   final ApplicationStatus status;
   @JsonKey(unknownEnumValue: ApplicationSource.unknown)
   final ApplicationSource source;
+  @JsonKey(unknownEnumValue: ApplicationStage.unknown)
+  final ApplicationStage stage;
   final DateTime createdAt;
   // Backend ApplicationRead sends `updated_at` (not `applicant_id` or a
   // dedicated `withdrawn_at`); for a withdrawn row this is the withdrawal time.
@@ -138,4 +142,36 @@ class SavedJobListItemDto {
   final MatchSummaryDto? match;
 
   Map<String, dynamic> toJson() => _$SavedJobListItemDtoToJson(this);
+}
+
+@JsonSerializable()
+class StageEventDto {
+  const StageEventDto({
+    required this.fromStage,
+    required this.toStage,
+    required this.createdAt,
+  });
+
+  factory StageEventDto.fromJson(Map<String, dynamic> json) =>
+      _$StageEventDtoFromJson(json);
+
+  @JsonKey(unknownEnumValue: ApplicationStage.unknown)
+  final ApplicationStage fromStage;
+  @JsonKey(unknownEnumValue: ApplicationStage.unknown)
+  final ApplicationStage toStage;
+  final DateTime createdAt;
+
+  Map<String, dynamic> toJson() => _$StageEventDtoToJson(this);
+}
+
+@JsonSerializable()
+class ApplicationTimelineDto {
+  const ApplicationTimelineDto({required this.items});
+
+  factory ApplicationTimelineDto.fromJson(Map<String, dynamic> json) =>
+      _$ApplicationTimelineDtoFromJson(json);
+
+  final List<StageEventDto> items;
+
+  Map<String, dynamic> toJson() => _$ApplicationTimelineDtoToJson(this);
 }

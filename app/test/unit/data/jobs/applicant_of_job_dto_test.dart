@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jobify_app/data/jobs/applicant_of_job_dto.dart';
+import 'package:jobify_app/data/jobs/application_stage.dart';
 
 void main() {
   group('ApplicantOfJobDto.fromJson', () {
@@ -10,6 +11,7 @@ void main() {
         'display_name': 'Jane Doe',
         'email': 'jane@example.com',
         'status': 'applied',
+        'stage': 'shortlisted',
         'applied_at': '2026-05-20T08:30:00Z',
         'match_score': 0.78,
         'match_explanation': {
@@ -25,6 +27,7 @@ void main() {
       expect(dto.displayName, 'Jane Doe');
       expect(dto.email, 'jane@example.com');
       expect(dto.status, 'applied');
+      expect(dto.stage, ApplicationStage.shortlisted);
       expect(dto.appliedAt, DateTime.utc(2026, 5, 20, 8, 30));
       expect(dto.matchScore, closeTo(0.78, 0.001));
       expect(dto.matchExplanation, {
@@ -40,6 +43,7 @@ void main() {
         'display_name': null,
         'email': null,
         'status': 'withdrawn',
+        'stage': 'applied',
         'applied_at': '2026-06-01T12:00:00Z',
         'match_score': null,
         'match_explanation': null,
@@ -67,6 +71,7 @@ void main() {
             'display_name': 'Bob Smith',
             'email': 'bob@example.com',
             'status': 'applied',
+            'stage': 'applied',
             'applied_at': '2026-05-15T10:00:00Z',
             'match_score': null,
             'match_explanation': null,

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jobify_app/data/feed/feed_dto.dart';
 import 'package:jobify_app/data/jobs/application_source.dart';
+import 'package:jobify_app/data/jobs/application_stage.dart';
 import 'package:jobify_app/data/jobs/application_status.dart';
 import 'package:jobify_app/data/jobs/applications_repository.dart';
 import 'package:jobify_app/data/jobs/applications_repository_impl.dart';
@@ -25,6 +26,10 @@ class _FakeApplicationsRepo implements ApplicationsRepository {
   @override
   Future<ApplicationDto> withdraw(String applicationId) async =>
       throw UnimplementedError();
+
+  @override
+  Future<List<StageEventDto>> fetchTimeline(String applicationId) async =>
+      throw UnimplementedError();
 }
 
 class _FakeSavedJobsRepo implements SavedJobsRepository {
@@ -46,6 +51,10 @@ class _ThrowingApplicationsRepo implements ApplicationsRepository {
 
   @override
   Future<ApplicationDto> withdraw(String applicationId) async =>
+      throw UnimplementedError();
+
+  @override
+  Future<List<StageEventDto>> fetchTimeline(String applicationId) async =>
       throw UnimplementedError();
 }
 
@@ -70,6 +79,7 @@ ApplicationListItemDto _application(String id) => ApplicationListItemDto(
         jobId: 'j1',
         status: ApplicationStatus.applied,
         source: ApplicationSource.feed,
+        stage: ApplicationStage.applied,
         createdAt: DateTime.parse('2026-05-18T00:00:00Z'),
         updatedAt: DateTime.parse('2026-05-18T00:00:00Z'),
       ),

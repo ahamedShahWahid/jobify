@@ -28,6 +28,9 @@ class _FakeApplicationsRepo implements ApplicationsRepository {
   @override
   Future<ApplicationDto> withdraw(String applicationId) async =>
       throw UnimplementedError();
+  @override
+  Future<List<StageEventDto>> fetchTimeline(String applicationId) async =>
+      throw UnimplementedError();
 }
 
 class _FakeSavedJobsRepo implements SavedJobsRepository {
@@ -60,6 +63,9 @@ class _ThrowingApplicationsRepo implements ApplicationsRepository {
   @override
   Future<ApplicationDto> withdraw(String applicationId) async =>
       throw UnimplementedError();
+  @override
+  Future<List<StageEventDto>> fetchTimeline(String applicationId) async =>
+      throw UnimplementedError();
 }
 
 /// See `_ThrowingApplicationsRepo` above — safe to combine with it now that
@@ -87,6 +93,9 @@ class _FlakyApplicationsRepo implements ApplicationsRepository {
 
   @override
   Future<ApplicationDto> withdraw(String applicationId) async =>
+      throw UnimplementedError();
+  @override
+  Future<List<StageEventDto>> fetchTimeline(String applicationId) async =>
       throw UnimplementedError();
 }
 

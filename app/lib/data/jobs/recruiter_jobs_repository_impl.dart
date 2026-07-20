@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:jobify_app/data/api/dio_provider.dart';
 import 'package:jobify_app/data/api/error_mapping.dart';
 import 'package:jobify_app/data/jobs/applicant_of_job_dto.dart';
+import 'package:jobify_app/data/jobs/application_stage.dart';
 import 'package:jobify_app/data/jobs/recruiter_job_dto.dart';
 import 'package:jobify_app/data/jobs/recruiter_jobs_api.dart';
 import 'package:jobify_app/data/jobs/recruiter_jobs_repository.dart';
@@ -74,6 +75,19 @@ class RecruiterJobsRepositoryImpl implements RecruiterJobsRepository {
   Future<ResumeDownload> downloadResume(String applicationId) async {
     try {
       return await _api.downloadResume(applicationId);
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
+  @override
+  Future<void> setStage(
+    String jobId,
+    String applicationId,
+    ApplicationStage stage,
+  ) async {
+    try {
+      await _api.setStage(jobId, applicationId, stage.wireValue);
     } on DioException catch (e) {
       throw mapDioException(e);
     }

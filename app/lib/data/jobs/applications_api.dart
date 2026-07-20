@@ -25,4 +25,10 @@ class ApplicationsApi {
     );
     return ApplicationDto.fromJson(res.data!);
   }
+
+  Future<ApplicationTimelineDto> fetchTimeline(String applicationId) async {
+    final res = await _dio
+        .get<Map<String, dynamic>>('/v1/applications/$applicationId/timeline');
+    return ApplicationTimelineDto.fromJson(res.data!);
+  }
 }

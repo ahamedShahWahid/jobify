@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jobify_app/core/error/exceptions.dart';
+import 'package:jobify_app/data/jobs/application_stage.dart';
 import 'package:jobify_app/data/jobs/recruiter_jobs_api.dart';
 import 'package:jobify_app/data/jobs/recruiter_jobs_repository_impl.dart';
 
@@ -41,6 +42,7 @@ Map<String, dynamic> _applicantJson(String appId) => {
       'display_name': 'Alice',
       'email': 'alice@example.com',
       'status': 'applied',
+      'stage': 'applied',
       'applied_at': '2026-05-20T08:00:00Z',
       'match_score': 0.72,
       'match_explanation': null,
@@ -326,6 +328,42 @@ void main() {
         repo.patchJob('missing', {}),
         throwsA(
           isA<ApiException>().having((e) => e.statusCode, 'statusCode', 404),
+        ),
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // setStage
+  // -------------------------------------------------------------------------
+
+  group('setStage', () {
+    test('200 → sends wireValue and completes', () async {
+      mock.on(
+        'PATCH',
+        '/v1/jobs/j1/applications/app-1/stage',
+        200,
+        {'detail': 'ok'},
+      );
+
+      await expectLater(
+        repo.setStage('j1', 'app-1', ApplicationStage.shortlisted),
+        completes,
+      );
+    });
+
+    test('400 invalid_transition → throws ApiException', () async {
+      mock.on(
+        'PATCH',
+        '/v1/jobs/j1/applications/app-1/stage',
+        400,
+        {'detail': 'invalid_transition'},
+      );
+
+      await expectLater(
+        repo.setStage('j1', 'app-1', ApplicationStage.hired),
+        throwsA(
+          isA<ApiException>().having((e) => e.statusCode, 'statusCode', 400),
         ),
       );
     });

@@ -34,6 +34,15 @@ class ApplicationsRepositoryImpl implements ApplicationsRepository {
       throw mapDioException(e);
     }
   }
+
+  @override
+  Future<List<StageEventDto>> fetchTimeline(String applicationId) async {
+    try {
+      return (await _api.fetchTimeline(applicationId)).items;
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
 }
 
 @Riverpod(keepAlive: true)
