@@ -185,12 +185,19 @@ class FakeApplicationsRepository implements ApplicationsRepository {
   /// Application ids passed to `fetchTimeline`, recorded in call order.
   final List<String> fetchedTimelineIds = [];
 
+  /// When set, `fetchTimeline` throws this instead of succeeding — lets
+  /// tests exercise the timeline's error-degrade path.
+  Object? fetchTimelineError;
+
+  /// When set, `fetchPage` returns this instead of an empty page.
+  ApplicationsPageDto? fetchPageOverride;
+
   @override
   Future<ApplicationsPageDto> fetchPage({
     String? cursor,
     int limit = 20,
   }) async =>
-      const ApplicationsPageDto(items: []);
+      fetchPageOverride ?? const ApplicationsPageDto(items: []);
 
   @override
   Future<ApplicationDto> withdraw(String id) async => ApplicationDto(
@@ -206,6 +213,8 @@ class FakeApplicationsRepository implements ApplicationsRepository {
   @override
   Future<List<StageEventDto>> fetchTimeline(String applicationId) async {
     fetchedTimelineIds.add(applicationId);
+    final err = fetchTimelineError;
+    if (err != null) throw Exception(err.toString());
     return timelines[applicationId] ?? [];
   }
 }

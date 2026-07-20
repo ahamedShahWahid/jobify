@@ -13,6 +13,18 @@ String notificationTitle(NotificationDto n) {
       }
       if (job != null) return 'Application received for $job';
       return 'Application received';
+    case 'application_stage_changed':
+      final job = p['job_title'] as String?;
+      final stage = p['stage'] as String?;
+      final line = switch (stage) {
+        'shortlisted' => 'Shortlisted',
+        'interview' => 'Interview stage',
+        'offer' => 'You have an offer',
+        'hired' => 'You were hired',
+        'rejected' => 'Update on your application',
+        _ => 'Application updated',
+      };
+      return job != null ? '$line for $job' : line;
     default:
       return _humanize(n.kind);
   }
