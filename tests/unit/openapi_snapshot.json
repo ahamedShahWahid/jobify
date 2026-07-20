@@ -539,6 +539,22 @@
         "title": "ApplicationRead",
         "type": "object"
       },
+      "ApplicationTimelineResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StageEventRead"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ApplicationTimelineResponse",
+        "type": "object"
+      },
       "AuditAnalyticsRead": {
         "properties": {
           "action_counts": {
@@ -2677,6 +2693,30 @@
         "title": "StageChangeRequest",
         "type": "object"
       },
+      "StageEventRead": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "from_stage": {
+            "title": "From Stage",
+            "type": "string"
+          },
+          "to_stage": {
+            "title": "To Stage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from_stage",
+          "to_stage",
+          "created_at"
+        ],
+        "title": "StageEventRead",
+        "type": "object"
+      },
       "SuspendRequest": {
         "additionalProperties": false,
         "properties": {
@@ -3852,6 +3892,50 @@
           }
         },
         "summary": "Recruiter Download Application Resume",
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/v1/applications/{application_id}/timeline": {
+      "get": {
+        "description": "The applicant's stage journey. Owner-only (token identity), uniform\n404 across unknown-id and other-owner; actor identity never exposed.",
+        "operationId": "get_application_timeline_v1_applications__application_id__timeline_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationTimelineResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Application Timeline",
         "tags": [
           "applications"
         ]
