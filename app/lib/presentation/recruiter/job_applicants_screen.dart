@@ -5,7 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jobify_app/core/error/exceptions.dart';
 import 'package:jobify_app/core/format/date_formats.dart';
 import 'package:jobify_app/data/jobs/applicant_of_job_dto.dart';
+import 'package:jobify_app/data/jobs/application_stage.dart';
 import 'package:jobify_app/data/jobs/recruiter_jobs_repository_impl.dart';
+import 'package:jobify_app/presentation/applications/applications_screen.dart'
+    show stageLabel;
 import 'package:jobify_app/presentation/recruiter/recruiter_applicants_controller.dart';
 import 'package:jobify_app/presentation/recruiter/resume_saver/resume_saver.dart';
 import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
@@ -82,6 +85,27 @@ class _JobApplicantsScreenState extends ConsumerState<JobApplicantsScreen> {
     }
   }
 
+  Future<void> _changeStage(
+    String applicationId,
+    ApplicationStage stage,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref
+          .read(recruiterApplicantsControllerProvider(widget.jobId).notifier)
+          .setStage(applicationId, stage);
+    } catch (e) {
+      final withdrew = e.toString().contains('application_withdrawn');
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            withdrew ? 'Candidate withdrew' : "Couldn't update the stage",
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final value =
@@ -125,6 +149,8 @@ class _JobApplicantsScreenState extends ConsumerState<JobApplicantsScreen> {
               return _ApplicantCard(
                 applicant: s.items[i],
                 onDownload: () => _download(s.items[i].applicationId),
+                onChangeStage: (stage) =>
+                    _changeStage(s.items[i].applicationId, stage),
               );
             },
           ),
@@ -135,10 +161,15 @@ class _JobApplicantsScreenState extends ConsumerState<JobApplicantsScreen> {
 }
 
 class _ApplicantCard extends StatelessWidget {
-  const _ApplicantCard({required this.applicant, required this.onDownload});
+  const _ApplicantCard({
+    required this.applicant,
+    required this.onDownload,
+    required this.onChangeStage,
+  });
 
   final ApplicantOfJobDto applicant;
   final VoidCallback onDownload;
+  final ValueChanged<ApplicationStage> onChangeStage;
 
   @override
   Widget build(BuildContext context) {
@@ -176,16 +207,77 @@ class _ApplicantCard extends StatelessWidget {
               Text(fit, style: theme.textTheme.bodyMedium),
             ],
             const SizedBox(height: JobifySpacing.sm),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: OutlinedButton.icon(
-                onPressed: onDownload,
-                icon: const Icon(Icons.download_outlined, size: 18),
-                label: const Text('Download résumé'),
-              ),
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: JobifySpacing.sm,
+              runSpacing: JobifySpacing.sm,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: onDownload,
+                  icon: const Icon(Icons.download_outlined, size: 18),
+                  label: const Text('Download résumé'),
+                ),
+                PopupMenuButton<ApplicationStage>(
+                  tooltip: 'Change stage',
+                  initialValue: applicant.stage,
+                  onSelected: onChangeStage,
+                  itemBuilder: (context) => const [
+                    ApplicationStage.shortlisted,
+                    ApplicationStage.interview,
+                    ApplicationStage.offer,
+                    ApplicationStage.hired,
+                    ApplicationStage.rejected,
+                  ]
+                      .map(
+                        (s) => PopupMenuItem(
+                          value: s,
+                          child: Text(stageLabel(s)),
+                        ),
+                      )
+                      .toList(),
+                  child: _StageChip(stage: applicant.stage),
+                ),
+              ],
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _StageChip extends StatelessWidget {
+  const _StageChip({required this.stage});
+
+  final ApplicationStage stage;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: JobifySpacing.sm,
+        vertical: JobifySpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            stageLabel(stage),
+            style: theme.textTheme.labelSmall
+                ?.copyWith(color: theme.colorScheme.onPrimaryContainer),
+          ),
+          const SizedBox(width: JobifySpacing.xs),
+          Icon(
+            Icons.arrow_drop_down,
+            size: 16,
+            color: theme.colorScheme.onPrimaryContainer,
+          ),
+        ],
       ),
     );
   }

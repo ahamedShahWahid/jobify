@@ -1,4 +1,5 @@
 import 'package:jobify_app/data/jobs/applicant_of_job_dto.dart';
+import 'package:jobify_app/data/jobs/application_stage.dart';
 import 'package:jobify_app/data/jobs/recruiter_jobs_repository_impl.dart';
 import 'package:jobify_app/presentation/paging/paged_state.dart';
 import 'package:jobify_app/presentation/paging/paging.dart';
@@ -40,4 +41,48 @@ class RecruiterApplicantsController extends _$RecruiterApplicantsController {
         },
         setState: (s) => state = s,
       );
+
+  /// Optimistic stage change: patch the row locally, call the API, revert on
+  /// error and rethrow so the screen can snackbar.
+  Future<void> setStage(
+    String applicationId,
+    ApplicationStage stage,
+  ) async {
+    final prev = state;
+    _patchRow(applicationId, stage);
+    try {
+      await ref
+          .read(recruiterJobsRepositoryProvider)
+          .setStage(jobId, applicationId, stage);
+    } catch (_) {
+      state = prev;
+      rethrow;
+    }
+  }
+
+  void _patchRow(String applicationId, ApplicationStage stage) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncValue.data(
+      current.copyWith(
+        items: [
+          for (final row in current.items)
+            if (row.applicationId == applicationId)
+              ApplicantOfJobDto(
+                applicationId: row.applicationId,
+                applicantId: row.applicantId,
+                displayName: row.displayName,
+                email: row.email,
+                status: row.status,
+                stage: stage,
+                appliedAt: row.appliedAt,
+                matchScore: row.matchScore,
+                matchExplanation: row.matchExplanation,
+              )
+            else
+              row,
+        ],
+      ),
+    );
+  }
 }

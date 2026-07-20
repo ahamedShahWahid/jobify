@@ -31,6 +31,9 @@ class FakeRecruiterJobsRepository implements RecruiterJobsRepository {
   /// call order.
   final List<(String, String, ApplicationStage)> stagesSet = [];
 
+  /// When set, `setStage` records the call then throws `Exception(err)`.
+  Object? setStageError;
+
   @override
   Future<RecruiterJobsPageDto> listMyJobs({
     String? status,
@@ -83,6 +86,8 @@ class FakeRecruiterJobsRepository implements RecruiterJobsRepository {
     ApplicationStage stage,
   ) async {
     stagesSet.add((jobId, applicationId, stage));
+    final err = setStageError;
+    if (err != null) throw Exception(err.toString());
   }
 }
 

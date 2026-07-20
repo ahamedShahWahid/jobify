@@ -54,7 +54,7 @@ final class RecruiterApplicantsControllerProvider
 }
 
 String _$recruiterApplicantsControllerHash() =>
-    r'ec8b38d6c25c201bdb327dc0e08a00befd47e505';
+    r'e5053336ed668fe8f290a89f7562db7d89687c23';
 
 final class RecruiterApplicantsControllerFamily extends $Family
     with
