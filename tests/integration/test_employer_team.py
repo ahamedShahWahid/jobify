@@ -13,6 +13,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from structlog.testing import capture_logs
 
 from jobify.db.models import (
     Applicant,
@@ -368,11 +369,16 @@ async def test_create_invite_duplicate_pending_409(
         f"/v1/employers/{emp_id}/invites", json=body, headers=_h(owner_token)
     )
     assert first.status_code == 201
-    dup = await async_client.post(
-        f"/v1/employers/{emp_id}/invites", json=body, headers=_h(owner_token)
-    )
+    with capture_logs() as logs:
+        dup = await async_client.post(
+            f"/v1/employers/{emp_id}/invites", json=body, headers=_h(owner_token)
+        )
     assert dup.status_code == 409
     assert dup.json()["detail"] == "invite_already_pending"
+
+    conflicts = [e for e in logs if e["event"] == "team.invite-conflict"]
+    assert len(conflicts) == 1
+    assert isinstance(conflicts[0]["constraint"], str) and conflicts[0]["constraint"]
 
 
 async def test_create_invite_existing_member_409(

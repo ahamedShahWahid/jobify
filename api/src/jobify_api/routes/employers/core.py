@@ -19,6 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from jobify.db.errors import constraint_name
 from jobify.db.models import Employer, EmployerUser, User
 from jobify_api.auth.dependencies import _require_recruiter, current_user
 from jobify_api.dependencies import get_session
@@ -65,17 +66,10 @@ async def create_employer(
     try:
         await session.flush()
     except IntegrityError as e:
-        # SQLAlchemy wraps the asyncpg exception: e.orig is AsyncAdapt_asyncpg_dbapi.IntegrityError,
-        # and the raw asyncpg UniqueViolationError (which carries constraint_name) sits at
-        # e.orig.__cause__. Walk the cause chain to detect our partial-UNIQUE constraint.
-        orig = getattr(e, "orig", None)
-        cause = getattr(orig, "__cause__", None) or orig
-        if (
-            cause is not None
-            and type(cause).__name__ == "UniqueViolationError"
-            and getattr(cause, "constraint_name", None) == "ix_employers_name_norm_live"
-        ):
+        name = constraint_name(e)
+        if name == "ix_employers_name_norm_live":
             await session.rollback()
+            _log.info("employer.create-conflict", constraint=name)
             raise HTTPException(status_code=409, detail="employer_name_taken") from e
         await session.rollback()
         raise

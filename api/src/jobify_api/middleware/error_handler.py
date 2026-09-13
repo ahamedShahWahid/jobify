@@ -7,7 +7,7 @@ responses that include the request id for traceability.
 from __future__ import annotations
 
 from http import HTTPStatus
-from typing import Any
+from typing import Any, Final
 
 import structlog
 from fastapi import FastAPI, HTTPException, Request
@@ -20,6 +20,14 @@ from jobify_api.middleware.request_context import route_template
 from jobify_api.middleware.request_id import REQUEST_ID_HEADER
 
 _log = structlog.get_logger(__name__)
+
+_MAX_LOC_PART_CHARS: Final = 64
+
+
+def _loc_part(part: object) -> str:
+    # extra="forbid" models put the CLIENT's unknown key name in loc — bound it.
+    text = str(part)
+    return text if len(text) <= _MAX_LOC_PART_CHARS else text[: _MAX_LOC_PART_CHARS - 1] + "…"
 
 
 def _problem(
@@ -86,7 +94,7 @@ def register_error_handlers(app: FastAPI) -> None:
             "http.validation-failed",
             route=route,
             fields=[
-                {"loc": ".".join(str(part) for part in error["loc"]), "type": error["type"]}
+                {"loc": ".".join(_loc_part(part) for part in error["loc"]), "type": error["type"]}
                 for error in exc.errors()
             ],
         )

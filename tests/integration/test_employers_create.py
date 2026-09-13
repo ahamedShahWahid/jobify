@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 from sqlalchemy import select
+from structlog.testing import capture_logs
 
 from jobify.db.models import EmployerUser, User, UserRole
 
@@ -64,13 +65,18 @@ async def test_create_employer_duplicate_name_returns_409(
         ttl_seconds=600,
     )
 
-    r2 = await async_client.post(
-        "/v1/employers",
-        json={"name": "Acme Corp"},
-        headers={"Authorization": f"Bearer {other_token}"},
-    )
+    with capture_logs() as logs:
+        r2 = await async_client.post(
+            "/v1/employers",
+            json={"name": "Acme Corp"},
+            headers={"Authorization": f"Bearer {other_token}"},
+        )
     assert r2.status_code == 409
     assert r2.json()["detail"] == "employer_name_taken"
+
+    conflicts = [e for e in logs if e["event"] == "employer.create-conflict"]
+    assert len(conflicts) == 1
+    assert conflicts[0]["constraint"] == "ix_employers_name_norm_live"
 
 
 async def test_create_employer_normalizes_name_for_dedup(

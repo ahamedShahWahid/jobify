@@ -313,13 +313,13 @@ def main(argv: list[str] | None = None) -> int:
     _log.info("seed.start", path=str(args.path), dry_run=args.dry_run)
     try:
         payload = _load_and_validate(args.path)
-    except Exception as exc:  # noqa: BLE001 — CLI boundary: any failure maps to an exit code
-        _log.error("seed.validation-failed", error=str(exc))
+    except Exception:  # noqa: BLE001 — CLI boundary: any failure maps to an exit code
+        _log.exception("seed.validation-failed")
         return 2
     try:
         report = asyncio.run(_apply(payload, dry_run=args.dry_run))
-    except Exception as exc:  # noqa: BLE001 — CLI boundary: any failure maps to an exit code
-        _log.error("seed.db-failed", error=str(exc))
+    except Exception:  # noqa: BLE001 — CLI boundary: any failure maps to an exit code
+        _log.exception("seed.db-failed")
         return 3
     _log.info("seed.complete", **report.as_log_kwargs())
     return 0

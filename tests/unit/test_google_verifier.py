@@ -16,6 +16,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from jwt.utils import to_base64url_uint
 from prometheus_client import REGISTRY
+from structlog.testing import capture_logs
 
 from jobify_api.auth.google_verifier import (
     GoogleJwksUnavailableError,
@@ -168,6 +169,26 @@ async def test_verify_rejects_wrong_iss(jwks_url: str, client_id: str) -> None:
 
     with pytest.raises(InvalidGoogleTokenError):
         await v.verify(token)
+
+
+async def test_rejected_token_logs_reason_without_token(jwks_url: str, client_id: str) -> None:
+    private, jwks = _make_keypair_and_jwks(kid="key-1")
+    token = _sign_id_token(
+        private_key=private,
+        kid="key-1",
+        sub="x",
+        aud=client_id,
+        email="a@example.com",
+        iss="https://accounts.google.com.evil",
+    )
+    transport = httpx.MockTransport(lambda r: httpx.Response(200, json=jwks))
+    v = _build_verifier(jwks_url, client_id, transport)
+
+    with capture_logs() as logs, pytest.raises(InvalidGoogleTokenError):
+        await v.verify(token)
+    (line,) = (e for e in logs if e["event"] == "google.id-token-rejected")
+    assert line["reason"] == "issuer_invalid"
+    assert token not in repr(line)
 
 
 async def test_verify_rejects_expired_token(jwks_url: str, client_id: str) -> None:

@@ -85,14 +85,17 @@ class JwksGoogleIdTokenVerifier:
         try:
             unverified_header = pyjwt.get_unverified_header(id_token)
         except pyjwt.PyJWTError as exc:
+            _log.warning("google.id-token-rejected", reason="header_invalid")
             raise InvalidGoogleTokenError() from exc
 
         kid = unverified_header.get("kid")
         if not kid:
+            _log.warning("google.id-token-rejected", reason="kid_missing")
             raise InvalidGoogleTokenError()
 
         key = await self._get_signing_key(kid)
         if key is None:
+            _log.warning("google.id-token-rejected", reason="kid_unknown")
             raise InvalidGoogleTokenError()
 
         try:
@@ -104,23 +107,32 @@ class JwksGoogleIdTokenVerifier:
                 options={"require": ["iss", "sub", "aud", "exp", "iat"]},
             )
         except pyjwt.PyJWTError as exc:
+            _log.warning(
+                "google.id-token-rejected",
+                reason="signature_or_claims_invalid",
+                error_type=type(exc).__name__,
+            )
             raise InvalidGoogleTokenError() from exc
 
         if claims["iss"] not in _GOOGLE_ISSUERS:
+            _log.warning("google.id-token-rejected", reason="issuer_invalid")
             raise InvalidGoogleTokenError()
 
         email = claims.get("email")
         if not isinstance(email, str) or not email:
+            _log.warning("google.id-token-rejected", reason="email_missing")
             raise InvalidGoogleTokenError()
 
         raw_aud = claims["aud"]
         if isinstance(raw_aud, list):
             if not raw_aud:
+                _log.warning("google.id-token-rejected", reason="audience_invalid")
                 raise InvalidGoogleTokenError()
             aud_str = raw_aud[0]
         else:
             aud_str = raw_aud
         if not isinstance(aud_str, str):
+            _log.warning("google.id-token-rejected", reason="audience_invalid")
             raise InvalidGoogleTokenError()
 
         return GoogleClaims(

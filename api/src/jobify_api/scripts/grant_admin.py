@@ -100,16 +100,15 @@ def main() -> None:
     report = asyncio.run(_apply(email))
 
     if not report.matched:
-        _log.error("grant-admin.user-not-found", email=email)
+        _log.error("grant-admin.user-not-found")
         sys.exit(1)
 
     if report.already_admin:
-        _log.info("grant-admin.no-change", email=email, user_id=report.user_id)
+        _log.info("grant-admin.no-change", user_id=report.user_id)
         return
 
     _log.info(
         "grant-admin.done",
-        email=email,
         user_id=report.user_id,
         from_role=report.from_role,
         to_role="admin",

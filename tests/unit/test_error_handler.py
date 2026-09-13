@@ -8,7 +8,7 @@ import pytest
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from prometheus_client import REGISTRY
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from jobify_api.app_factory import create_app
 from tests.logging_helpers import json_log_lines, rebind_logging_per_request
@@ -193,3 +193,52 @@ def test_validation_failure_increments_counter(json_app: TestClient) -> None:
     json_app.post("/validate/7", json={"count": "nope"})
 
     assert REGISTRY.get_sample_value("jobify_http_validation_failures_total", labels) == before + 1
+
+
+class _Strict(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    count: int
+
+
+@pytest.fixture
+def strict_json_app(
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> Iterator[TestClient]:
+    monkeypatch.setenv("JOBIFY_ENV", "local")
+    monkeypatch.setenv("JOBIFY_SERVICE_NAME", "jobify-api")
+    monkeypatch.setenv("JOBIFY_LOG_LEVEL", "INFO")
+    monkeypatch.setenv("JOBIFY_LOG_FORMAT", "json")
+    monkeypatch.setenv("JOBIFY_DB_URL", "postgresql+asyncpg://u:p@h:5432/d")
+    monkeypatch.setenv("JOBIFY_REDIS_URL", "redis://localhost:6379/0")
+    monkeypatch.setenv("JOBIFY_JWT_SECRET", "x" * 32)
+    monkeypatch.setenv("JOBIFY_GOOGLE_OAUTH_CLIENT_IDS", "test.apps.googleusercontent.com")
+    app = create_app()
+
+    @app.post("/strict")
+    async def strict(body: _Strict) -> dict[str, int]:
+        return {"count": body.count}
+
+    with TestClient(app, raise_server_exceptions=False) as client:
+        capsys.readouterr()
+        rebind_logging_per_request(client, monkeypatch)
+        yield client
+
+
+def test_validation_log_loc_parts_are_capped_at_64_chars(
+    strict_json_app: TestClient, capsys: pytest.CaptureFixture[str]
+) -> None:
+    long_key = "k" * 500
+    strict_json_app.post("/strict", json={"count": 1, long_key: 1})
+
+    output = capsys.readouterr().out
+    lines = [x for x in json_log_lines(output) if x["event"] == "http.validation-failed"]
+    (line,) = lines
+    fields = line["fields"]
+    extra_forbidden = [f for f in fields if f["type"] == "extra_forbidden"]
+    assert len(extra_forbidden) == 1
+    for field in fields:
+        for part in field["loc"].split("."):
+            assert len(part) <= 64
+    long_part = extra_forbidden[0]["loc"].split(".")[-1]
+    assert len(long_part) == 64
+    assert long_part.endswith("…")

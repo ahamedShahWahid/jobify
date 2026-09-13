@@ -24,6 +24,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobify.audit import audit_log
+from jobify.db.errors import constraint_name
 from jobify.db.models import (
     Employer,
     EmployerInvite,
@@ -188,6 +189,11 @@ async def accept_invite(
     except IntegrityError as e:
         # Concurrent accept raced us to the membership partial-UNIQUE.
         await session.rollback()
+        _log.info(
+            "invite.accept-conflict",
+            invite_id=str(invite.id),
+            constraint=constraint_name(e),
+        )
         raise HTTPException(status_code=409, detail="already_a_member") from e
 
     await audit_log(

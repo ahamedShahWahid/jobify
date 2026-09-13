@@ -10,11 +10,13 @@ from __future__ import annotations
 
 from typing import Any
 
+import structlog
 from fastapi import APIRouter, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
+_log = structlog.get_logger(__name__)
 router = APIRouter()
 
 
@@ -32,6 +34,8 @@ async def ready(request: Request) -> JSONResponse:
         # SQLAlchemy-wrapped driver errors (e.g. auth failure, unknown host via DNS).
         checks["db"] = f"error: {type(exc).__name__}"
         overall_ok = False
+        # No traceback: probes fire every few seconds while a dependency is down.
+        _log.warning("ready.dependency-failed", dependency="db", error_type=type(exc).__name__)
     except Exception as exc:  # noqa: BLE001 — readiness boundary: any dependency error is a 503, not a 500
         # asyncpg surfaces network-level failures (connection refused, unreachable host)
         # as raw OSError subclasses rather than wrapping them in SQLAlchemyError.
@@ -39,6 +43,7 @@ async def ready(request: Request) -> JSONResponse:
         # error returns 503 instead of propagating as an unhandled 500.
         checks["db"] = f"error: {type(exc).__name__}"
         overall_ok = False
+        _log.warning("ready.dependency-failed", dependency="db", error_type=type(exc).__name__)
 
     try:
         await request.app.state.redis.ping()
@@ -46,6 +51,7 @@ async def ready(request: Request) -> JSONResponse:
     except Exception as exc:  # noqa: BLE001 — readiness boundary: any dependency error is a 503, not a 500
         checks["redis"] = f"error: {type(exc).__name__}"
         overall_ok = False
+        _log.warning("ready.dependency-failed", dependency="redis", error_type=type(exc).__name__)
 
     body: dict[str, Any] = {
         "status": "ready" if overall_ok else "not_ready",
