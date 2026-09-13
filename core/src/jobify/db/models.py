@@ -420,6 +420,17 @@ class RefreshToken(Base):
             "user_id",
             postgresql_where="revoked_at IS NULL",
         ),
+        # Serve cleanup_refresh_tokens' `expires_at < now() OR revoked_at <
+        # cutoff` as a bitmap-or instead of a sequential scan (PERF-08). The
+        # revoked_at index is partial: a NULL row never matches `revoked_at <
+        # cutoff`, and that condition implies IS NOT NULL, so the planner can
+        # still use it.
+        Index("ix_refresh_tokens_expires_at", "expires_at"),
+        Index(
+            "ix_refresh_tokens_revoked_at",
+            "revoked_at",
+            postgresql_where="revoked_at IS NOT NULL",
+        ),
         {"schema": "jobify"},
     )
 
