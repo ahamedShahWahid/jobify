@@ -110,65 +110,83 @@ async def test_query_task_formats_with_search_result_prefix() -> None:
 # ---------------------------------------------------------------------------
 
 
+_PROVIDER_BODY_SECRET = "PROVIDER_BODY_TEXT_the-users-resume-content-leaks-here"
+
+
 @pytest.mark.asyncio
 async def test_5xx_maps_to_transient_error() -> None:
-    """ServerError (5xx) from the SDK → TransientEmbeddingError."""
+    """ServerError (5xx) from the SDK → TransientEmbeddingError.
+
+    The raised message must be built from class + code + status only — the
+    SDK's ``details``/``message`` (rendered into ``str(exc)`` by
+    ``APIError.__init__``) can carry request/response body text and must not
+    reach our exception message, which Celery's trace line renders.
+    """
     from google.genai import errors
 
     provider, embed_mock = _make_provider()
 
-    # Build a minimal fake response that satisfies APIError.__init__
-    fake_response = MagicMock()
-    fake_response.status_code = 500
-    fake_response.json.return_value = {
-        "message": "internal error",
-        "status": "INTERNAL",
-        "code": 500,
-    }
-    embed_mock.side_effect = errors.ServerError(500, fake_response)
+    # APIError.__init__(code, response_json, response=None) reads status/message
+    # straight off response_json (a dict) — not via response.json().
+    response_json = {"message": _PROVIDER_BODY_SECRET, "status": "INTERNAL", "code": 500}
+    embed_mock.side_effect = errors.ServerError(500, response_json, MagicMock(status_code=500))
 
-    with pytest.raises(TransientEmbeddingError):
+    with pytest.raises(TransientEmbeddingError) as exc_info:
         await provider.encode(text="x", task=EmbeddingTask.DOCUMENT)
+
+    message = str(exc_info.value)
+    assert _PROVIDER_BODY_SECRET not in message
+    assert "ServerError" in message
+    assert "500" in message
+    assert "INTERNAL" in message
 
 
 @pytest.mark.asyncio
 async def test_429_maps_to_transient_error() -> None:
-    """ClientError with code=429 (rate limit) → TransientEmbeddingError."""
+    """ClientError with code=429 (rate limit) → TransientEmbeddingError, no provider body text."""
     from google.genai import errors
 
     provider, embed_mock = _make_provider()
 
-    fake_response = MagicMock()
-    fake_response.status_code = 429
-    fake_response.json.return_value = {
-        "message": "rate limit",
+    response_json = {
+        "message": _PROVIDER_BODY_SECRET,
         "status": "RESOURCE_EXHAUSTED",
         "code": 429,
     }
-    embed_mock.side_effect = errors.ClientError(429, fake_response)
+    embed_mock.side_effect = errors.ClientError(429, response_json, MagicMock(status_code=429))
 
-    with pytest.raises(TransientEmbeddingError):
+    with pytest.raises(TransientEmbeddingError) as exc_info:
         await provider.encode(text="x", task=EmbeddingTask.DOCUMENT)
+
+    message = str(exc_info.value)
+    assert _PROVIDER_BODY_SECRET not in message
+    assert "ClientError" in message
+    assert "429" in message
+    assert "RESOURCE_EXHAUSTED" in message
 
 
 @pytest.mark.asyncio
 async def test_other_4xx_maps_to_permanent_error() -> None:
-    """ClientError with code=400 (bad request) → EmbeddingProviderError."""
+    """ClientError with code=400 (bad request) → EmbeddingProviderError, no provider body text."""
     from google.genai import errors
 
     provider, embed_mock = _make_provider()
 
-    fake_response = MagicMock()
-    fake_response.status_code = 400
-    fake_response.json.return_value = {
-        "message": "bad input",
+    response_json = {
+        "message": _PROVIDER_BODY_SECRET,
         "status": "INVALID_ARGUMENT",
         "code": 400,
     }
-    embed_mock.side_effect = errors.ClientError(400, fake_response)
+    embed_mock.side_effect = errors.ClientError(400, response_json, MagicMock(status_code=400))
 
-    with pytest.raises(EmbeddingProviderError):
+    with pytest.raises(EmbeddingProviderError) as exc_info:
         await provider.encode(text="x", task=EmbeddingTask.DOCUMENT)
+
+    message = str(exc_info.value)
+    assert _PROVIDER_BODY_SECRET not in message
+    assert "ClientError" in message
+    assert "400" in message
+    assert "INVALID_ARGUMENT" in message
 
 
 # ---------------------------------------------------------------------------

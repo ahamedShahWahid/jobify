@@ -242,3 +242,33 @@ def test_validation_log_loc_parts_are_capped_at_64_chars(
     long_part = extra_forbidden[0]["loc"].split(".")[-1]
     assert len(long_part) == 64
     assert long_part.endswith("…")
+
+
+def test_validation_log_fields_capped_at_20_with_truncated_count(
+    strict_json_app: TestClient, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """25 unknown keys → only the first 20 are logged, plus fields_truncated=5.
+
+    Guards against an attacker sending an oversized payload to blow up the
+    log line (and the fields list is otherwise unbounded — one entry per
+    validation error).
+    """
+    payload: dict[str, int] = {"count": 1}
+    for i in range(25):
+        payload[f"extra_{i}"] = i
+    strict_json_app.post("/strict", json=payload)
+
+    output = capsys.readouterr().out
+    (line,) = (x for x in json_log_lines(output) if x["event"] == "http.validation-failed")
+    assert len(line["fields"]) == 20
+    assert line["fields_truncated"] == 5
+
+
+def test_validation_log_has_no_truncated_key_under_cap(
+    strict_json_app: TestClient, capsys: pytest.CaptureFixture[str]
+) -> None:
+    strict_json_app.post("/strict", json={"count": 1, "extra": 1})
+
+    output = capsys.readouterr().out
+    (line,) = (x for x in json_log_lines(output) if x["event"] == "http.validation-failed")
+    assert "fields_truncated" not in line

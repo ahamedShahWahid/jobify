@@ -5,6 +5,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import structlog
+from celery.exceptions import Retry
 from celery.signals import task_failure, task_postrun, task_prerun, task_retry
 from prometheus_client import REGISTRY
 from structlog.testing import capture_logs
@@ -103,15 +104,34 @@ def test_postrun_without_prerun_still_counts() -> None:
 
 
 def test_retry_logs_warning_with_error_type_and_no_args() -> None:
+    """Celery's real ``task_retry`` signal (handle_retry) sends ``reason=`` a
+    ``celery.exceptions.Retry`` wrapper, not the underlying exception — the
+    real cause lives at ``reason.exc``."""
     request = SimpleNamespace(id="t-r", task="jobify.test_task", retries=1, args=("secret-arg",))
     with capture_logs() as logs:
-        task_retry.send(sender=_TASK, request=request, reason=TimeoutError("slow"), einfo=None)
+        task_retry.send(
+            sender=_TASK,
+            request=request,
+            reason=Retry(exc=TimeoutError("slow"), when=4),
+            einfo=None,
+        )
 
     (line,) = (e for e in logs if e["event"] == "task.retry")
     assert line["log_level"] == "warning"
     assert line["task_name"] == "jobify.test_task"
     assert line["error_type"] == "TimeoutError"
     assert "secret-arg" not in repr(line)
+
+
+def test_retry_logs_error_type_for_plain_exception_reason() -> None:
+    """A plain exception (not wrapped in ``Retry``) also yields error_type —
+    covers autoretry_for and any direct-raise path."""
+    request = SimpleNamespace(id="t-r2", task="jobify.test_task", retries=0, args=())
+    with capture_logs() as logs:
+        task_retry.send(sender=_TASK, request=request, reason=ValueError("bad"), einfo=None)
+
+    (line,) = (e for e in logs if e["event"] == "task.retry")
+    assert line["error_type"] == "ValueError"
 
 
 def test_failure_logs_error_without_second_traceback_or_args() -> None:

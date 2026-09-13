@@ -146,12 +146,17 @@ def record_task_run(task_id: str, task: Any, state: str | None = None, **_kwargs
 
 @task_retry.connect  # type: ignore[untyped-decorator]
 def log_task_retry(request: Any, reason: object = None, **_kwargs: object) -> None:
+    # Celery's real handle_retry sends `reason=` a celery.exceptions.Retry
+    # wrapper, not the underlying exception — unwrap `reason.exc` (may be
+    # None) to get the real cause; fall back to `reason` itself for a plain
+    # exception (autoretry_for) or string reason.
+    cause = getattr(reason, "exc", None) or reason
     _log.warning(
         "task.retry",
         task_id=getattr(request, "id", None),
         task_name=getattr(request, "task", None),
         retries=getattr(request, "retries", None),
-        error_type=type(reason).__name__ if isinstance(reason, BaseException) else None,
+        error_type=type(cause).__name__ if isinstance(cause, BaseException) else None,
     )
 
 

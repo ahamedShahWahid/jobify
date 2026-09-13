@@ -247,7 +247,8 @@ async def test_sweep_retries_on_failed_channel(
         n.send_after = datetime.now(UTC) - timedelta(seconds=1)
         await session.commit()
 
-        await _sweep_notifications_async(sm=sm, email_channel=failing, batch_size=10)
+        with capture_logs() as retry_logs:
+            await _sweep_notifications_async(sm=sm, email_channel=failing, batch_size=10)
         await session.refresh(n)
         assert (
             n.status == NotificationStatus.PENDING
@@ -255,6 +256,11 @@ async def test_sweep_retries_on_failed_channel(
         assert n.attempts == expected_attempts
         assert n.last_error == "simulated"
         assert n.send_after > datetime.now(UTC)
+
+        (retry_line,) = (e for e in retry_logs if e["event"] == "sweep.retry-scheduled")
+        assert retry_line["log_level"] == "warning"
+        assert retry_line["channel"] == NotificationChannel.EMAIL
+        assert retry_line["error"] == "simulated"
 
     # 5th failure: reset send_after then run again → FAILED.
     n.send_after = datetime.now(UTC) - timedelta(seconds=1)
@@ -268,6 +274,9 @@ async def test_sweep_retries_on_failed_channel(
     assert n.last_error == "simulated"
 
     (line,) = (e for e in logs if e["event"] == "sweep.max-attempts-reached")
+    assert line["log_level"] == "error"
+    assert line["channel"] == NotificationChannel.EMAIL
+    assert line["error"] == "simulated"
     assert "last_error" not in line
 
 

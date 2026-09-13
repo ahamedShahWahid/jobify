@@ -60,14 +60,22 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
                     config=types.EmbedContentConfig(output_dimensionality=self._output_dim),
                 )
         except errors.ServerError as exc:
-            raise TransientEmbeddingError(str(exc)) from exc
+            # class + code + status only (mirrors llm_parser.py) — exc's own
+            # str()/message/details can carry the provider's response body,
+            # which Celery's trace line would render verbatim.
+            raise TransientEmbeddingError(
+                f"gemini:{type(exc).__name__} {exc.code} {exc.status}"
+            ) from exc
         except errors.ClientError as exc:
+            detail = f"gemini:{type(exc).__name__} {exc.code} {exc.status}"
             # 429 Too Many Requests → transient; all other 4xx → permanent
             if exc.code == 429:
-                raise TransientEmbeddingError(str(exc)) from exc
-            raise EmbeddingProviderError(str(exc)) from exc
+                raise TransientEmbeddingError(detail) from exc
+            raise EmbeddingProviderError(detail) from exc
         except errors.APIError as exc:
-            raise EmbeddingProviderError(str(exc)) from exc
+            raise EmbeddingProviderError(
+                f"gemini:{type(exc).__name__} {exc.code} {exc.status}"
+            ) from exc
 
         if not resp.embeddings or not resp.embeddings[0].values:
             raise EmbeddingProviderError("empty embedding response")

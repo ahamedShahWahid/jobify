@@ -314,6 +314,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         payload = _load_and_validate(args.path)
     except Exception:  # noqa: BLE001 — CLI boundary: any failure maps to an exit code
+        # Traceback is fine here: it renders the operator-supplied seed-file
+        # JSON (a fixture we authored), never applicant/user PII.
         _log.exception("seed.validation-failed")
         return 2
     try:

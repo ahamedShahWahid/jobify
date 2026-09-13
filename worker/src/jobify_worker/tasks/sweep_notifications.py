@@ -313,23 +313,25 @@ async def _dispatch_one(
             if n.attempts >= _worker_settings.notify_max_attempts:
                 n.status = NotificationStatus.FAILED
                 _clear_claim(n)
-                _log.warning(
+                _log.error(
                     "sweep.max-attempts-reached",
                     notification_id=str(notification_id),
                     attempts=n.attempts,
                     channel=n.channel,
+                    error=result.message,
                 )
             else:
                 n.status = NotificationStatus.PENDING
                 delay = min(60 * (2 ** (n.attempts - 1)), 3600) + random.randint(0, 30)  # noqa: S311
                 n.send_after = datetime.now(UTC) + timedelta(seconds=delay)
                 _clear_claim(n)
-                _log.info(
+                _log.warning(
                     "sweep.retry-scheduled",
                     notification_id=str(notification_id),
                     attempts=n.attempts,
                     delay_seconds=delay,
                     channel=n.channel,
+                    error=result.message,
                 )
 
         await session.commit()
