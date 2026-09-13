@@ -20,7 +20,7 @@ from typing import Annotated, Literal
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import and_, case, distinct, func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobify.audit import audit_log
@@ -91,45 +91,47 @@ async def list_my_jobs(
 ) -> RecruiterJobsPage:
     await _require_recruiter(user)
 
-    applicant_count_expr = func.count(
-        distinct(
-            case(
-                (
-                    and_(
-                        Application.deleted_at.is_(None),
-                        Application.status == "applied",
-                    ),
-                    Application.id,
-                ),
-            )
+    # Correlated scalar subqueries, not outer joins: an outer join against
+    # applications/matches multiplies rows per job before GROUP BY collapses
+    # them (up to applications x matches intermediate rows per job), and
+    # neither table's join column (job_id) carried a matching index. Each
+    # subquery is now a single index-scan-and-count served by
+    # ix_applications_job_created_live / ix_matches_job_surfaced.
+    applicant_count_expr = (
+        select(func.count(Application.id))
+        .where(
+            Application.job_id == Job.id,
+            Application.deleted_at.is_(None),
+            Application.status == "applied",
         )
-    ).label("applicant_count")
-    surfaced_match_count_expr = func.count(
-        distinct(
-            case(
-                (
-                    and_(
-                        Match.deleted_at.is_(None),
-                        Match.surfaced_at.is_not(None),
-                    ),
-                    Match.id,
-                ),
-            )
+        .correlate(Job)
+        .scalar_subquery()
+    )
+    surfaced_match_count_expr = (
+        select(func.count(Match.id))
+        .where(
+            Match.job_id == Job.id,
+            Match.deleted_at.is_(None),
+            Match.surfaced_at.is_not(None),
         )
-    ).label("surfaced_match_count")
+        .correlate(Job)
+        .scalar_subquery()
+    )
 
     stmt = (
-        select(Job, Employer, applicant_count_expr, surfaced_match_count_expr)
+        select(
+            Job,
+            Employer,
+            applicant_count_expr.label("applicant_count"),
+            surfaced_match_count_expr.label("surfaced_match_count"),
+        )
         .join(EmployerUser, EmployerUser.employer_id == Job.employer_id)
         .join(Employer, Employer.id == Job.employer_id)
-        .outerjoin(Application, Application.job_id == Job.id)
-        .outerjoin(Match, Match.job_id == Job.id)
         .where(
             EmployerUser.user_id == user.id,
             EmployerUser.deleted_at.is_(None),
             Job.deleted_at.is_(None),
         )
-        .group_by(Job.id, Employer.id)
         .order_by(Job.posted_at.desc(), Job.id.desc())
     )
 

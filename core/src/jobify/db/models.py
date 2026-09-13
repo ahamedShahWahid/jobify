@@ -110,6 +110,16 @@ class User(Base):
     __table_args__ = (
         Index("ix_users_email_live", "email", postgresql_where="deleted_at IS NULL"),
         Index("ix_users_phone_live", "phone", postgresql_where="deleted_at IS NULL"),
+        Index(
+            # Every live equality lookup compares func.lower(email) against an
+            # already-lowercased value (team_service.add_member, routes/invites.py,
+            # dsr export/deleter); a plain btree on email can't serve that. Kept
+            # alongside ix_users_email_live, which still serves the two exact-case
+            # comparisons in auth/service.py and scripts/grant_admin.py.
+            "ix_users_email_lower_live",
+            text("lower(email)"),
+            postgresql_where="deleted_at IS NULL",
+        ),
         {"schema": "jobify"},
     )
 
@@ -569,6 +579,15 @@ class EmployerInvite(Base):
             "email",
             postgresql_where="deleted_at IS NULL AND status = 'pending'",
         ),
+        # Every live call site (routes/invites.py, dsr export/deleter) compares
+        # func.lower(email) against an already-lowercased value — the plain
+        # index above can't serve that. Kept alongside it; nothing queries
+        # EmployerInvite.email with exact case.
+        Index(
+            "ix_employer_invites_email_lower_live",
+            text("lower(email)"),
+            postgresql_where="deleted_at IS NULL AND status = 'pending'",
+        ),
         CheckConstraint("role IN ('owner','member')", name="ck_employer_invites_role"),
         {"schema": "jobify"},
     )
@@ -762,6 +781,18 @@ class Application(Base):
             "ix_applications_applicant_created_at",
             "applicant_id",
             text("created_at DESC"),
+            postgresql_where="deleted_at IS NULL",
+        ),
+        Index(
+            # Serves GET /v1/jobs/{id}/applicants' (created_at DESC, id DESC)
+            # keyset filtered by job_id, and the applicant_count scalar
+            # subquery in GET /v1/jobs/me (job_id + deleted_at is null, then
+            # status='applied' filtered from the same index scan). Neither
+            # existing index leads with job_id.
+            "ix_applications_job_created_live",
+            "job_id",
+            text("created_at DESC"),
+            text("id DESC"),
             postgresql_where="deleted_at IS NULL",
         ),
         {"schema": "jobify"},
@@ -1120,6 +1151,16 @@ class AuditLog(Base):
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
+    )
+
+    __table_args__ = (
+        # GET /v1/admin/audit-logs with no filters (the common case) keysets
+        # on (created_at DESC, id DESC). No column-specific filter is here
+        # because there wasn't one before this index — the filtered call
+        # shapes stay index-free scans over a table that is admin-only and,
+        # unlike every other table here, has no deleted_at to key off.
+        Index("ix_audit_logs_created_id", text("created_at DESC"), text("id DESC")),
+        {"schema": "jobify"},
     )
 
 
