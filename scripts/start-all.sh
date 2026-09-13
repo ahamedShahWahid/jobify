@@ -100,7 +100,7 @@ say "Applying Alembic migrations (→ head)…"
 # ── 3. App-layer services ──────────────────────────────────────────────────
 say "Starting API, worker, frontend…"
 spawn api "$RUN_DIR/api.pid" "$RUN_DIR/api.log" \
-  "cd '$ROOT' && exec uv run --env-file='$ENV_FILE' uvicorn jobify_api.main:app --reload --port 8000"
+  "cd '$ROOT' && exec uv run --env-file='$ENV_FILE' uvicorn jobify_api.main:app --reload --port 8000 --no-access-log"
 
 # The `outbox` queue is NOT optional: API/worker transactions only STAGE task
 # intents in `outbox_events`, and `jobify.sweep_outbox` (the only thing that

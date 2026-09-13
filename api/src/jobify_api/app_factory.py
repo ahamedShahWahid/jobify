@@ -19,6 +19,7 @@ from jobify.observability.logging import configure_logging
 from jobify_api.auth.google_verifier import JwksGoogleIdTokenVerifier
 from jobify_api.middleware.error_handler import register_error_handlers
 from jobify_api.middleware.metrics import MetricsMiddleware
+from jobify_api.middleware.request_context import RequestContextMiddleware
 from jobify_api.middleware.request_id import RequestIdMiddleware
 from jobify_api.rate_limit import RedisRateLimiter
 from jobify_api.routes import (
@@ -73,6 +74,10 @@ def create_app() -> FastAPI:
         accepted_client_ids=list(settings.google_oauth_client_ids),
         cache_ttl_seconds=settings.google_jwks_cache_ttl_seconds,
     )
+    # Added FIRST so it is innermost (last-added = outermost): it must sit inside
+    # RequestIdMiddleware to read the request id. Binds log context + writes the
+    # http.request access line (see middleware/request_context.py).
+    app.add_middleware(RequestContextMiddleware)
     app.add_middleware(RequestIdMiddleware)
     # MetricsMiddleware wraps RequestIdMiddleware (counts real routed requests,
     # including HTTPException/500 responses) but stays INSIDE CORS below, so CORS
