@@ -3,7 +3,7 @@
 # start-all.sh — boot the full local Jobify stack in the background.
 #
 # Brings up (idempotently — safe to re-run):
-#   • Postgres     (Homebrew service)        • Celery worker (parse/embed/score/notify/outbox)
+#   • Postgres     (Homebrew service)        • Celery worker (parse/embed/score/notify/outbox) — metrics on :9101
 #   • Celery beat  (sweep schedules)
 #   • Redis        (Homebrew service)         • Frontend     (Vite dev server  :5173)
 #   • Alembic migrations → head               • Flutter web  (:8080, opt-in)
@@ -99,8 +99,15 @@ say "Applying Alembic migrations (→ head)…"
 
 # ── 3. App-layer services ──────────────────────────────────────────────────
 say "Starting API, worker, frontend…"
+# prometheus_client multiprocess mode: one directory PER SERVICE (a shared one
+# would merge API and worker series in both scrapes), emptied on every start
+# (files from dead pids of a previous run would otherwise keep reporting).
+PROM_DIR="$RUN_DIR/prometheus"
+rm -rf "$PROM_DIR"
+mkdir -p "$PROM_DIR/api" "$PROM_DIR/worker"
+
 spawn api "$RUN_DIR/api.pid" "$RUN_DIR/api.log" \
-  "cd '$ROOT' && exec uv run --env-file='$ENV_FILE' uvicorn jobify_api.main:app --reload --port 8000 --no-access-log"
+  "cd '$ROOT' && PROMETHEUS_MULTIPROC_DIR='$PROM_DIR/api' exec uv run --env-file='$ENV_FILE' uvicorn jobify_api.main:app --reload --port 8000 --no-access-log"
 
 # The `outbox` queue is NOT optional: API/worker transactions only STAGE task
 # intents in `outbox_events`, and `jobify.sweep_outbox` (the only thing that
@@ -109,7 +116,7 @@ spawn api "$RUN_DIR/api.pid" "$RUN_DIR/api.log" \
 # runs it — no parse, no embed, no score, empty feed. Keep in step with
 # worker/README.md and the root CLAUDE.md command.
 spawn worker "$RUN_DIR/worker.pid" "$RUN_DIR/worker.log" \
-  "cd '$ROOT' && exec uv run --env-file='$ENV_FILE' celery -A jobify_worker.worker_app worker --pool=solo --concurrency=1 -Q parse,embed,score,notify,outbox"
+  "cd '$ROOT' && PROMETHEUS_MULTIPROC_DIR='$PROM_DIR/worker' JOBIFY_WORKER_METRICS_PORT=9101 exec uv run --env-file='$ENV_FILE' celery -A jobify_worker.worker_app worker --pool=solo --concurrency=1 -Q parse,embed,score,notify,outbox"
 
 # Beat only ENQUEUES; the worker above executes. Both sweeps (notifications +
 # durable outbox) and the daily outbox cleanup live in its schedule.

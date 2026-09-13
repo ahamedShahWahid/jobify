@@ -16,6 +16,13 @@ Every domain table: `id` (uuid4), `created_at`, `updated_at`, `deleted_at TIMEST
 - **DB errors never embed bound values** — the engine is built with `hide_parameters=True`.
 - **`uvicorn.access` is disabled in code, not via the CLI flag.** uvicorn decides per-connection whether to emit an access-log record by checking `self.access_logger.hasHandlers()` — which walks up to the root handler if the logger propagates, so `--no-access-log` alone doesn't stop it once `configure_logging` has run. `uvicorn.access` is therefore reset to no handlers **and `propagate=False`** (unlike `uvicorn`/`uvicorn.error`, which do propagate) so `hasHandlers()` stays False and the raw request line — method, path, AND query string, e.g. `/v1/feed?q=<free-text search>` — never gets emitted. The app's own `http.request` line (route template, no query string) is the access log.
 
+## Metrics — spec `2026-09-13-backend-observability-foundation-design.md`
+
+- **Declare every metric in `jobify/observability/metrics.py`** (`prometheus_client`), never inline. Cardinality rule: label values only from closed sets — route templates, registered task names, literal service/operation strings, `outcome ∈ {success, error, retry, failure}`; never ids, raw paths or messages.
+- **Multiprocess mode is decided at import** by `PROMETHEUS_MULTIPROC_DIR`; scrapes must render `build_registry()`, not `REGISTRY`. One directory per service (API ≠ worker), emptied before start.
+- **Tests assert deltas** via `REGISTRY.get_sample_value(...)` — the default registry is process-global. Multiprocess behavior is tested in subprocesses.
+- DB-backed gauges are per-scrape collectors (`api/.../operational_metrics.py`), not declared metrics — `Collector.collect()` is sync, so the route queries first.
+
 ## Applicant preferences (`applicant_preferences`) — spec `2026-07-01-resume-review-preferences-design.md`
 
 - **One live row per applicant** (partial-unique `ix_applicant_preferences_applicant_live`), **eagerly created at signup** by `AuthService._upsert_identity` (like consent seeding), and backfilled for older applicants by migration 0028 — the API provisions a row that never existed but 500s on a soft-deleted-only row (see `api/CLAUDE.md`). Workers still outer-join defensively for seeded/test applicants, with `deleted_at IS NULL` in the JOIN's **ON clause** so a soft-deleted row degrades to "no prefs" rather than dropping the applicant (see `worker/CLAUDE.md` → Scoring).

@@ -249,6 +249,7 @@ All settings are read from environment variables prefixed `JOBIFY_`. The `.env` 
 | `JOBIFY_CORS_ALLOW_ORIGINS` | no | `http://localhost:8080` | Comma-separated list of allowed CORS origins (web frontend). |
 | `JOBIFY_REDIS_URL`    | yes      | —       | Redis for API rate limits and readiness. |
 | `JOBIFY_METRICS_BEARER_TOKEN` | staging/prod | — | Bearer token protecting `/metrics` |
+| `PROMETHEUS_MULTIPROC_DIR` | multi-process deploys | — | prometheus_client multiprocess mode: a directory owned by the API alone, emptied before start. Unset = single-process metrics |
 
 The API refuses to boot if required variables are missing or invalid. Worker-only
 Gemini, email, lease, batch, and Celery settings are documented in `worker/README.md`.
