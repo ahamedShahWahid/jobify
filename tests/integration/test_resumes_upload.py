@@ -191,6 +191,55 @@ async def test_upload_resume_rejects_oversized_payload(
 
 
 @pytest.mark.integration
+async def test_upload_resume_deletes_orphan_blob_when_db_write_fails(
+    async_client: httpx.AsyncClient,
+    google_verifier,
+    session: AsyncSession,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """PERF-07: the blob is now written before the DB row. If the DB write
+    then fails, the upload must not leave an unreferenced blob behind.
+    """
+    applicant_id, access = await _signin_as_applicant(async_client, google_verifier)
+
+    def _boom(*args: object, **kwargs: object) -> None:
+        raise RuntimeError("simulated DB failure after upload")
+
+    monkeypatch.setattr("jobify_api.routes.resumes.enqueue_task", _boom)
+
+    # An unhandled exception is handled cleanly by the app's own
+    # ServerErrorMiddleware (which does write a 500 response — see the
+    # `http.request status=500` line other assertions here rely on
+    # indirectly), but Starlette re-raises it afterwards for the ASGI
+    # server to see, and ASGITransport's default raise_app_exceptions=True
+    # propagates that to the caller instead of returning the response.
+    with pytest.raises(RuntimeError, match="simulated DB failure"):
+        await async_client.post(
+            "/v1/applicants/me/resumes",
+            files={"file": ("cv.pdf", _TINY_PDF, "application/pdf")},
+            headers=_auth(access),
+        )
+
+    # rglob also yields the now-empty resumes/ directory storage.save()
+    # created — only files matter for "was the blob actually deleted".
+    assert not any(
+        p.is_file() for p in tmp_path.rglob("*")
+    ), "orphaned blob left on disk after a failed DB write"
+
+    # The real get_session dependency rolls back on any unhandled exception
+    # (jobify_api.dependencies.get_session); the test harness's shared-session
+    # override skips that (by design, so a *successful* request's writes stay
+    # inspectable) — roll back explicitly here to see what a real request
+    # would have left behind: nothing, since commit() was never reached.
+    await session.rollback()
+    rows = (
+        await session.execute(select(Resume).where(Resume.applicant_id == uuid.UUID(applicant_id)))
+    ).all()
+    assert rows == []
+
+
+@pytest.mark.integration
 async def test_get_resume_returns_metadata(
     async_client: httpx.AsyncClient,
     google_verifier,
