@@ -445,8 +445,15 @@ class _SpecRow extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          const Spacer(),
-          Flexible(child: trailing),
+          const SizedBox(width: JobifySpacing.lg),
+          // Expanded + end-Align, not Spacer + Flexible: that pair splits the
+          // free width 50/50 and a loose Flexible parks the value at mid-row.
+          Expanded(
+            child: Align(
+              alignment: AlignmentDirectional.topEnd,
+              child: trailing,
+            ),
+          ),
         ],
       ),
     );

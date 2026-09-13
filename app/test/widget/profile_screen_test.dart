@@ -95,6 +95,40 @@ ProviderScope _buildScope({required Widget home, AuthState? authState}) {
 }
 
 void main() {
+  testWidgets('spec-sheet values and Add prompts sit flush at the row end, '
+      'even on a wide viewport', (tester) async {
+    // Regression: `Spacer()` + loose `Flexible` split the free width 50/50,
+    // parking every value at mid-row instead of the right edge.
+    await tester.binding.setSurfaceSize(const Size(1000, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_buildScope(home: const ProfileScreen()));
+    await tester.pumpAndSettle();
+
+    double rowEnd(Finder child) =>
+        tester
+            .getTopRight(
+              find.ancestor(of: child, matching: find.byType(Row)).first,
+            )
+            .dx;
+
+    final value = find.text('Pune');
+    expect(tester.getTopRight(value).dx, closeTo(rowEnd(value), 1));
+
+    // `_FakePrefsRepo` has no desired role, so that row shows the Add prompt.
+    final add =
+        find
+            .ancestor(
+              of: find.text(
+                lookupAppLocalizations(
+                  const Locale('en'),
+                ).profileAddFieldAction,
+              ),
+              matching: find.byType(InkWell),
+            )
+            .first;
+    expect(tester.getTopRight(add).dx, closeTo(rowEnd(add), 1));
+  });
+
   testWidgets(
     'renders user name + email + résumé/notifications/privacy rows + Sign out',
     (tester) async {
