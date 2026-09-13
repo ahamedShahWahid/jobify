@@ -15,12 +15,16 @@ import 'package:jobify_app/presentation/feed/feed_summary_controller.dart';
 class _FakeApplicationsRepo implements ApplicationsRepository {
   _FakeApplicationsRepo(this._page);
   final ApplicationsPageDto _page;
+  int? requestedLimit;
 
   @override
   Future<ApplicationsPageDto> fetchPage({
     String? cursor,
     int limit = 20,
-  }) async => _page;
+  }) async {
+    requestedLimit = limit;
+    return _page;
+  }
 
   @override
   Future<ApplicationDto> withdraw(String applicationId) async =>
@@ -34,10 +38,13 @@ class _FakeApplicationsRepo implements ApplicationsRepository {
 class _FakeSavedJobsRepo implements SavedJobsRepository {
   _FakeSavedJobsRepo(this._page);
   final SavedJobsPageDto _page;
+  int? requestedLimit;
 
   @override
-  Future<SavedJobsPageDto> fetchPage({String? cursor, int limit = 20}) async =>
-      _page;
+  Future<SavedJobsPageDto> fetchPage({String? cursor, int limit = 20}) async {
+    requestedLimit = limit;
+    return _page;
+  }
 }
 
 class _ThrowingApplicationsRepo implements ApplicationsRepository {
@@ -147,6 +154,27 @@ void main() {
     expect(summary.applicationsApprox, isTrue);
     expect(summary.savedApprox, isFalse);
   });
+
+  test(
+    'requests pages within the server-side limit cap (le=50, else 422)',
+    () async {
+      final applications = _FakeApplicationsRepo(
+        const ApplicationsPageDto(items: []),
+      );
+      final saved = _FakeSavedJobsRepo(const SavedJobsPageDto(items: []));
+      final container = ProviderContainer(
+        overrides: [
+          applicationsRepositoryProvider.overrideWithValue(applications),
+          savedJobsRepositoryProvider.overrideWithValue(saved),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(feedSummaryControllerProvider.future);
+      expect(applications.requestedLimit, 50);
+      expect(saved.requestedLimit, 50);
+    },
+  );
 
   test('empty pages yield an all-zero summary', () async {
     final container = ProviderContainer(

@@ -16,9 +16,10 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from jobify.db.models import ApplicantPreferences, RoleCategory, User
+from jobify.db.models import Applicant, ApplicantPreferences, RoleCategory, User
 from jobify.outbox import enqueue_task
 from jobify_api.auth.dependencies import (
     current_user,
@@ -129,11 +130,54 @@ class PreferencesUpdate(BaseModel):
 async def _require_preferences_row(
     applicant_id: UUID, session: AsyncSession
 ) -> ApplicantPreferences:
-    """Every applicant gets a live preferences row eagerly at signup
-    (AuthService._upsert_identity) — a missing row here is unreachable in
-    the real system but guarded defensively, same shape as
-    require_applicant's applicant_missing 500."""
-    row = (
+    """Return the applicant's live preferences row, provisioning it if it never
+    existed.
+
+    New applicants get the row eagerly at signup (AuthService._upsert_identity),
+    but accounts created before migration 0021 had none until 0028 backfilled
+    them — and seeded/out-of-band applicants can still lack one. "No row at all"
+    is therefore provisioned with defaults. A row that exists but is only
+    soft-deleted is a different case: an invariant violation surfaced as the
+    pinned 500 slug, never silently resurrected."""
+    rows = (
+        (
+            await session.execute(
+                select(ApplicantPreferences).where(
+                    ApplicantPreferences.applicant_id == applicant_id,
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    live = next((row for row in rows if row.deleted_at is None), None)
+    if live is not None:
+        return live
+    if rows:
+        _log.error("preferences.row-missing-for-applicant", applicant_id=str(applicant_id))
+        raise HTTPException(status_code=500, detail="applicant_preferences_missing")
+
+    # INSERT … SELECT from the LIVE applicant, not VALUES: a DSR erasure that
+    # committed after require_applicant (prefs hard-deleted, applicant
+    # soft-deleted) leaves "no row at all", and a bare VALUES insert would
+    # recreate a live row — which PATCH then fills with location/CTC. ON
+    # CONFLICT against the live partial-unique index: concurrent first reads
+    # (the client fires several in parallel) must not trip a unique violation.
+    await session.execute(
+        insert(ApplicantPreferences)
+        .from_select(
+            ["applicant_id"],
+            select(Applicant.id).where(
+                Applicant.id == applicant_id, Applicant.deleted_at.is_(None)
+            ),
+        )
+        .on_conflict_do_nothing(
+            index_elements=[ApplicantPreferences.applicant_id],
+            index_where=ApplicantPreferences.deleted_at.is_(None),
+        )
+    )
+    await session.commit()
+    live = (
         await session.execute(
             select(ApplicantPreferences).where(
                 ApplicantPreferences.applicant_id == applicant_id,
@@ -141,10 +185,11 @@ async def _require_preferences_row(
             )
         )
     ).scalar_one_or_none()
-    if row is None:
+    if live is None:
         _log.error("preferences.row-missing-for-applicant", applicant_id=str(applicant_id))
         raise HTTPException(status_code=500, detail="applicant_preferences_missing")
-    return row
+    _log.warning("preferences.row-provisioned", applicant_id=str(applicant_id))
+    return live
 
 
 @router.get("/preferences", response_model=PreferencesRead, status_code=status.HTTP_200_OK)

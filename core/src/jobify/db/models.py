@@ -166,9 +166,10 @@ class ApplicantPreferences(Base):
     """Desired role / location / expected CTC — captured after resume upload
     or via the profile edit screen. Single source for these 3 fields (they
     used to live on Applicant); one live row per applicant, eagerly created
-    at signup by AuthService._upsert_identity so scoring workers and the
-    GET endpoint never need to handle a missing row for a real applicant
-    (workers still outer-join defensively for seeded/test applicants)."""
+    at signup by AuthService._upsert_identity and backfilled for older
+    applicants by migration 0028. The preferences endpoints still provision a
+    row that never existed, and workers outer-join defensively for
+    seeded/test applicants."""
 
     __tablename__ = "applicant_preferences"
 
