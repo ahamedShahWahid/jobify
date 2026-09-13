@@ -142,13 +142,19 @@ async def test_record_failure_schedules_retry_with_backoff(
     await session.commit()
     before = datetime.now(UTC)
 
-    await _record_failure(_make_sm(session), event.id, token, RuntimeError("broker"))
+    exc = RuntimeError("broker")
+    with capture_logs() as logs:
+        await _record_failure(_make_sm(session), event.id, token, exc)
 
     await session.refresh(event)
     assert event.status == OutboxEventStatus.PENDING
     assert event.available_at > before
     assert event.dispatch_token is None
     assert event.locked_until is None
+
+    (line,) = (e for e in logs if e["event"] == "outbox.event-failed")
+    assert line["task_name"] == "jobify.parse_resume"
+    assert line["exc_info"] is exc
 
 
 @pytest.mark.asyncio

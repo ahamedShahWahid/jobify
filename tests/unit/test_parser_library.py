@@ -12,6 +12,7 @@ import io
 import pytest
 from docx import Document
 from fpdf import FPDF
+from structlog.testing import capture_logs
 
 from jobify.integrations.parser.base import ParsedResume
 from jobify.integrations.parser.library import LibraryResumeParser, _extract_skills
@@ -131,12 +132,16 @@ async def test_parse_empty_resume_returns_valid_parsed_resume(
 ) -> None:
     """A resume with only whitespace still produces a valid ParsedResume
     (no exceptions; empty arrays for everything except raw_text)."""
-    pr = await parser.parse(content=_pdf(["   "]), content_type=PDF_CT)
+    with capture_logs() as logs:
+        pr = await parser.parse(content=_pdf(["   "]), content_type=PDF_CT)
     assert pr.email is None
     assert pr.phone is None
     assert pr.skills == []
     assert pr.experience == []
     assert pr.education == []
+    (line,) = (e for e in logs if e["event"] == "parse.no-text-extracted")
+    assert line["log_level"] == "warning"
+    assert line["content_type"] == PDF_CT
 
 
 @pytest.mark.parametrize(

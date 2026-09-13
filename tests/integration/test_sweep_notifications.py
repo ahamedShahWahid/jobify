@@ -260,11 +260,57 @@ async def test_sweep_retries_on_failed_channel(
     n.send_after = datetime.now(UTC) - timedelta(seconds=1)
     await session.commit()
 
-    await _sweep_notifications_async(sm=sm, email_channel=failing, batch_size=10)
+    with capture_logs() as logs:
+        await _sweep_notifications_async(sm=sm, email_channel=failing, batch_size=10)
     await session.refresh(n)
     assert n.status == NotificationStatus.FAILED
     assert n.attempts == 5
     assert n.last_error == "simulated"
+
+    (line,) = (e for e in logs if e["event"] == "sweep.max-attempts-reached")
+    assert "last_error" not in line
+
+
+@pytest.mark.integration
+async def test_sweep_channel_crash_logs_class_only_and_redacts_recipient(
+    session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A channel crash (not ChannelResult.failed) can carry the recipient in its
+    exception message — only the exception class name is logged or persisted.
+    """
+    import jobify_worker.runtime as cel
+    import jobify_worker.tasks.sweep_notifications as sweep_mod
+
+    user = await _seed_user(session, email="bob@example.com")
+    n = await _seed_notification(session, user, channel=NotificationChannel.EMAIL, attempts=0)
+    await session.commit()
+
+    class _CrashingChannel:
+        async def send(
+            self, notification: Notification, *, recipient: str, language: str = "en"
+        ) -> ChannelResult:
+            raise RuntimeError("smtp says bob@example.com bounced")
+
+    crashing = _CrashingChannel()
+    monkeypatch.setattr(cel, "get_email_channel", lambda: crashing)
+    monkeypatch.setattr(sweep_mod, "get_email_channel", lambda: crashing)
+
+    sm = _make_sm(session)
+
+    with capture_logs() as logs:
+        await _sweep_notifications_async(sm=sm, email_channel=crashing, batch_size=10)
+
+    await session.refresh(n)
+    assert n.status == NotificationStatus.PENDING
+    assert n.last_error == "RuntimeError"
+
+    (line,) = (e for e in logs if e["event"] == "sweep.dispatch-failed")
+    assert line["error_type"] == "RuntimeError"
+    assert "channel" in line
+
+    for entry in logs:
+        assert "bob@example.com" not in repr(entry)
 
 
 @pytest.mark.integration

@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from structlog.testing import capture_logs
 
 from jobify.db.models import Employer, Job, JobEmbedding
 from jobify.integrations.embeddings.base import (
@@ -227,9 +228,14 @@ async def test_embed_job_permanent_error_does_not_retry(
     monkeypatch.setattr(runtime_mod, "_embedding_provider", embedding_provider)
 
     sm = _make_sm(session)
-    await _embed_job_async(job.id, sm=sm, provider=embedding_provider)
+    with capture_logs() as logs:
+        await _embed_job_async(job.id, sm=sm, provider=embedding_provider)
     rows = (await session.execute(select(JobEmbedding).where(JobEmbedding.job_id == job.id))).all()
     assert rows == []  # permanent error → no row, no retry, no exception surfaced
+
+    (line,) = (e for e in logs if e["event"] == "embed.job-permanent-failure")
+    assert line["error_type"] == "EmbeddingProviderError"
+    assert "error" not in line
 
 
 @pytest.mark.integration

@@ -20,6 +20,8 @@ import structlog.testing
 
 from jobify.integrations.notifications.base import ChannelResult
 from jobify.integrations.notifications.logging_email import LoggingEmailChannel
+from jobify.observability.logging import configure_logging
+from tests.logging_helpers import LogSettings, json_log_lines
 
 
 def _make_notification(
@@ -81,3 +83,23 @@ async def test_logging_email_channel_logs_hindi_language() -> None:
         await channel.send(notif, recipient="applicant@example.com", language="hi")
 
     assert captured[0]["language"] == "hi"
+
+
+@pytest.mark.asyncio
+async def test_logging_email_channel_output_redacts_recipient_and_payload(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Pins what actually reaches stdout through the real redaction chain.
+
+    The capture_logs tests above pin what the dev channel *emits*; this pins
+    what reaches output after redaction.
+    """
+    configure_logging(LogSettings())
+    capsys.readouterr()
+    await LoggingEmailChannel().send(_make_notification(), recipient="applicant@example.com")
+
+    output = capsys.readouterr().out
+    (line,) = (x for x in json_log_lines(output) if x["event"] == "email.sent")
+    assert line["recipient"] == "[REDACTED]"
+    assert line["payload"] == "[REDACTED]"
+    assert "applicant@example.com" not in output

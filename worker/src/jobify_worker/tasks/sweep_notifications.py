@@ -280,7 +280,15 @@ async def _dispatch_one(
         else:
             result = ChannelResult.failed(f"unknown_channel:{channel}")
     except Exception as exc:  # noqa: BLE001 — a channel crash is a failed attempt, retried with backoff
-        result = ChannelResult.failed(f"{type(exc).__name__}:{exc}"[:1000])
+        # Type only: provider text can contain the recipient address and is
+        # persisted to notifications.last_error.
+        _log.warning(
+            "sweep.dispatch-failed",
+            notification_id=str(notification_id),
+            channel=str(channel),
+            error_type=type(exc).__name__,
+        )
+        result = ChannelResult.failed(type(exc).__name__)
 
     # --- State transition, guarded by the exact claim token ---
     async with session_maker() as session:
@@ -309,7 +317,7 @@ async def _dispatch_one(
                     "sweep.max-attempts-reached",
                     notification_id=str(notification_id),
                     attempts=n.attempts,
-                    last_error=result.message,
+                    channel=n.channel,
                 )
             else:
                 n.status = NotificationStatus.PENDING
@@ -321,6 +329,7 @@ async def _dispatch_one(
                     notification_id=str(notification_id),
                     attempts=n.attempts,
                     delay_seconds=delay,
+                    channel=n.channel,
                 )
 
         await session.commit()

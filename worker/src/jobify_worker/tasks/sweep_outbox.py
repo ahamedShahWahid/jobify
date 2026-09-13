@@ -170,6 +170,7 @@ async def _record_failure(
         event = await session.get(OutboxEvent, event_id, with_for_update=True)
         if event is None or not _owns_claim(event, dispatch_token):
             return
+        task_name = event.payload.get("task_name") if isinstance(event.payload, dict) else None
         terminal = event.attempts >= settings.outbox_max_attempts
         event.status = OutboxEventStatus.FAILED if terminal else OutboxEventStatus.PENDING
         event.available_at = datetime.now(UTC) + timedelta(
@@ -184,6 +185,8 @@ async def _record_failure(
             attempts=event.attempts,
             terminal=terminal,
             error_type=type(exc).__name__,
+            task_name=task_name,
+            exc_info=exc,
         )
 
 
