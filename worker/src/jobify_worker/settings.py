@@ -80,7 +80,7 @@ class WorkerSettings(BaseSettings):
 
     # Opt-in Prometheus scrape endpoint for the worker (no auth → loopback by
     # default; set the host to 0.0.0.0 only behind a private network).
-    worker_metrics_port: int | None = Field(default=None, ge=0, le=65535)
+    worker_metrics_port: int | None = Field(default=None, ge=1, le=65535)
     worker_metrics_host: str = "127.0.0.1"
 
     @field_validator("log_level", mode="before")

@@ -97,3 +97,21 @@ async def test_method_label_is_upper_cased() -> None:
     await _drive(app, method="delete")
 
     assert _requests("DELETE", "204") == before + 1
+
+
+async def test_unbounded_method_is_labeled_other_in_metrics() -> None:
+    """Only the bounded method set is a metric label value; anything else
+    collapses to OTHER (unbounded methods would be unbounded cardinality).
+    The access log is unaffected — it still logs the real, upper-cased
+    method (unchanged local variable in RequestContextMiddleware)."""
+    before = _requests("OTHER", "204")
+    before_duration = _durations("OTHER", "/_m/webdav/{item_id}")
+
+    async def app(scope: Scope, receive: Receive, send: Send) -> None:
+        scope["route"] = SimpleNamespace(path="/_m/webdav/{item_id}")
+        await send({"type": "http.response.start", "status": 204})
+
+    await _drive(app, method="PROPFIND")
+
+    assert _requests("OTHER", "204") == before + 1
+    assert _durations("OTHER", "/_m/webdav/{item_id}") == before_duration + 1

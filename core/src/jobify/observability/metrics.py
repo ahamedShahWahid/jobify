@@ -4,16 +4,31 @@ Declare new metrics HERE, never inline in routes/tasks: one module keeps names,
 labels and the cardinality rule reviewable in one place.
 
 **Cardinality rule:** label values come only from closed sets — route
-templates, registered task names, literal service/operation strings, and
-``outcome ∈ {success, error, retry, failure}``. Never ids, raw paths or
-messages.
+templates, registered task names, literal service/operation strings,
+``outcome ∈ {success, error, retry, failure}``, and the bounded HTTP method
+set in ``request_context.py`` (unrecognized methods collapse to ``"OTHER"``).
+Never ids, raw paths or messages.
 
 **Multiprocess mode.** When ``PROMETHEUS_MULTIPROC_DIR`` is set *before*
 ``prometheus_client`` is imported, every process writes its values to
 memory-mapped files in that directory and :func:`build_registry` returns a fresh
 registry whose ``MultiProcessCollector`` aggregates them at scrape time. Each
 service needs its OWN directory (a shared one merges API and worker series),
-wiped on start. Unset (tests, single-process dev) → the default ``REGISTRY``.
+wiped when that service is (re)started. Unset (tests, single-process dev) →
+the default ``REGISTRY``. In multiprocess mode the scrape contains ONLY the
+metrics declared in this module — ``MultiProcessCollector`` does not ship the
+default process/platform collectors (``process_*``, ``python_gc_*``,
+``python_info``); single-process mode still includes them via the default
+``REGISTRY``.
+
+**Boot-time validation.** :func:`ensure_multiprocess_dir_ready` must be called
+once at process startup (API ``create_app()``, worker ``worker_init``)
+*before* anything touches a declared metric or :func:`build_registry`. A set
+but missing/non-directory ``PROMETHEUS_MULTIPROC_DIR`` otherwise surfaces as a
+``FileNotFoundError`` from the first metric write (inside
+``RequestContextMiddleware``'s ``finally``, after the access log line) or a
+``ValueError`` from the first ``/metrics`` scrape — both far from the actual
+misconfiguration.
 """
 
 from __future__ import annotations
@@ -62,8 +77,38 @@ VALIDATION_FAILURES: Final[Counter] = Counter(
 
 
 def multiprocess_enabled() -> bool:
-    """True when this process runs in prometheus_client multiprocess mode."""
-    return bool(os.environ.get("PROMETHEUS_MULTIPROC_DIR"))
+    """True when this process runs in prometheus_client multiprocess mode.
+
+    Mirrors prometheus_client's own predicate (``values.py``/``multiprocess.py``):
+    presence of either env var spelling counts, not truthiness of its value —
+    an empty-string ``PROMETHEUS_MULTIPROC_DIR`` still turns multiprocess mode
+    on (and then fails :func:`ensure_multiprocess_dir_ready`, since "" is not
+    a directory). Read per call (not cached) so tests can monkeypatch it.
+    """
+    return "PROMETHEUS_MULTIPROC_DIR" in os.environ or "prometheus_multiproc_dir" in os.environ
+
+
+def _multiprocess_dir() -> str | None:
+    """The directory prometheus_client itself will resolve to (same precedence:
+    uppercase wins whenever it is present, even as ""; else the legacy
+    lowercase name; else ``None``)."""
+    if "PROMETHEUS_MULTIPROC_DIR" in os.environ:
+        return os.environ["PROMETHEUS_MULTIPROC_DIR"]
+    return os.environ.get("prometheus_multiproc_dir")
+
+
+def ensure_multiprocess_dir_ready() -> None:
+    """Fail fast if multiprocess mode is on but its directory isn't usable yet.
+
+    Call once at process boot (API ``create_app()``, worker ``worker_init``)
+    before any metric write or scrape — see the module docstring for why.
+    A no-op when multiprocess mode is off.
+    """
+    if not multiprocess_enabled():
+        return
+    path = _multiprocess_dir()
+    if not path or not os.path.isdir(path):
+        raise RuntimeError(f"PROMETHEUS_MULTIPROC_DIR={path} must be an existing directory")
 
 
 def build_registry() -> CollectorRegistry:

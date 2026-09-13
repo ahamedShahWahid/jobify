@@ -4,12 +4,21 @@
   own logging setup, so Celery's records — including ``celery.app.trace``
   task-failure tracebacks — reach the root handler and render (and get redacted)
   like every other line. Both ``celery worker`` and ``celery beat`` send it.
-- ``worker_init`` (main process, before any fork) → opt-in Prometheus scrape
-  endpoint on ``JOBIFY_WORKER_METRICS_PORT``. In multiprocess mode it serves a
-  ``MultiProcessCollector`` registry, so prefork children's samples appear.
-- ``worker_process_shutdown`` (sent in the parent for each exiting prefork
-  child) → ``multiprocess.mark_process_dead(pid)`` so dead children's live-gauge
-  files stop reporting.
+- ``worker_init`` (main process, before any fork) → first validates
+  ``PROMETHEUS_MULTIPROC_DIR`` is ready (raises if multiprocess mode is on but
+  the directory doesn't exist — a bad directory silently drops every metric
+  sample, so unlike a busy port it is NOT tolerated), then starts an opt-in
+  Prometheus scrape endpoint on ``JOBIFY_WORKER_METRICS_PORT``. In
+  multiprocess mode it serves a ``MultiProcessCollector`` registry, so
+  prefork children's samples appear. NOTE: Celery's ``Signal.send`` catches
+  and merely logs exceptions raised by receivers (it does not re-raise them
+  to the caller), so this raise is fail-fast for direct calls (as tested)
+  but is not proven to abort `celery worker` startup end-to-end — see
+  worker/CLAUDE.md.
+- ``worker_process_shutdown`` (sent by each prefork child itself as it exits
+  normally — billiard's ``Worker._do_exit`` → ``on_exit`` — never for a
+  SIGKILL'd or OOM-killed child) → ``multiprocess.mark_process_dead(pid)`` so
+  dead children's live-gauge files stop reporting.
 
 None of these fire for eager tasks in tests — call the receivers directly.
 """
@@ -24,7 +33,11 @@ from celery.signals import setup_logging, worker_init, worker_process_shutdown
 from prometheus_client import multiprocess, start_http_server
 
 from jobify.observability.logging import configure_logging
-from jobify.observability.metrics import build_registry, multiprocess_enabled
+from jobify.observability.metrics import (
+    build_registry,
+    ensure_multiprocess_dir_ready,
+    multiprocess_enabled,
+)
 from jobify_worker.celery_app import settings
 
 _log = structlog.get_logger(__name__)
@@ -43,7 +56,13 @@ def configure_worker_logging(**_kwargs: object) -> None:
 
 @worker_init.connect  # type: ignore[untyped-decorator]
 def start_worker_metrics_server(**_kwargs: object) -> WSGIServer | None:
-    """Start the scrape endpoint when configured; never let it stop the worker."""
+    """Validate the multiprocess dir (raises — fatal), then start the scrape
+    endpoint when configured. A PORT BIND failure alone must never stop task
+    processing (caught below); a misconfigured multiprocess directory is a
+    different class of failure — it would silently drop every metric sample
+    from this process, so that check runs first and is allowed to raise.
+    """
+    ensure_multiprocess_dir_ready()
     port = settings.worker_metrics_port
     if port is None:
         return None

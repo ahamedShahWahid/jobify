@@ -16,6 +16,7 @@ from jobify import __version__
 from jobify.db.session import create_engine_from_settings, make_sessionmaker
 from jobify.integrations.storage import create_storage
 from jobify.observability.logging import configure_logging
+from jobify.observability.metrics import ensure_multiprocess_dir_ready
 from jobify_api.auth.google_verifier import JwksGoogleIdTokenVerifier
 from jobify_api.middleware.error_handler import register_error_handlers
 from jobify_api.middleware.request_context import RequestContextMiddleware
@@ -47,6 +48,11 @@ from jobify_api.settings import Settings
 def create_app() -> FastAPI:
     settings = Settings()  # validated; raises on misconfiguration
     configure_logging(settings)
+    # Fail fast if PROMETHEUS_MULTIPROC_DIR is set but not an existing
+    # directory — otherwise the first request's metrics write or the first
+    # /metrics scrape raises deep inside request handling instead (see
+    # jobify.observability.metrics module docstring).
+    ensure_multiprocess_dir_ready()
     engine = create_engine_from_settings(settings)
     redis_client = Redis.from_url(settings.redis_url, decode_responses=True)
 
