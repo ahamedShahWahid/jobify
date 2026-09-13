@@ -17,6 +17,7 @@ from jobify.integrations.embeddings.base import (
     EmbeddingTask,
     TransientEmbeddingError,
 )
+from jobify.observability.external import observe_external_call
 
 _log = structlog.get_logger(__name__)
 
@@ -52,11 +53,12 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
             raise NotImplementedError(f"task type not supported by this provider: {task}")
 
         try:
-            resp = await self._client.aio.models.embed_content(
-                model=self._model,
-                contents=content,
-                config=types.EmbedContentConfig(output_dimensionality=self._output_dim),
-            )
+            with observe_external_call("gemini", "embed", log_traceback=False):
+                resp = await self._client.aio.models.embed_content(
+                    model=self._model,
+                    contents=content,
+                    config=types.EmbedContentConfig(output_dimensionality=self._output_dim),
+                )
         except errors.ServerError as exc:
             raise TransientEmbeddingError(str(exc)) from exc
         except errors.ClientError as exc:

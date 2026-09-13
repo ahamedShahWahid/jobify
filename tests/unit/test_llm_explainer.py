@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from prometheus_client import REGISTRY
 
 from jobify.scoring.explainer import ExplainContext
 from jobify.scoring.llm_explainer import (
@@ -15,6 +16,11 @@ from jobify.scoring.llm_explainer import (
     LLM_GENERATOR_VERSION,
     GeminiMatchExplainer,
 )
+
+
+def _external_calls(service: str, operation: str, outcome: str) -> float:
+    labels = {"service": service, "operation": operation, "outcome": outcome}
+    return REGISTRY.get_sample_value("jobify_external_calls_total", labels) or 0.0
 
 
 def _ctx(*, total: float = 0.9, threshold: float = 0.55, **overrides: object) -> ExplainContext:
@@ -175,9 +181,10 @@ async def test_generation_config_uses_thinking_level_on_3x_models() -> None:
 
 
 @pytest.mark.asyncio
-async def test_parse_failure_logs_raw_text_snippet() -> None:
-    """The fallback is silent by design — the warning must carry the raw
-    model text or the failure mode is undiagnosable from logs."""
+async def test_parse_failure_logs_shape_not_model_text() -> None:
+    """The model's raw output can restate the applicant's profile — the
+    failure log must carry shape (length, error type) only, never the text
+    itself."""
     from structlog.testing import capture_logs
 
     explainer, gc_mock = _make_explainer()
@@ -187,9 +194,24 @@ async def test_parse_failure_logs_raw_text_snippet() -> None:
         out = await explainer.explain(_ctx())
 
     assert out["generator"] == "templated"
-    failed = [e for e in logs if e.get("event") == "explain.llm-failed"]
-    assert len(failed) == 1
-    assert "Here is the JSON requested" in failed[0]["raw_text"]
+    (failed,) = (e for e in logs if e.get("event") == "explain.llm-failed")
+    assert "raw_text" not in failed
+    assert failed["raw_length"] == len("Here is the JSON requested:\n")
+    assert failed["error_type"] == "JSONDecodeError"
+    assert all("Here is the JSON" not in str(value) for value in failed.values())
+
+
+@pytest.mark.asyncio
+async def test_explain_call_is_observed() -> None:
+    """A failed generate_content call bumps the (gemini, explain_match, error) counter."""
+    explainer, gc_mock = _make_explainer()
+    gc_mock.side_effect = RuntimeError("down")
+    before = _external_calls("gemini", "explain_match", "error")
+
+    out = await explainer.explain(_ctx())
+
+    assert out["generator"] == "templated"
+    assert _external_calls("gemini", "explain_match", "error") == before + 1
 
 
 @pytest.mark.asyncio

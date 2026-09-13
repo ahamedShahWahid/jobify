@@ -7,6 +7,7 @@ import html
 from typing import TYPE_CHECKING, Any
 
 from jobify.integrations.notifications.base import ChannelResult
+from jobify.observability.external import http_status_of, observe_external_call
 
 if TYPE_CHECKING:
     from jobify.db.models import Notification
@@ -53,30 +54,35 @@ class SesEmailChannel:
     ) -> ChannelResult:
         subject, text_body = _render(notification.kind, notification.payload, language)
         try:
-            await asyncio.to_thread(
-                self._client.send_email,
-                FromEmailAddress=self._from_address,
-                Destination={"ToAddresses": [recipient]},
-                Content={
-                    "Simple": {
-                        "Subject": {"Data": subject, "Charset": "UTF-8"},
-                        "Body": {
-                            "Text": {"Data": text_body, "Charset": "UTF-8"},
-                            "Html": {
-                                "Data": (
-                                    "<html><body><h1>"
-                                    f"{html.escape(subject)}</h1><p>"
-                                    f"{html.escape(text_body).replace(chr(10), '<br>')}"
-                                    "</p></body></html>"
-                                ),
-                                "Charset": "UTF-8",
+            with observe_external_call("ses", "send_email", log_traceback=False):
+                await asyncio.to_thread(
+                    self._client.send_email,
+                    FromEmailAddress=self._from_address,
+                    Destination={"ToAddresses": [recipient]},
+                    Content={
+                        "Simple": {
+                            "Subject": {"Data": subject, "Charset": "UTF-8"},
+                            "Body": {
+                                "Text": {"Data": text_body, "Charset": "UTF-8"},
+                                "Html": {
+                                    "Data": (
+                                        "<html><body><h1>"
+                                        f"{html.escape(subject)}</h1><p>"
+                                        f"{html.escape(text_body).replace(chr(10), '<br>')}"
+                                        "</p></body></html>"
+                                    ),
+                                    "Charset": "UTF-8",
+                                },
                             },
-                        },
-                    }
-                },
-            )
+                        }
+                    },
+                )
         except Exception as exc:  # noqa: BLE001 — channel contract: provider failures become ChannelResult.failed (sweep retries)
-            return ChannelResult.failed(f"ses:{type(exc).__name__}:{exc}"[:1000])
+            # Type + status only: SES error text can contain recipient addresses,
+            # and this message is persisted to notifications.last_error.
+            status = http_status_of(exc)
+            suffix = f":{status}" if status is not None else ""
+            return ChannelResult.failed(f"ses:{type(exc).__name__}{suffix}")
         return ChannelResult.success()
 
 

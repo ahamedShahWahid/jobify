@@ -18,6 +18,8 @@ import jwt as pyjwt
 import structlog
 from fastapi import Request
 
+from jobify.observability.external import observe_external_call
+
 _GOOGLE_ISSUERS: Final[frozenset[str]] = frozenset(
     {"accounts.google.com", "https://accounts.google.com"}
 )
@@ -148,12 +150,14 @@ class JwksGoogleIdTokenVerifier:
     async def _refetch_locked(self) -> None:
         """Fetch JWKS and replace the cache. Lock must be held by caller."""
         try:
-            async with self._http_factory() as client:
-                resp = await client.get(self._jwks_url)
-                resp.raise_for_status()
-                body = resp.json()
+            with observe_external_call("google", "jwks_fetch"):
+                async with self._http_factory() as client:
+                    resp = await client.get(self._jwks_url)
+                    resp.raise_for_status()
+                    body = resp.json()
         except (httpx.HTTPError, ValueError) as exc:
-            _log.warning("jwks-fetch-failed", url=self._jwks_url, error=str(exc))
+            # external.call (WARNING, with traceback) already recorded the failure.
+            _log.warning("jwks-fetch-failed", serving_stale=bool(self._cache_keys))
             if self._cache_keys:
                 # Serve stale on transient failure.
                 return

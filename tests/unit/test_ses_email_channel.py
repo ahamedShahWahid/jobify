@@ -5,8 +5,14 @@ from unittest.mock import MagicMock
 
 import boto3
 import pytest
+from prometheus_client import REGISTRY
 
 from jobify.integrations.notifications.ses import SesEmailChannel, _render
+
+
+def _external_calls(service: str, operation: str, outcome: str) -> float:
+    labels = {"service": service, "operation": operation, "outcome": outcome}
+    return REGISTRY.get_sample_value("jobify_external_calls_total", labels) or 0.0
 
 
 def test_ses_client_disables_sdk_retries_for_non_idempotent_send(
@@ -43,6 +49,7 @@ async def test_ses_channel_sends_application_email() -> None:
         kind="application_received",
         payload={"job_title": "Engineer", "employer_name": "Acme"},
     )
+    before = _external_calls("ses", "send_email", "success")
 
     result = await channel.send(notification, recipient="user@example.com")
 
@@ -51,6 +58,7 @@ async def test_ses_channel_sends_application_email() -> None:
     assert request["FromEmailAddress"] == "notify@jobify.test"
     assert request["Destination"] == {"ToAddresses": ["user@example.com"]}
     assert "Engineer" in request["Content"]["Simple"]["Subject"]["Data"]
+    assert _external_calls("ses", "send_email", "success") == before + 1
 
 
 @pytest.mark.asyncio
@@ -59,9 +67,14 @@ async def test_ses_channel_returns_failure_for_provider_error() -> None:
     client.send_email.side_effect = RuntimeError("down")
     channel = SesEmailChannel(from_address="notify@jobify.test", client=client)
     notification = SimpleNamespace(kind="unknown", payload={})
+    before = _external_calls("ses", "send_email", "error")
+
     result = await channel.send(notification, recipient="user@example.com")
+
     assert not result.ok
-    assert "RuntimeError" in result.message
+    assert result.message == "ses:RuntimeError"
+    assert "down" not in result.message
+    assert _external_calls("ses", "send_email", "error") == before + 1
 
 
 _ALL_LOCALIZED_KINDS = ["application_received", "application_stage_changed"]

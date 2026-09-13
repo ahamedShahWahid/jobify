@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from prometheus_client import REGISTRY
 
 from jobify.integrations.parser import LlmParserError, ParserError
 from jobify.integrations.parser import llm_parser as llm_parser_module
@@ -16,6 +17,12 @@ from jobify.integrations.parser.llm_parser import (
     GeminiResumeParser,
     _raw_shape,
 )
+
+
+def _external_calls(service: str, operation: str, outcome: str) -> float:
+    labels = {"service": service, "operation": operation, "outcome": outcome}
+    return REGISTRY.get_sample_value("jobify_external_calls_total", labels) or 0.0
+
 
 _GOOD_JSON = json.dumps(
     {
@@ -75,6 +82,22 @@ def test_invalid_json_raises_llm_error() -> None:
         asyncio.run(parser.parse_text("text"))
 
 
+def test_invalid_model_response_logs_rejection_at_warning() -> None:
+    """A rejected model response is an operational signal (bad model output,
+    prompt drift), not routine diagnostic noise — it must be visible without
+    debug-level logging turned up."""
+    from structlog.testing import capture_logs
+
+    parser = GeminiResumeParser(client=_client_returning("not json {"), model="m")
+
+    with capture_logs() as logs:
+        with pytest.raises(LlmParserError):
+            asyncio.run(parser.parse_text("text"))
+
+    (rejected,) = (e for e in logs if e.get("event") == "parse.llm-output-rejected")
+    assert rejected["log_level"] == "warning"
+
+
 def test_schema_invalid_payload_raises_llm_error() -> None:
     # end_year must be an int — a string that pydantic can't coerce fails validation.
     bad = json.dumps({"education": [{"end_year": "two thousand"}]})
@@ -102,8 +125,28 @@ def test_provider_exception_wrapped_as_llm_error() -> None:
     client = MagicMock()
     client.aio.models.generate_content = AsyncMock(side_effect=RuntimeError("503"))
     parser = GeminiResumeParser(client=client, model="m")
+    before = _external_calls("gemini", "parse_resume", "error")
     with pytest.raises(LlmParserError):
         asyncio.run(parser.parse_text("text"))
+    assert _external_calls("gemini", "parse_resume", "error") == before + 1
+
+
+async def test_provider_api_error_message_keeps_http_status() -> None:
+    from google.genai import errors
+
+    api_error = errors.ClientError(
+        429, {"error": {"code": 429, "status": "RESOURCE_EXHAUSTED", "message": "quota"}}
+    )
+    client = MagicMock()
+    client.aio.models.generate_content = AsyncMock(side_effect=api_error)
+    parser = GeminiResumeParser(client=client, model="m")
+    before = _external_calls("gemini", "parse_resume", "error")
+
+    with pytest.raises(LlmParserError) as info:
+        await parser.parse_text("resume text")
+
+    assert str(info.value) == "llm_call_failed: ClientError 429 RESOURCE_EXHAUSTED"
+    assert _external_calls("gemini", "parse_resume", "error") == before + 1
 
 
 def test_parse_propagates_extraction_error_without_model_call() -> None:

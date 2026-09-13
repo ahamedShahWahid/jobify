@@ -21,6 +21,7 @@ import structlog
 from google.genai import types
 
 from jobify.integrations.gemini_thinking import no_thinking_config
+from jobify.observability.external import observe_external_call
 from jobify.scoring.explainer import ExplainContext, _templated_from_ctx
 
 if TYPE_CHECKING:
@@ -80,24 +81,25 @@ class GeminiMatchExplainer:
                 instruction = _SYSTEM_INSTRUCTION + _HINDI_DIRECTIVE
             else:
                 instruction = _SYSTEM_INSTRUCTION
-            resp = await self._client.aio.models.generate_content(
-                model=self._model,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=instruction,
-                    response_mime_type="application/json",
-                    response_schema=_RESPONSE_SCHEMA,
-                    temperature=0.3,
-                    max_output_tokens=200,
-                    # Gemini thinks by default and thought tokens count
-                    # against max_output_tokens: with the 200 cap the model
-                    # burned ~190 tokens thinking, finished MAX_TOKENS, and
-                    # emitted an unparsable preamble — every explain silently
-                    # fell back to templated. This is a two-sentence JSON task;
-                    # thinking buys nothing. The knob differs per model family.
-                    thinking_config=no_thinking_config(self._model),
-                ),
-            )
+            with observe_external_call("gemini", "explain_match", log_traceback=False):
+                resp = await self._client.aio.models.generate_content(
+                    model=self._model,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        system_instruction=instruction,
+                        response_mime_type="application/json",
+                        response_schema=_RESPONSE_SCHEMA,
+                        temperature=0.3,
+                        max_output_tokens=200,
+                        # Gemini thinks by default and thought tokens count
+                        # against max_output_tokens: with the 200 cap the model
+                        # burned ~190 tokens thinking, finished MAX_TOKENS, and
+                        # emitted an unparsable preamble — every explain silently
+                        # fell back to templated. This is a two-sentence JSON task;
+                        # thinking buys nothing. The knob differs per model family.
+                        thinking_config=no_thinking_config(self._model),
+                    ),
+                )
             text = getattr(resp, "text", None)
             if not text:
                 raise ValueError("empty response text")
@@ -120,10 +122,14 @@ class GeminiMatchExplainer:
                 "generator": LLM_GENERATOR,
                 "generator_version": LLM_GENERATOR_VERSION,
             }
-        except Exception:  # noqa: BLE001 — explain() NEVER raises; any failure degrades to templated
-            # raw_text is the diagnosis handle — the templated fallback makes
-            # this failure invisible everywhere else.
-            _log.warning("explain.llm-failed", raw_text=(text or "")[:200], exc_info=True)
+        except Exception as exc:  # noqa: BLE001 — explain() NEVER raises; any failure degrades to templated
+            # Shape only: the model's raw output can restate the applicant's
+            # profile, and provider errors can echo the prompt (core/CLAUDE.md).
+            _log.warning(
+                "explain.llm-failed",
+                error_type=type(exc).__name__,
+                raw_length=len(text) if text is not None else None,
+            )
             return _templated_from_ctx(ctx)
 
 

@@ -6,7 +6,7 @@ never re-export this class from the package ``__init__``.
 
 Failure contract: any post-extraction failure (provider exception, blocked or
 empty response, JSON that fails ``ParsedResume`` validation) raises
-:class:`LlmParserError` after logging a PII-safe SHAPE summary at debug (see
+:class:`LlmParserError` after logging a PII-safe SHAPE summary at warning (see
 ``_raw_shape`` — never the response body, which restates the resume).
 ONE attempt, no internal retry — :class:`FallbackResumeParser` is the recovery.
 Extraction failures (:class:`ParserError` from ``extract_text``) propagate
@@ -31,12 +31,13 @@ import json
 from typing import TYPE_CHECKING, Any, Final
 
 import structlog
-from google.genai import types
+from google.genai import errors, types
 from pydantic import ValidationError
 
 from jobify.integrations.gemini_thinking import no_thinking_config
 from jobify.integrations.parser.base import LlmParserError, ParsedResume
 from jobify.integrations.parser.text import extract_text
+from jobify.observability.external import observe_external_call
 
 if TYPE_CHECKING:
     from google.genai import Client as GenaiClient
@@ -232,13 +233,20 @@ class GeminiResumeParser:
         anywhere from minutes to hours.
         """
         try:
-            resp = await self._client.aio.models.generate_content(
-                model=self._model,
-                contents=text,
-                config=_generate_content_config(self._model),
-            )
-        except Exception as exc:
-            raise LlmParserError(f"llm_call_failed: {type(exc).__name__}") from exc
+            with observe_external_call("gemini", "parse_resume", log_traceback=False):
+                resp = await self._client.aio.models.generate_content(
+                    model=self._model,
+                    contents=text,
+                    config=_generate_content_config(self._model),
+                )
+        except Exception as exc:  # re-raises, so BLE001 doesn't fire — no noqa (RUF100)
+            # Degradation contract: ANY provider failure → LlmParserError
+            # (fallback parser takes over).
+            detail = type(exc).__name__
+            if isinstance(exc, errors.APIError):
+                # code/status only — never exc.details/message (can echo the prompt).
+                detail = f"{detail} {exc.code} {exc.status}"
+            raise LlmParserError(f"llm_call_failed: {detail}") from exc
         raw = getattr(resp, "text", None)
         return self._validated_resume(raw, text)
 
@@ -263,7 +271,7 @@ class GeminiResumeParser:
                 **payload,
             )
         except ValidationError as exc:
-            _log.debug("parse.llm-output-rejected", **_raw_shape(raw))
+            _log.warning("parse.llm-output-rejected", **_raw_shape(raw))
             # str(exc) embeds pydantic's "input_value=..." context, which for
             # this model IS the resume's own PII (name/email/phone/etc). Build
             # the message from a slug + failing top-level field names only —
@@ -273,7 +281,7 @@ class GeminiResumeParser:
         except (ValueError, TypeError) as exc:
             # Our own safe messages ("empty response text", "expected object,
             # got ..."); never model-echoed content.
-            _log.debug("parse.llm-output-rejected", **_raw_shape(raw))
+            _log.warning("parse.llm-output-rejected", **_raw_shape(raw))
             raise LlmParserError(f"llm_output_invalid: {exc}") from exc
         except Exception as exc:
             # Blanket arm restoring the module's documented "ANY
@@ -282,5 +290,5 @@ class GeminiResumeParser:
             # unexpected error constructing ParsedResume). Type name only —
             # never str(exc), which for this model can carry the resume's
             # own PII the same way ValidationError's message does.
-            _log.debug("parse.llm-output-rejected", **_raw_shape(raw))
+            _log.warning("parse.llm-output-rejected", **_raw_shape(raw))
             raise LlmParserError(f"llm_output_invalid: {type(exc).__name__}") from exc

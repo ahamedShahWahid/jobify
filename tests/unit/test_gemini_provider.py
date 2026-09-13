@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from prometheus_client import REGISTRY
 
 from jobify.integrations.embeddings.base import (
     EmbeddingProviderError,
@@ -20,6 +21,11 @@ from jobify.integrations.embeddings.gemini import GeminiEmbeddingProvider
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _external_calls(service: str, operation: str, outcome: str) -> float:
+    labels = {"service": service, "operation": operation, "outcome": outcome}
+    return REGISTRY.get_sample_value("jobify_external_calls_total", labels) or 0.0
 
 
 def _make_provider(output_dim: int = 3072) -> tuple[GeminiEmbeddingProvider, AsyncMock]:
@@ -163,6 +169,46 @@ async def test_other_4xx_maps_to_permanent_error() -> None:
 
     with pytest.raises(EmbeddingProviderError):
         await provider.encode(text="x", task=EmbeddingTask.DOCUMENT)
+
+
+# ---------------------------------------------------------------------------
+# Observability tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_embed_call_is_observed_on_success() -> None:
+    """A successful embed_content call bumps the (gemini, embed, success) counter."""
+    provider, embed_mock = _make_provider(output_dim=2)
+    embed_mock.return_value = _make_response([0.1, 0.2])
+    before = _external_calls("gemini", "embed", "success")
+
+    await provider.encode(text="foo", task=EmbeddingTask.DOCUMENT, title="Alice")
+
+    assert _external_calls("gemini", "embed", "success") == before + 1
+
+
+@pytest.mark.asyncio
+async def test_embed_call_is_observed_on_provider_error() -> None:
+    """A provider 5xx error bumps the (gemini, embed, error) counter."""
+    from google.genai import errors
+
+    provider, embed_mock = _make_provider()
+
+    fake_response = MagicMock()
+    fake_response.status_code = 500
+    fake_response.json.return_value = {
+        "message": "internal error",
+        "status": "INTERNAL",
+        "code": 500,
+    }
+    embed_mock.side_effect = errors.ServerError(500, fake_response)
+    before = _external_calls("gemini", "embed", "error")
+
+    with pytest.raises(TransientEmbeddingError):
+        await provider.encode(text="x", task=EmbeddingTask.DOCUMENT)
+
+    assert _external_calls("gemini", "embed", "error") == before + 1
 
 
 # ---------------------------------------------------------------------------
