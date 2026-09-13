@@ -18,7 +18,6 @@ from jobify.integrations.storage import create_storage
 from jobify.observability.logging import configure_logging
 from jobify_api.auth.google_verifier import JwksGoogleIdTokenVerifier
 from jobify_api.middleware.error_handler import register_error_handlers
-from jobify_api.middleware.metrics import MetricsMiddleware
 from jobify_api.middleware.request_context import RequestContextMiddleware
 from jobify_api.middleware.request_id import RequestIdMiddleware
 from jobify_api.rate_limit import RedisRateLimiter
@@ -79,11 +78,7 @@ def create_app() -> FastAPI:
     # http.request access line (see middleware/request_context.py).
     app.add_middleware(RequestContextMiddleware)
     app.add_middleware(RequestIdMiddleware)
-    # MetricsMiddleware wraps RequestIdMiddleware (counts real routed requests,
-    # including HTTPException/500 responses) but stays INSIDE CORS below, so CORS
-    # preflight (OPTIONS) short-circuits are not counted. Pure-ASGI (see metrics.py).
-    app.add_middleware(MetricsMiddleware)
-    # Added after RequestIdMiddleware so it wraps it (outermost): CORS handles the
+    # Added last so it is outermost: CORS handles the
     # browser preflight (OPTIONS) and stamps Access-Control-* on every response,
     # including errors. Starlette's CORSMiddleware is pure-ASGI, so it's safe
     # alongside RequestIdMiddleware (see the BaseHTTPMiddleware note in CLAUDE.md).

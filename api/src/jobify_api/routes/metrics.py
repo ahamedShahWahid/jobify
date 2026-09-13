@@ -11,9 +11,10 @@ import hmac
 
 import structlog
 from fastapi import APIRouter, HTTPException, Request
+from prometheus_client import generate_latest
 from starlette.responses import PlainTextResponse
 
-from jobify_api.metrics import render_prometheus
+from jobify.observability.metrics import build_registry
 from jobify_api.operational_metrics import render_async_work_metrics
 
 router = APIRouter()
@@ -24,17 +25,13 @@ _log = structlog.get_logger(__name__)
 
 @router.get("/metrics", include_in_schema=False)
 async def metrics(request: Request) -> PlainTextResponse:
-    # async on purpose: a sync handler runs in a threadpool, where
-    # render_prometheus iterating _REQUEST_COUNTS would race the event loop's
-    # record_request mutating it ("dictionary changed size during iteration").
-    # Staying on the event loop keeps render's lock-free iteration atomic.
     configured = request.app.state.settings.metrics_bearer_token
     if configured is not None:
         expected = f"Bearer {configured.get_secret_value()}"
         supplied = request.headers.get("Authorization", "")
         if not hmac.compare_digest(supplied, expected):
             raise HTTPException(status_code=401, detail="invalid_metrics_token")
-    process_metrics = render_prometheus()
+    process_metrics = generate_latest(build_registry()).decode()
     try:
         async with request.app.state.db_sessionmaker() as session:
             queue_metrics = await render_async_work_metrics(session)

@@ -9,6 +9,10 @@ INSIDE ``RequestIdMiddleware`` — added to the app before it — so
 - **End:** exactly one ``http.request`` event. Never the query string or raw
   path — ``q`` is free text and paths carry unbounded ids — only the matched
   route template.
+- **Metrics:** the same end point records ``http_requests_total{method,status}``
+  and ``http_request_duration_seconds{method,route}`` (this replaced the old
+  ``MetricsMiddleware``; CORS stays outermost, so preflight short-circuits are
+  not counted).
 
 Context is deliberately NOT cleared on the way out: Starlette's
 ``ServerErrorMiddleware`` (outermost) runs the unhandled-exception handler after
@@ -24,6 +28,8 @@ from typing import Any, Final
 
 import structlog
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
+
+from jobify.observability.metrics import HTTP_REQUEST_DURATION, HTTP_REQUESTS
 
 _log = structlog.get_logger(__name__)
 
@@ -79,16 +85,20 @@ class RequestContextMiddleware:
             raise
         finally:
             # No status (e.g. client disconnect / CancelledError): nothing was
-            # served, so no access line — mirrors MetricsMiddleware.
+            # served — no access line and no metric sample.
             if status is not None:
                 route = route_template(scope)
+                method = str(scope.get("method", "")).upper()
+                duration_seconds = max(perf_counter() - started_at, 0.0)
+                HTTP_REQUESTS.labels(method=method, status=str(status)).inc()
+                HTTP_REQUEST_DURATION.labels(method=method, route=route).observe(duration_seconds)
                 user_id = state.get("current_user_id")
                 _log.log(
                     _level_for(status, route),
                     "http.request",
-                    method=scope.get("method", ""),
+                    method=method,
                     route=route,
                     status=status,
-                    duration_ms=round((perf_counter() - started_at) * 1000, 1),
+                    duration_ms=round(duration_seconds * 1000, 1),
                     user_id=str(user_id) if user_id is not None else None,
                 )
