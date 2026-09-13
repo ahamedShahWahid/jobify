@@ -131,6 +131,11 @@ def bind_task_context(task_id: str, task: Any, **_kwargs: object) -> None:
 @task_postrun.connect  # type: ignore[untyped-decorator]
 def record_task_run(task_id: str, task: Any, state: str | None = None, **_kwargs: object) -> None:
     started_at, tokens = _task_runs.pop(task_id, (None, {}))
+    # state is also None under eager mode with task_eager_propagates=True (this worker's
+    # setting): celery.app.trace.on_error re-raises before handle_error_state runs, so a
+    # raising eager task never reaches RETRY/FAILURE state here and is counted as "error"
+    # (task_retry/task_failure don't fire either — see worker/CLAUDE.md). Real (non-eager)
+    # workers always pass a real state.
     outcome = _TASK_OUTCOMES.get(state or "", "error")
     TASK_RUNS.labels(task=task.name, outcome=outcome).inc()
     if started_at is not None:
