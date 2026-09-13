@@ -15,6 +15,7 @@ from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from jobify.observability.metrics import UNHANDLED_EXCEPTIONS, VALIDATION_FAILURES
 from jobify_api.middleware.request_context import route_template
 from jobify_api.middleware.request_id import REQUEST_ID_HEADER
 
@@ -80,14 +81,16 @@ def register_error_handlers(app: FastAPI) -> None:
         # Log-only: the body stays FastAPI's default {"detail": [...]} — both
         # clients parse it, so reshaping it is a cross-package contract change.
         # Shapes, never values: loc + type only; input/msg/ctx echo the payload.
+        route = route_template(request.scope)
         _log.warning(
             "http.validation-failed",
-            route=route_template(request.scope),
+            route=route,
             fields=[
                 {"loc": ".".join(str(part) for part in error["loc"]), "type": error["type"]}
                 for error in exc.errors()
             ],
         )
+        VALIDATION_FAILURES.labels(route=route).inc()
         return await request_validation_exception_handler(request, exc)
 
     @app.exception_handler(Exception)
@@ -95,12 +98,14 @@ def register_error_handlers(app: FastAPI) -> None:
         request_id = getattr(request.state, "request_id", "unknown")
         # The canonical traceback line (uvicorn's duplicate is filtered in
         # configure_logging). Route template, not raw path: bounded, no ids.
+        route = route_template(request.scope)
         _log.exception(
             "unhandled-exception",
             request_id=request_id,
-            route=route_template(request.scope),
+            route=route,
             method=request.method,
         )
+        UNHANDLED_EXCEPTIONS.labels(route=route).inc()
         response = _problem(
             status=500,
             title="Internal Server Error",

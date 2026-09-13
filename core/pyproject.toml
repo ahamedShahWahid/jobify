@@ -8,6 +8,7 @@ dependencies = [
     "anyio>=4,<5",
     "asyncpg>=0.30,<0.31",
     "pgvector>=0.3.0,<0.4",
+    "prometheus-client>=0.26,<1",
     "pydantic>=2.9,<3",
     "pydantic-settings>=2.5,<3",
     "sqlalchemy[asyncio]>=2.0.36,<2.1",

@@ -9,6 +9,15 @@ INSIDE ``RequestIdMiddleware`` — added to the app before it — so
 - **End:** exactly one ``http.request`` event. Never the query string or raw
   path — ``q`` is free text and paths carry unbounded ids — only the matched
   route template.
+- **Metrics:** the same end point records ``http_requests_total{method,status}``
+  and ``http_request_duration_seconds{method,route}`` (this replaced the old
+  ``MetricsMiddleware``; CORS stays outermost, so preflight short-circuits are
+  not counted). The ``http.request`` log line is written FIRST, metrics
+  recorded AFTER — an unexpected metrics failure (e.g. a misconfigured
+  ``PROMETHEUS_MULTIPROC_DIR`` that slipped past the boot-time check) must
+  never cost the access line. The ``method`` metric label is bounded to
+  ``{GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS,OTHER}`` (see
+  ``_metric_method``) — never unbounded like the log's real method.
 
 Context is deliberately NOT cleared on the way out: Starlette's
 ``ServerErrorMiddleware`` (outermost) runs the unhandled-exception handler after
@@ -25,16 +34,30 @@ from typing import Any, Final
 import structlog
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from jobify.observability.metrics import HTTP_REQUEST_DURATION, HTTP_REQUESTS
+
 _log = structlog.get_logger(__name__)
 
 UNMATCHED_ROUTE: Final[str] = "__unmatched__"
 _PROBE_ROUTES: Final[frozenset[str]] = frozenset({"/health", "/ready", "/metrics"})
+# Cardinality rule (jobify.observability.metrics): metric label values come
+# only from closed sets. HTTP methods are technically unbounded (any token is
+# a valid request line), so anything outside this set collapses to "OTHER"
+# for METRICS ONLY — the access log always keeps the real method.
+_METRIC_METHODS: Final[frozenset[str]] = frozenset(
+    {"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
+)
 
 
 def route_template(scope: Scope) -> str:
     """The matched route's path template, or ``__unmatched__`` (bounded values only)."""
     path = getattr(scope.get("route"), "path", None)
     return path if isinstance(path, str) else UNMATCHED_ROUTE
+
+
+def _metric_method(method: str) -> str:
+    """Bounded method label for METRICS only — see _METRIC_METHODS."""
+    return method if method in _METRIC_METHODS else "OTHER"
 
 
 def _level_for(status: int, route: str) -> int:
@@ -79,16 +102,26 @@ class RequestContextMiddleware:
             raise
         finally:
             # No status (e.g. client disconnect / CancelledError): nothing was
-            # served, so no access line — mirrors MetricsMiddleware.
+            # served — no access line and no metric sample.
             if status is not None:
                 route = route_template(scope)
+                method = str(scope.get("method", "")).upper()
+                duration_seconds = max(perf_counter() - started_at, 0.0)
                 user_id = state.get("current_user_id")
+                # Log BEFORE recording metrics: an unexpected metrics failure
+                # (e.g. a multiprocess dir that vanished after boot) must not
+                # cost the one canonical access line.
                 _log.log(
                     _level_for(status, route),
                     "http.request",
-                    method=scope.get("method", ""),
+                    method=method,
                     route=route,
                     status=status,
-                    duration_ms=round((perf_counter() - started_at) * 1000, 1),
+                    duration_ms=round(duration_seconds * 1000, 1),
                     user_id=str(user_id) if user_id is not None else None,
+                )
+                metric_method = _metric_method(method)
+                HTTP_REQUESTS.labels(method=metric_method, status=str(status)).inc()
+                HTTP_REQUEST_DURATION.labels(method=metric_method, route=route).observe(
+                    duration_seconds
                 )

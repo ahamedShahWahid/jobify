@@ -98,11 +98,11 @@ async def test_metrics_exposes_bounded_async_work_health(
     assert response.status_code == 200
     body = response.text
     lines = body.splitlines()
-    assert "jobify_async_metrics_up 1" in lines
-    assert 'jobify_async_items{queue="notifications",status="pending"} 2' in lines
-    assert 'jobify_async_items{queue="notifications",status="failed"} 1' in lines
-    assert 'jobify_async_items{queue="outbox",status="processing"} 1' in lines
-    assert 'jobify_async_items{queue="outbox",status="completed"} 1' in lines
+    assert "jobify_async_metrics_up 1.0" in lines
+    assert 'jobify_async_items{queue="notifications",status="pending"} 2.0' in lines
+    assert 'jobify_async_items{queue="notifications",status="failed"} 1.0' in lines
+    assert 'jobify_async_items{queue="outbox",status="processing"} 1.0' in lines
+    assert 'jobify_async_items{queue="outbox",status="completed"} 1.0' in lines
     notification_age = _age_value(body, queue="notifications")
     outbox_age = _age_value(body, queue="outbox")
     assert 115.0 <= notification_age <= 300.0

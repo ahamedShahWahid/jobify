@@ -20,6 +20,19 @@ process alongside the worker — it only enqueues, it doesn't execute:
 
     uv run --env-file=.env celery -A jobify_worker.worker_app beat
 
+## Metrics
+
+Opt-in Prometheus endpoint: set `JOBIFY_WORKER_METRICS_PORT` (e.g. `9101`) and scrape
+`http://<host>:<port>/metrics`. It binds `JOBIFY_WORKER_METRICS_HOST` (default
+`127.0.0.1`; the endpoint has no auth). For `--pool=prefork` (several processes) also
+set `PROMETHEUS_MULTIPROC_DIR` to a directory **owned by the worker alone**; it
+**must already exist and be emptied before the worker starts** — deploy entrypoints
+own that (`scripts/start-all.sh` does it locally), never the worker itself. The
+worker refuses to boot (raises during `worker_init`, before the port check) if this
+is set but not an existing directory. In this mode the scrape carries only the
+metrics this worker declares — no `process_*`/`python_gc_*`/`python_info` (those
+come from the default single-process registry only).
+
 `sweep_outbox` runs every `JOBIFY_OUTBOX_SWEEP_INTERVAL_SECONDS` seconds
 (default 5). API and worker transactions write task dispatch and blob cleanup
 intents to `outbox_events`; the sweeper delivers them with leases and retries.
@@ -78,6 +91,8 @@ In addition to database, Redis, storage, and logging variables in `.env`:
 | `JOBIFY_SCORE_BATCH_SIZE` | `100` | Applicant/job pairs processed per task batch |
 | `JOBIFY_RESUME_PARSER` | `llm` | Resume parser: `llm` (Gemini with library fallback) or `library` (deterministic, no network). Keyless + `llm` degrades to library with a warning. |
 | `JOBIFY_RESUME_PARSER_MODEL` | `gemini-3.1-flash-lite` | Gemini model for resume parsing (chosen on the extraction yardstick, see `core/data/parse_eval/LLM_EVAL_REPORT.md`). |
+| `JOBIFY_WORKER_METRICS_PORT` | unset (disabled) | Opt-in Prometheus scrape port for the worker (`1`-`65535`); unset disables the endpoint entirely. |
+| `JOBIFY_WORKER_METRICS_HOST` | `127.0.0.1` | Bind host for the metrics endpoint. No auth — keep on loopback unless behind a private network. |
 
 ### Notification lease rollout
 

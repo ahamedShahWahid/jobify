@@ -3,7 +3,7 @@
 # start-all.sh — boot the full local Jobify stack in the background.
 #
 # Brings up (idempotently — safe to re-run):
-#   • Postgres     (Homebrew service)        • Celery worker (parse/embed/score/notify/outbox)
+#   • Postgres     (Homebrew service)        • Celery worker (parse/embed/score/notify/outbox) — metrics on :9101
 #   • Celery beat  (sweep schedules)
 #   • Redis        (Homebrew service)         • Frontend     (Vite dev server  :5173)
 #   • Alembic migrations → head               • Flutter web  (:8080, opt-in)
@@ -72,14 +72,24 @@ ensure_service() {
   fi
 }
 
-# spawn <name> <pidfile> <logfile> <command-string>
+# spawn <name> <pidfile> <logfile> <command-string> [prom-dir]
 # Runs the command via `nohup bash -c`; the command must end in `exec <real>`
 # so the recorded PID is the real process (its child tree is killed on stop).
+# When <prom-dir> is given, it is wiped+recreated ONLY inside the "about to
+# actually spawn" branch — never when skipping an already-running service.
+# Wiping unconditionally (the old behavior) deleted a live process's
+# prometheus_client multiprocess .db files out from under it on every re-run,
+# silently emptying its scrapes until the next restart — see finding 1,
+# docs/superpowers/plans/2026-09-13-observability-pr2-metrics.md.
 spawn() {
-  local name=$1 pidfile=$2 logfile=$3 cmd=$4
+  local name=$1 pidfile=$2 logfile=$3 cmd=$4 promdir=${5:-}
   if running "$pidfile"; then
     warn "$name already running (pid $(cat "$pidfile")) — skipping"
     return 0
+  fi
+  if [ -n "$promdir" ]; then
+    rm -rf "$promdir"
+    mkdir -p "$promdir"
   fi
   nohup bash -c "$cmd" >"$logfile" 2>&1 &
   local pid=$!
@@ -99,8 +109,16 @@ say "Applying Alembic migrations (→ head)…"
 
 # ── 3. App-layer services ──────────────────────────────────────────────────
 say "Starting API, worker, frontend…"
+# prometheus_client multiprocess mode: one directory PER SERVICE (a shared one
+# would merge API and worker series in both scrapes). Each is wiped when — and
+# only when — THAT service is actually about to be (re)spawned (see spawn()):
+# wiping a directory whose process is still running (skipped below because
+# its pidfile is live) would delete its .db files out from under it.
+PROM_DIR="$RUN_DIR/prometheus"
+
 spawn api "$RUN_DIR/api.pid" "$RUN_DIR/api.log" \
-  "cd '$ROOT' && exec uv run --env-file='$ENV_FILE' uvicorn jobify_api.main:app --reload --port 8000 --no-access-log"
+  "cd '$ROOT' && PROMETHEUS_MULTIPROC_DIR='$PROM_DIR/api' exec uv run --env-file='$ENV_FILE' uvicorn jobify_api.main:app --reload --port 8000 --no-access-log" \
+  "$PROM_DIR/api"
 
 # The `outbox` queue is NOT optional: API/worker transactions only STAGE task
 # intents in `outbox_events`, and `jobify.sweep_outbox` (the only thing that
@@ -109,7 +127,8 @@ spawn api "$RUN_DIR/api.pid" "$RUN_DIR/api.log" \
 # runs it — no parse, no embed, no score, empty feed. Keep in step with
 # worker/README.md and the root CLAUDE.md command.
 spawn worker "$RUN_DIR/worker.pid" "$RUN_DIR/worker.log" \
-  "cd '$ROOT' && exec uv run --env-file='$ENV_FILE' celery -A jobify_worker.worker_app worker --pool=solo --concurrency=1 -Q parse,embed,score,notify,outbox"
+  "cd '$ROOT' && PROMETHEUS_MULTIPROC_DIR='$PROM_DIR/worker' JOBIFY_WORKER_METRICS_PORT=9101 exec uv run --env-file='$ENV_FILE' celery -A jobify_worker.worker_app worker --pool=solo --concurrency=1 -Q parse,embed,score,notify,outbox" \
+  "$PROM_DIR/worker"
 
 # Beat only ENQUEUES; the worker above executes. Both sweeps (notifications +
 # durable outbox) and the daily outbox cleanup live in its schedule.

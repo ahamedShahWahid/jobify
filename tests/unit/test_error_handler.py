@@ -7,6 +7,7 @@ from collections.abc import Iterator
 import pytest
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
+from prometheus_client import REGISTRY
 from pydantic import BaseModel
 
 from jobify_api.app_factory import create_app
@@ -174,3 +175,21 @@ def test_unhandled_exception_logs_one_traceback_with_route(
     assert "RuntimeError: kaboom" in line["exception"]
     assert "path" not in line
     assert sum("exception" in x for x in lines) == 1
+
+
+def test_unhandled_exception_increments_counter(json_app: TestClient) -> None:
+    labels = {"route": "/boom-unhandled/{item_id}"}
+    before = REGISTRY.get_sample_value("jobify_unhandled_exceptions_total", labels) or 0.0
+
+    json_app.get("/boom-unhandled/abc")
+
+    assert REGISTRY.get_sample_value("jobify_unhandled_exceptions_total", labels) == before + 1
+
+
+def test_validation_failure_increments_counter(json_app: TestClient) -> None:
+    labels = {"route": "/validate/{item_id}"}
+    before = REGISTRY.get_sample_value("jobify_http_validation_failures_total", labels) or 0.0
+
+    json_app.post("/validate/7", json={"count": "nope"})
+
+    assert REGISTRY.get_sample_value("jobify_http_validation_failures_total", labels) == before + 1

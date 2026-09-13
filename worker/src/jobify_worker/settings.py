@@ -78,6 +78,11 @@ class WorkerSettings(BaseSettings):
     provider_connect_timeout_seconds: float = Field(default=5.0, gt=0, le=60)
     provider_read_timeout_seconds: float = Field(default=30.0, gt=0, le=300)
 
+    # Opt-in Prometheus scrape endpoint for the worker (no auth → loopback by
+    # default; set the host to 0.0.0.0 only behind a private network).
+    worker_metrics_port: int | None = Field(default=None, ge=1, le=65535)
+    worker_metrics_host: str = "127.0.0.1"
+
     @field_validator("log_level", mode="before")
     @classmethod
     def _upper_log_level(cls, value: object) -> object:
