@@ -74,6 +74,7 @@ _NAMED_LOGGERS_TO_RESTORE = (
     "boto3",
     "urllib3",
     "google_genai",
+    "google.genai",
 )
 
 
@@ -93,7 +94,7 @@ def _restore_global_logging_state() -> Iterator[None]:
     ``configure_logging()`` also mutates ``uvicorn``/``uvicorn.error``/
     ``uvicorn.access`` in place (clears handlers, flips ``propagate``) and pins
     the third-party loggers (``httpx``, ``httpcore``, ``botocore``, ``boto3``,
-    ``urllib3``, ``google_genai``) to WARNING — restore all of those too, or a
+    ``urllib3``, ``google_genai``, ``google.genai``) to WARNING — restore all of those too, or a
     test that runs before one asserting on their state (e.g.
     ``test_uvicorn_loggers_propagate_to_root_after_configure``) can leave them
     already in the "configured" shape, making that test pass trivially.

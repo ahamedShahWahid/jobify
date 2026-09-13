@@ -18,7 +18,7 @@ Every domain table: `id` (uuid4), `created_at`, `updated_at`, `deleted_at TIMEST
 - **Tracebacks vs provider text.** Unexpected exceptions from our code/infra log WITH traceback. Exceptions whose message can carry request/user content — provider API errors (SES, Gemini), anything chained to a `ValidationError` over resume data — log `error_type` (+ `http_status`) WITHOUT `exc_info`: the rendered traceback includes the message and its causes.
 - **External calls go through `observe_external_call(service, operation)`** (`observability/external.py`) — closed set: gemini/embed, gemini/parse_resume, gemini/explain_match, ses/send_email, s3/put_object, s3/get_object, s3/delete_object, google/jwks_fetch. It never swallows.
 - **Blind `except Exception` needs a reason** — ruff `BLE001` is on; every suppression is `# noqa: BLE001 — <why this boundary catches everything>`. `TRY400` is deliberately NOT enabled: ruff can't see structlog `_log` objects as loggers.
-- **Third-party loggers** (`httpx`, `httpcore`, `botocore`, `boto3`, `urllib3`, `google_genai`) are pinned to WARNING in `configure_logging`.
+- **Third-party loggers** (`httpx`, `httpcore`, `botocore`, `boto3`, `urllib3`, `google_genai`, `google.genai`) are pinned to WARNING in `configure_logging` — both `google_genai` (the SDK's normal module loggers our Gemini calls actually use) and `google.genai` (a separate dotted hierarchy the SDK's unused `_interactions` submodule logs through) are pinned belt-and-braces; they are distinct logger trees.
 - **LLM output is never logged** — parser and explainer log shapes (`_raw_shape`, `raw_length`) only.
 
 ## Metrics — spec `2026-09-13-backend-observability-foundation-design.md`

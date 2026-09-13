@@ -49,7 +49,11 @@ _UVICORN_LOGGERS: Final[tuple[str, ...]] = ("uvicorn", "uvicorn.error")
 # Third-party clients that log request/response detail our key-based redaction
 # can't see: httpx logs full outbound URLs at INFO, botocore/boto3 log signed
 # request headers inside message text at DEBUG. Pinned to WARNING regardless
-# of JOBIFY_LOG_LEVEL.
+# of JOBIFY_LOG_LEVEL. Both "google_genai" (the SDK's normal module loggers,
+# e.g. google_genai.models/_api_client — the ones our generate_content/
+# embed_content calls actually log through) and "google.genai" (a separate,
+# dotted-hierarchy sibling used by the SDK's unused _interactions submodule)
+# are pinned belt-and-braces — they are NOT the same logger tree.
 _PINNED_THIRD_PARTY_LOGGERS: Final[tuple[str, ...]] = (
     "httpx",
     "httpcore",
@@ -57,6 +61,7 @@ _PINNED_THIRD_PARTY_LOGGERS: Final[tuple[str, ...]] = (
     "boto3",
     "urllib3",
     "google_genai",
+    "google.genai",
 )
 
 

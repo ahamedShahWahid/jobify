@@ -258,5 +258,13 @@ def test_uvicorn_color_message_extra_is_dropped(capsys: pytest.CaptureFixture[st
 def test_third_party_loggers_pinned_to_warning() -> None:
     configure_logging(LogSettings(log_level="DEBUG"))
 
-    for name in ("httpx", "httpcore", "botocore", "boto3", "urllib3", "google_genai"):
+    for name in (
+        "httpx",
+        "httpcore",
+        "botocore",
+        "boto3",
+        "urllib3",
+        "google_genai",
+        "google.genai",
+    ):
         assert logging.getLogger(name).level == logging.WARNING, name
