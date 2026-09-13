@@ -253,3 +253,10 @@ def test_uvicorn_color_message_extra_is_dropped(capsys: pytest.CaptureFixture[st
 
     (line,) = json_log_lines(capsys.readouterr().out)
     assert "color_message" not in line
+
+
+def test_third_party_loggers_pinned_to_warning() -> None:
+    configure_logging(LogSettings(log_level="DEBUG"))
+
+    for name in ("httpx", "httpcore", "botocore", "boto3", "urllib3", "google_genai"):
+        assert logging.getLogger(name).level == logging.WARNING, name

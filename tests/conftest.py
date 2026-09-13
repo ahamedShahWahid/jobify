@@ -64,7 +64,17 @@ def pytest_configure(config: object) -> None:
     )
 
 
-_NAMED_LOGGERS_TO_RESTORE = ("uvicorn", "uvicorn.error", "uvicorn.access")
+_NAMED_LOGGERS_TO_RESTORE = (
+    "uvicorn",
+    "uvicorn.error",
+    "uvicorn.access",
+    "httpx",
+    "httpcore",
+    "botocore",
+    "boto3",
+    "urllib3",
+    "google_genai",
+)
 
 
 @pytest.fixture(autouse=True)
@@ -81,8 +91,10 @@ def _restore_global_logging_state() -> Iterator[None]:
     capsys-based ``configure_logging()`` call can leak into another.
 
     ``configure_logging()`` also mutates ``uvicorn``/``uvicorn.error``/
-    ``uvicorn.access`` in place (clears handlers, flips ``propagate``) — restore
-    those too, or a test that runs before one asserting on their state (e.g.
+    ``uvicorn.access`` in place (clears handlers, flips ``propagate``) and pins
+    the third-party loggers (``httpx``, ``httpcore``, ``botocore``, ``boto3``,
+    ``urllib3``, ``google_genai``) to WARNING — restore all of those too, or a
+    test that runs before one asserting on their state (e.g.
     ``test_uvicorn_loggers_propagate_to_root_after_configure``) can leave them
     already in the "configured" shape, making that test pass trivially.
     """
@@ -90,16 +102,17 @@ def _restore_global_logging_state() -> Iterator[None]:
     saved_handlers = root.handlers[:]
     saved_level = root.level
     named_loggers = [logging.getLogger(name) for name in _NAMED_LOGGERS_TO_RESTORE]
-    saved_named = [(lg.handlers[:], lg.propagate) for lg in named_loggers]
+    saved_named = [(lg.handlers[:], lg.propagate, lg.level) for lg in named_loggers]
     structlog.contextvars.clear_contextvars()
     yield
     structlog.contextvars.clear_contextvars()
     structlog.reset_defaults()
     root.handlers[:] = saved_handlers
     root.setLevel(saved_level)
-    for lg, (handlers, propagate) in zip(named_loggers, saved_named, strict=True):
+    for lg, (handlers, propagate, level) in zip(named_loggers, saved_named, strict=True):
         lg.handlers[:] = handlers
         lg.propagate = propagate
+        lg.setLevel(level)
 
 
 @pytest.fixture

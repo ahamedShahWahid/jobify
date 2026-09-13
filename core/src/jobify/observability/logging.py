@@ -46,6 +46,19 @@ _LEVEL_MAP: Final[dict[str, int]] = {
 # app; resetting them sends its records through the root handler below.
 _UVICORN_LOGGERS: Final[tuple[str, ...]] = ("uvicorn", "uvicorn.error")
 
+# Third-party clients that log request/response detail our key-based redaction
+# can't see: httpx logs full outbound URLs at INFO, botocore/boto3 log signed
+# request headers inside message text at DEBUG. Pinned to WARNING regardless
+# of JOBIFY_LOG_LEVEL.
+_PINNED_THIRD_PARTY_LOGGERS: Final[tuple[str, ...]] = (
+    "httpx",
+    "httpcore",
+    "botocore",
+    "boto3",
+    "urllib3",
+    "google_genai",
+)
+
 
 class DropUvicornDuplicateTraceback(logging.Filter):
     """Drop uvicorn's copy of an unhandled-exception traceback.
@@ -153,6 +166,12 @@ def configure_logging(settings: LoggingSettings | None = None) -> None:
     uvicorn_access = logging.getLogger("uvicorn.access")
     uvicorn_access.handlers.clear()
     uvicorn_access.propagate = False
+
+    # Third-party clients log full outbound URLs at INFO (httpx) and signed request
+    # headers inside message text at DEBUG (botocore) — key-based redaction can't
+    # see either. Pin them to WARNING regardless of JOBIFY_LOG_LEVEL.
+    for name in _PINNED_THIRD_PARTY_LOGGERS:
+        logging.getLogger(name).setLevel(logging.WARNING)
 
     structlog.configure(
         processors=[
