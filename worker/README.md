@@ -20,6 +20,14 @@ process alongside the worker — it only enqueues, it doesn't execute:
 
     uv run --env-file=.env celery -A jobify_worker.worker_app beat
 
+## Metrics
+
+Opt-in Prometheus endpoint: set `JOBIFY_WORKER_METRICS_PORT` (e.g. `9101`) and scrape
+`http://<host>:<port>/metrics`. It binds `JOBIFY_WORKER_METRICS_HOST` (default
+`127.0.0.1`; the endpoint has no auth). For `--pool=prefork` (several processes) also
+set `PROMETHEUS_MULTIPROC_DIR` to a directory **owned by the worker alone** and empty
+it before each start — `scripts/start-all.sh` does both locally.
+
 `sweep_outbox` runs every `JOBIFY_OUTBOX_SWEEP_INTERVAL_SECONDS` seconds
 (default 5). API and worker transactions write task dispatch and blob cleanup
 intents to `outbox_events`; the sweeper delivers them with leases and retries.
