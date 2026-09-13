@@ -109,12 +109,12 @@ spawn api "$RUN_DIR/api.pid" "$RUN_DIR/api.log" \
 # runs it — no parse, no embed, no score, empty feed. Keep in step with
 # worker/README.md and the root CLAUDE.md command.
 spawn worker "$RUN_DIR/worker.pid" "$RUN_DIR/worker.log" \
-  "cd '$ROOT' && exec uv run --env-file='$ENV_FILE' celery -A jobify_worker.worker_app worker --pool=solo --concurrency=1 -Q parse,embed,score,notify,outbox --loglevel=info"
+  "cd '$ROOT' && exec uv run --env-file='$ENV_FILE' celery -A jobify_worker.worker_app worker --pool=solo --concurrency=1 -Q parse,embed,score,notify,outbox"
 
 # Beat only ENQUEUES; the worker above executes. Both sweeps (notifications +
 # durable outbox) and the daily outbox cleanup live in its schedule.
 spawn beat "$RUN_DIR/beat.pid" "$RUN_DIR/beat.log" \
-  "cd '$ROOT' && exec uv run --env-file='$ENV_FILE' celery -A jobify_worker.worker_app beat --loglevel=info"
+  "cd '$ROOT' && exec uv run --env-file='$ENV_FILE' celery -A jobify_worker.worker_app beat"
 
 spawn frontend "$RUN_DIR/frontend.pid" "$RUN_DIR/frontend.log" \
   "cd '$ROOT/frontend' && exec npm run dev"

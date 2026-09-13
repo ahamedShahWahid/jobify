@@ -38,7 +38,7 @@ All backend commands run from the **repo root** (`pyproject.toml` + `uv.lock` li
 - App refuses to boot if a required `JOBIFY_*` var is missing/invalid (`settings.py` in `jobify_api`); `JOBIFY_DB_URL` **must** use `postgresql+asyncpg://` (enforced in `Settings._enforce_async_driver`).
 - Integration fixtures inject `JOBIFY_JWT_SECRET="x"*32` + `JOBIFY_GOOGLE_OAUTH_CLIENT_IDS=test.apps.googleusercontent.com` — match these for new apps under test.
 - **Alembic runs from `core/`:** `cd core && uv run alembic upgrade head` (alembic.ini lives in `core/`).
-- **Worker runs from repo root:** `uv run --env-file=.env celery -A jobify_worker.worker_app worker --pool=solo --concurrency=1 -Q parse,embed,score,notify,outbox --loglevel=info`. API/worker transactions stage task intents in `outbox_events`; `sweep_outbox` publishes them by task name.
+- **Worker runs from repo root:** `uv run --env-file=.env celery -A jobify_worker.worker_app worker --pool=solo --concurrency=1 -Q parse,embed,score,notify,outbox`. API/worker transactions stage task intents in `outbox_events`; `sweep_outbox` publishes them by task name.
 - **CI verbatim** (run these exact commands from repo root before claiming green) — backend: `uv run ruff check core/src api/src worker/src tests` · `uv run ruff format --check core/src api/src worker/src tests` · `uv run mypy` · `uv run pytest -v -m "not integration and not eval"` · `uv run pytest -v -s -m eval` · `uv run pytest -v -m integration`; app: `dart format --set-exit-if-changed lib test` · `flutter analyze` · `flutter test`.
 
 ## Conventions (apply everywhere)
