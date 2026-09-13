@@ -151,7 +151,14 @@ def test_http_exception_4xx_does_not_log_http_error(
 ) -> None:
     json_app.get("/boom-404")
 
-    assert [x for x in json_log_lines(capsys.readouterr().out) if x["event"] == "http.error"] == []
+    lines = json_log_lines(capsys.readouterr().out)
+    # Anchor: JSON logging is actually configured and the request WAS logged
+    # (an `http.request` access line for the 404) — without this, the
+    # `http.error` assertion below would also pass if JSON format silently
+    # weren't configured at all (json_log_lines skips non-JSON lines).
+    (access,) = (x for x in lines if x["event"] == "http.request")
+    assert access["status"] == 404
+    assert [x for x in lines if x["event"] == "http.error"] == []
 
 
 def test_unhandled_exception_logs_one_traceback_with_route(
