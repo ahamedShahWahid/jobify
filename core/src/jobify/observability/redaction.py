@@ -68,7 +68,10 @@ def redact_sensitive(_logger: WrappedLogger, _method_name: str, event_dict: Even
     """structlog processor: mask sensitive keys and email addresses.
 
     Underscore-prefixed keys are processor metadata (``_record``,
-    ``_from_structlog``) and pass through untouched.
+    ``_from_structlog``) and pass through untouched. On the stdlib path,
+    ``ProcessorFormatter.remove_processors_meta`` already strips these before
+    this processor runs; the guard here covers the native structlog path,
+    where they are still present when a bound logger's context carries them.
     """
     return {
         key: value if key.startswith("_") else _redact_item(key, value)

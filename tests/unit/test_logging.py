@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import sys
-from collections.abc import Iterator
 from uuid import uuid4
 
 import pytest
@@ -80,26 +79,6 @@ def test_configure_logging_does_not_stack_handlers(
 
     # Only one handler regardless of how many times configure_logging() runs.
     assert len(logging.getLogger().handlers) == 1
-
-
-@pytest.fixture(autouse=True)
-def _clear_log_context() -> Iterator[None]:
-    # configure_logging() under capsys freezes the capsys capture stream into
-    # both the structlog PrintLogger and the root StreamHandler (neither has a
-    # "resolve current stdout at print time" escape hatch once bound). Left in
-    # place, that stale, closed stream leaks into later test modules that call
-    # structlog.get_logger() outside of capsys — restore global logging state
-    # so this module's capsys-based tests never escape it. Deviation from the
-    # brief's contextvars-only fixture; see task-1-report.md.
-    root = logging.getLogger()
-    saved_handlers = root.handlers[:]
-    saved_level = root.level
-    structlog.contextvars.clear_contextvars()
-    yield
-    structlog.contextvars.clear_contextvars()
-    structlog.reset_defaults()
-    root.handlers[:] = saved_handlers
-    root.setLevel(saved_level)
 
 
 def test_stdlib_records_render_through_structlog_as_json(

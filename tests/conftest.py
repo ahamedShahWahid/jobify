@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from collections.abc import Iterator
 
 import pytest
+import structlog
 from fastapi.testclient import TestClient
 
 from jobify_api.app_factory import create_app
@@ -60,6 +62,30 @@ def pytest_configure(config: object) -> None:
         "JOBIFY_GOOGLE_OAUTH_CLIENT_IDS",
         "test.apps.googleusercontent.com",
     )
+
+
+@pytest.fixture(autouse=True)
+def _restore_global_logging_state() -> Iterator[None]:
+    """Undo global logging state any test's ``configure_logging()`` call leaves behind.
+
+    ``configure_logging()`` binds structlog's ``PrintLoggerFactory`` and the root
+    ``logging.StreamHandler`` to whatever ``sys.stdout`` *is at call time*. A test
+    that calls it under ``capsys`` freezes the capture stream into that global
+    state; capsys then closes the stream at teardown, and the next test module
+    to log through structlog/stdlib logging (without configuring it itself)
+    crashes with ``ValueError: I/O operation on closed file``. Snapshot + restore
+    here, autoused for unit/integration/eval alike, so no test file's
+    capsys-based ``configure_logging()`` call can leak into another.
+    """
+    root = logging.getLogger()
+    saved_handlers = root.handlers[:]
+    saved_level = root.level
+    structlog.contextvars.clear_contextvars()
+    yield
+    structlog.contextvars.clear_contextvars()
+    structlog.reset_defaults()
+    root.handlers[:] = saved_handlers
+    root.setLevel(saved_level)
 
 
 @pytest.fixture
