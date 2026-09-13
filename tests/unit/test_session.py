@@ -101,3 +101,15 @@ def test_get_session_can_be_used_as_fastapi_dependency(monkeypatch: pytest.Monke
         response = client.get("/_probe")
     assert response.status_code == 200
     assert response.json() == {"ok": True}
+
+
+def test_create_engine_hides_bound_parameters_in_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("JOBIFY_ENV", "local")
+    monkeypatch.setenv("JOBIFY_SERVICE_NAME", "jobify-api")
+    monkeypatch.setenv("JOBIFY_DB_URL", "postgresql+asyncpg://u:p@h:5432/d")
+
+    engine = core_session_module.create_engine_from_settings()
+
+    assert engine.sync_engine.hide_parameters is True
