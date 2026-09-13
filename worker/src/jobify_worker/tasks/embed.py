@@ -30,6 +30,7 @@ from jobify.integrations.embeddings.base import (
 )
 from jobify.integrations.embeddings.canonicalize import canonicalize_profile
 from jobify.integrations.parser.base import ParsedResume
+from jobify.observability.external import http_status_of
 from jobify.outbox import enqueue_task
 from jobify_worker.async_bridge import run_async
 from jobify_worker.celery_app import celery_app
@@ -116,7 +117,8 @@ async def _embed_applicant_async(
         _log.error(
             "embed.permanent-failure",
             applicant_id=str(applicant_id),
-            error=str(exc),
+            error_type=type(exc).__name__,
+            http_status=http_status_of(exc.__cause__) if exc.__cause__ is not None else None,
         )
         return  # No row state to clean up; no retry.
     except TransientEmbeddingError:

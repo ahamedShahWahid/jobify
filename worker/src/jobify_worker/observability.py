@@ -21,19 +21,35 @@
   dead children's live-gauge files stop reporting.
 
 None of these fire for eager tasks in tests — call the receivers directly.
+
+- task_prerun/postrun/retry/failure → task context in logs, jobify_task_runs_total +
+  jobify_task_duration_seconds; task args are never logged.
 """
 
 from __future__ import annotations
 
 import os
+from contextvars import Token
+from time import perf_counter
+from typing import Any
 from wsgiref.simple_server import WSGIServer
 
 import structlog
-from celery.signals import setup_logging, worker_init, worker_process_shutdown
+from celery.signals import (
+    setup_logging,
+    task_failure,
+    task_postrun,
+    task_prerun,
+    task_retry,
+    worker_init,
+    worker_process_shutdown,
+)
 from prometheus_client import multiprocess, start_http_server
 
 from jobify.observability.logging import configure_logging
 from jobify.observability.metrics import (
+    TASK_DURATION,
+    TASK_RUNS,
     build_registry,
     ensure_multiprocess_dir_ready,
     multiprocess_enabled,
@@ -91,3 +107,71 @@ def mark_worker_process_dead(pid: int | None = None, **_kwargs: object) -> None:
         multiprocess.mark_process_dead(  # type: ignore[no-untyped-call]
             pid if pid is not None else os.getpid()
         )
+
+
+# Per-run state keyed by task id. Celery signals also fire for EAGER tasks (tests,
+# and any code path that calls .apply()), possibly inside an API request — so
+# receivers restore exactly the contextvars they bound instead of clearing.
+_TASK_OUTCOMES = {"SUCCESS": "success", "RETRY": "retry", "FAILURE": "failure"}
+# An entry leaks only if task_postrun never fires for a started task (hard-killed
+# process — which discards this dict anyway); postrun fires on success, retry and failure.
+_task_runs: dict[str, tuple[float, dict[str, Token[Any]]]] = {}
+
+
+@task_prerun.connect  # type: ignore[untyped-decorator]
+def bind_task_context(task_id: str, task: Any, **_kwargs: object) -> None:
+    tokens = structlog.contextvars.bind_contextvars(
+        task_id=task_id,
+        task_name=task.name,
+        task_retries=getattr(task.request, "retries", 0),
+    )
+    _task_runs[task_id] = (perf_counter(), dict(tokens))
+
+
+@task_postrun.connect  # type: ignore[untyped-decorator]
+def record_task_run(task_id: str, task: Any, state: str | None = None, **_kwargs: object) -> None:
+    started_at, tokens = _task_runs.pop(task_id, (None, {}))
+    # state is also None under eager mode with task_eager_propagates=True (this worker's
+    # setting): celery.app.trace.on_error re-raises before handle_error_state runs, so a
+    # raising eager task never reaches RETRY/FAILURE state here and is counted as "error"
+    # (task_retry/task_failure don't fire either — see worker/CLAUDE.md). Real (non-eager)
+    # workers always pass a real state.
+    outcome = _TASK_OUTCOMES.get(state or "", "error")
+    TASK_RUNS.labels(task=task.name, outcome=outcome).inc()
+    if started_at is not None:
+        TASK_DURATION.labels(task=task.name).observe(max(perf_counter() - started_at, 0.0))
+    if tokens:
+        structlog.contextvars.reset_contextvars(**tokens)
+
+
+@task_retry.connect  # type: ignore[untyped-decorator]
+def log_task_retry(request: Any, reason: object = None, **_kwargs: object) -> None:
+    # Celery's real handle_retry sends `reason=` a celery.exceptions.Retry
+    # wrapper, not the underlying exception — unwrap `reason.exc` (may be
+    # None) to get the real cause; fall back to `reason` itself for a plain
+    # exception (autoretry_for) or string reason.
+    cause = getattr(reason, "exc", None) or reason
+    _log.warning(
+        "task.retry",
+        task_id=getattr(request, "id", None),
+        task_name=getattr(request, "task", None),
+        retries=getattr(request, "retries", None),
+        error_type=type(cause).__name__ if isinstance(cause, BaseException) else None,
+    )
+
+
+@task_failure.connect  # type: ignore[untyped-decorator]
+def log_task_failure(
+    sender: Any = None,
+    task_id: str | None = None,
+    exception: BaseException | None = None,
+    **_kwargs: object,
+) -> None:
+    # celery.app.trace already logs the canonical ERROR line WITH the traceback
+    # (structured + redacted since PR 1); this adds task context, no second copy.
+    _log.error(
+        "task.failed",
+        task_id=task_id,
+        task_name=getattr(sender, "name", None),
+        error_type=type(exception).__name__ if exception is not None else None,
+    )

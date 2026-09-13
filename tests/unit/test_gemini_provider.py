@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from prometheus_client import REGISTRY
 
 from jobify.integrations.embeddings.base import (
     EmbeddingProviderError,
@@ -20,6 +21,11 @@ from jobify.integrations.embeddings.gemini import GeminiEmbeddingProvider
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _external_calls(service: str, operation: str, outcome: str) -> float:
+    labels = {"service": service, "operation": operation, "outcome": outcome}
+    return REGISTRY.get_sample_value("jobify_external_calls_total", labels) or 0.0
 
 
 def _make_provider(output_dim: int = 3072) -> tuple[GeminiEmbeddingProvider, AsyncMock]:
@@ -104,14 +110,109 @@ async def test_query_task_formats_with_search_result_prefix() -> None:
 # ---------------------------------------------------------------------------
 
 
+_PROVIDER_BODY_SECRET = "PROVIDER_BODY_TEXT_the-users-resume-content-leaks-here"
+
+
 @pytest.mark.asyncio
 async def test_5xx_maps_to_transient_error() -> None:
-    """ServerError (5xx) from the SDK → TransientEmbeddingError."""
+    """ServerError (5xx) from the SDK → TransientEmbeddingError.
+
+    The raised message must be built from class + code + status only — the
+    SDK's ``details``/``message`` (rendered into ``str(exc)`` by
+    ``APIError.__init__``) can carry request/response body text and must not
+    reach our exception message, which Celery's trace line renders.
+    """
     from google.genai import errors
 
     provider, embed_mock = _make_provider()
 
-    # Build a minimal fake response that satisfies APIError.__init__
+    # APIError.__init__(code, response_json, response=None) reads status/message
+    # straight off response_json (a dict) — not via response.json().
+    response_json = {"message": _PROVIDER_BODY_SECRET, "status": "INTERNAL", "code": 500}
+    embed_mock.side_effect = errors.ServerError(500, response_json, MagicMock(status_code=500))
+
+    with pytest.raises(TransientEmbeddingError) as exc_info:
+        await provider.encode(text="x", task=EmbeddingTask.DOCUMENT)
+
+    message = str(exc_info.value)
+    assert _PROVIDER_BODY_SECRET not in message
+    assert "ServerError" in message
+    assert "500" in message
+    assert "INTERNAL" in message
+
+
+@pytest.mark.asyncio
+async def test_429_maps_to_transient_error() -> None:
+    """ClientError with code=429 (rate limit) → TransientEmbeddingError, no provider body text."""
+    from google.genai import errors
+
+    provider, embed_mock = _make_provider()
+
+    response_json = {
+        "message": _PROVIDER_BODY_SECRET,
+        "status": "RESOURCE_EXHAUSTED",
+        "code": 429,
+    }
+    embed_mock.side_effect = errors.ClientError(429, response_json, MagicMock(status_code=429))
+
+    with pytest.raises(TransientEmbeddingError) as exc_info:
+        await provider.encode(text="x", task=EmbeddingTask.DOCUMENT)
+
+    message = str(exc_info.value)
+    assert _PROVIDER_BODY_SECRET not in message
+    assert "ClientError" in message
+    assert "429" in message
+    assert "RESOURCE_EXHAUSTED" in message
+
+
+@pytest.mark.asyncio
+async def test_other_4xx_maps_to_permanent_error() -> None:
+    """ClientError with code=400 (bad request) → EmbeddingProviderError, no provider body text."""
+    from google.genai import errors
+
+    provider, embed_mock = _make_provider()
+
+    response_json = {
+        "message": _PROVIDER_BODY_SECRET,
+        "status": "INVALID_ARGUMENT",
+        "code": 400,
+    }
+    embed_mock.side_effect = errors.ClientError(400, response_json, MagicMock(status_code=400))
+
+    with pytest.raises(EmbeddingProviderError) as exc_info:
+        await provider.encode(text="x", task=EmbeddingTask.DOCUMENT)
+
+    message = str(exc_info.value)
+    assert _PROVIDER_BODY_SECRET not in message
+    assert "ClientError" in message
+    assert "400" in message
+    assert "INVALID_ARGUMENT" in message
+
+
+# ---------------------------------------------------------------------------
+# Observability tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_embed_call_is_observed_on_success() -> None:
+    """A successful embed_content call bumps the (gemini, embed, success) counter."""
+    provider, embed_mock = _make_provider(output_dim=2)
+    embed_mock.return_value = _make_response([0.1, 0.2])
+    before = _external_calls("gemini", "embed", "success")
+
+    await provider.encode(text="foo", task=EmbeddingTask.DOCUMENT, title="Alice")
+
+    assert _external_calls("gemini", "embed", "success") == before + 1
+
+
+@pytest.mark.asyncio
+async def test_embed_call_is_observed_on_provider_error() -> None:
+    """A provider 5xx error bumps the (gemini, embed, error) counter."""
+    from google.genai import errors
+
+    provider, embed_mock = _make_provider()
+
     fake_response = MagicMock()
     fake_response.status_code = 500
     fake_response.json.return_value = {
@@ -120,49 +221,12 @@ async def test_5xx_maps_to_transient_error() -> None:
         "code": 500,
     }
     embed_mock.side_effect = errors.ServerError(500, fake_response)
+    before = _external_calls("gemini", "embed", "error")
 
     with pytest.raises(TransientEmbeddingError):
         await provider.encode(text="x", task=EmbeddingTask.DOCUMENT)
 
-
-@pytest.mark.asyncio
-async def test_429_maps_to_transient_error() -> None:
-    """ClientError with code=429 (rate limit) → TransientEmbeddingError."""
-    from google.genai import errors
-
-    provider, embed_mock = _make_provider()
-
-    fake_response = MagicMock()
-    fake_response.status_code = 429
-    fake_response.json.return_value = {
-        "message": "rate limit",
-        "status": "RESOURCE_EXHAUSTED",
-        "code": 429,
-    }
-    embed_mock.side_effect = errors.ClientError(429, fake_response)
-
-    with pytest.raises(TransientEmbeddingError):
-        await provider.encode(text="x", task=EmbeddingTask.DOCUMENT)
-
-
-@pytest.mark.asyncio
-async def test_other_4xx_maps_to_permanent_error() -> None:
-    """ClientError with code=400 (bad request) → EmbeddingProviderError."""
-    from google.genai import errors
-
-    provider, embed_mock = _make_provider()
-
-    fake_response = MagicMock()
-    fake_response.status_code = 400
-    fake_response.json.return_value = {
-        "message": "bad input",
-        "status": "INVALID_ARGUMENT",
-        "code": 400,
-    }
-    embed_mock.side_effect = errors.ClientError(400, fake_response)
-
-    with pytest.raises(EmbeddingProviderError):
-        await provider.encode(text="x", task=EmbeddingTask.DOCUMENT)
+    assert _external_calls("gemini", "embed", "error") == before + 1
 
 
 # ---------------------------------------------------------------------------

@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import pytest
+from structlog.testing import capture_logs
 
 from jobify.integrations.parser import (
     FallbackResumeParser,
     LlmParserError,
     ParsedResume,
     ParserError,
+    TransientParserError,
 )
 
 
@@ -73,3 +75,37 @@ def test_extraction_parser_error_propagates_uncaught() -> None:
         asyncio.run(_run(FallbackResumeParser(primary=primary, fallback=fallback)))
     assert str(exc_info.value) == "password_protected"
     assert fallback.calls == 0
+
+
+async def test_transient_extraction_error_propagates_for_retry() -> None:
+    primary = _StubParser(raises=TransientParserError("storage hiccup"))
+    fallback = _StubParser(result=_resume("library.v1"))
+    parser = FallbackResumeParser(primary=primary, fallback=fallback)
+    with pytest.raises(TransientParserError):
+        await parser.parse(content=b"x", content_type="application/pdf")
+    assert fallback.calls == 0
+
+
+async def test_llm_degrade_logs_class_without_message_or_traceback() -> None:
+    primary = _StubParser(
+        raises=LlmParserError("llm_output_invalid: validation failed on ['name']")
+    )
+    fallback = _StubParser(result=_resume("library.v1"))
+    parser = FallbackResumeParser(primary=primary, fallback=fallback)
+    with capture_logs() as logs:
+        await parser.parse(content=b"x", content_type="application/pdf")
+    (line,) = (e for e in logs if e["event"] == "parse.llm-failed")
+    assert line["error_class"] == "LlmParserError"
+    assert line["reason"] == "llm_output_invalid: validation failed on ['name']"
+    assert "exc_info" not in line
+
+
+async def test_unexpected_degrade_logs_class_only() -> None:
+    primary = _StubParser(raises=RuntimeError("contains alice@example.com and resume text"))
+    fallback = _StubParser(result=_resume("library.v1"))
+    parser = FallbackResumeParser(primary=primary, fallback=fallback)
+    with capture_logs() as logs:
+        await parser.parse(content=b"x", content_type="application/pdf")
+    (line,) = (e for e in logs if e["event"] == "parse.llm-failed")
+    assert line["error_class"] == "RuntimeError"
+    assert "reason" not in line and "exc_info" not in line

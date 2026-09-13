@@ -7,7 +7,7 @@ responses that include the request id for traceability.
 from __future__ import annotations
 
 from http import HTTPStatus
-from typing import Any
+from typing import Any, Final
 
 import structlog
 from fastapi import FastAPI, HTTPException, Request
@@ -20,6 +20,15 @@ from jobify_api.middleware.request_context import route_template
 from jobify_api.middleware.request_id import REQUEST_ID_HEADER
 
 _log = structlog.get_logger(__name__)
+
+_MAX_LOC_PART_CHARS: Final = 64
+_MAX_LOGGED_FIELDS: Final = 20
+
+
+def _loc_part(part: object) -> str:
+    # extra="forbid" models put the CLIENT's unknown key name in loc — bound it.
+    text = str(part)
+    return text if len(text) <= _MAX_LOC_PART_CHARS else text[: _MAX_LOC_PART_CHARS - 1] + "…"
 
 
 def _problem(
@@ -82,14 +91,16 @@ def register_error_handlers(app: FastAPI) -> None:
         # clients parse it, so reshaping it is a cross-package contract change.
         # Shapes, never values: loc + type only; input/msg/ctx echo the payload.
         route = route_template(request.scope)
-        _log.warning(
-            "http.validation-failed",
-            route=route,
-            fields=[
-                {"loc": ".".join(str(part) for part in error["loc"]), "type": error["type"]}
-                for error in exc.errors()
-            ],
-        )
+        errors = exc.errors()
+        fields = [
+            {"loc": ".".join(_loc_part(part) for part in error["loc"]), "type": error["type"]}
+            for error in errors[:_MAX_LOGGED_FIELDS]
+        ]
+        log_kwargs: dict[str, Any] = {"route": route, "fields": fields}
+        truncated = len(errors) - len(fields)
+        if truncated > 0:
+            log_kwargs["fields_truncated"] = truncated
+        _log.warning("http.validation-failed", **log_kwargs)
         VALIDATION_FAILURES.labels(route=route).inc()
         return await request_validation_exception_handler(request, exc)
 

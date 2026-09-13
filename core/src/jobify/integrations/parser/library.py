@@ -10,6 +10,8 @@ from __future__ import annotations
 import re
 from typing import Final
 
+import structlog
+
 from jobify.integrations.parser.base import (
     CertificationEntry,
     EducationEntry,
@@ -21,6 +23,8 @@ from jobify.integrations.parser.skills_dict import SKILLS
 from jobify.integrations.parser.text import extract_text
 
 PARSER_NAME: Final[str] = "library.v1"
+
+_log = structlog.get_logger(__name__)
 
 # --- Regex patterns ---
 
@@ -71,6 +75,7 @@ class LibraryResumeParser:
             # ParsedResume with empty fields rather than propagating; the caller
             # can decide whether to surface this as a permanent failure.
             if str(exc) == "no_text_extracted":
+                _log.warning("parse.no-text-extracted", content_type=content_type)
                 return ParsedResume(
                     parser_name=PARSER_NAME,
                     raw_text="",

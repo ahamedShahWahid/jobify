@@ -17,6 +17,7 @@ from jobify.integrations.embeddings.base import (
     EmbeddingTask,
     TransientEmbeddingError,
 )
+from jobify.observability.external import observe_external_call
 
 _log = structlog.get_logger(__name__)
 
@@ -52,20 +53,29 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
             raise NotImplementedError(f"task type not supported by this provider: {task}")
 
         try:
-            resp = await self._client.aio.models.embed_content(
-                model=self._model,
-                contents=content,
-                config=types.EmbedContentConfig(output_dimensionality=self._output_dim),
-            )
+            with observe_external_call("gemini", "embed", log_traceback=False):
+                resp = await self._client.aio.models.embed_content(
+                    model=self._model,
+                    contents=content,
+                    config=types.EmbedContentConfig(output_dimensionality=self._output_dim),
+                )
         except errors.ServerError as exc:
-            raise TransientEmbeddingError(str(exc)) from exc
+            # class + code + status only (mirrors llm_parser.py) — exc's own
+            # str()/message/details can carry the provider's response body,
+            # which Celery's trace line would render verbatim.
+            raise TransientEmbeddingError(
+                f"gemini:{type(exc).__name__} {exc.code} {exc.status}"
+            ) from exc
         except errors.ClientError as exc:
+            detail = f"gemini:{type(exc).__name__} {exc.code} {exc.status}"
             # 429 Too Many Requests → transient; all other 4xx → permanent
             if exc.code == 429:
-                raise TransientEmbeddingError(str(exc)) from exc
-            raise EmbeddingProviderError(str(exc)) from exc
+                raise TransientEmbeddingError(detail) from exc
+            raise EmbeddingProviderError(detail) from exc
         except errors.APIError as exc:
-            raise EmbeddingProviderError(str(exc)) from exc
+            raise EmbeddingProviderError(
+                f"gemini:{type(exc).__name__} {exc.code} {exc.status}"
+            ) from exc
 
         if not resp.embeddings or not resp.embeddings[0].values:
             raise EmbeddingProviderError("empty embedding response")

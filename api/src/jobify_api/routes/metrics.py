@@ -41,7 +41,7 @@ async def metrics(request: Request) -> Response:
     try:
         async with request.app.state.db_sessionmaker() as session:
             snapshot = await fetch_async_work_snapshot(session)
-    except Exception:
+    except Exception:  # noqa: BLE001 — scrape must succeed even when the DB is down (reports jobify_async_metrics_up 0)
         _log.exception("metrics.async-work-query-failed")
         snapshot = None
 

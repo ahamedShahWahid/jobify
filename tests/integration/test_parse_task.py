@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.pool import NullPool
+from structlog.testing import capture_logs
 
 from jobify.db.models import Applicant, Resume, ResumeParseStatus, User, UserRole
 from jobify.integrations.parser.base import (
@@ -130,13 +131,17 @@ async def test_parse_parser_error_marks_failed_no_retry(
     parser = _RaisingParser(ParserError("password_protected"))
 
     # ParserError doesn't propagate — task handles it by marking failed.
-    await _parse_resume_async(resume_id, sm=sm, storage=storage, parser=parser)
+    with capture_logs() as logs:
+        await _parse_resume_async(resume_id, sm=sm, storage=storage, parser=parser)
 
     async with sm() as session:
         row = await session.get(Resume, resume_id)
         assert row is not None
         assert row.parse_status == ResumeParseStatus.FAILED
         assert row.parse_error == "password_protected"
+
+    (line,) = (e for e in logs if e["event"] == "parse.failed")
+    assert line["error_type"] == "ParserError"
 
 
 async def test_parse_transient_error_propagates_for_celery_retry(

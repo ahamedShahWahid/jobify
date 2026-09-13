@@ -325,3 +325,18 @@ module.
 Hosted error tracker; OpenTelemetry tracing; changing the 422 response shape;
 Flutter and React error capture (sub-projects 2 and 3); log shipping/retention
 infrastructure.
+
+## PR 3 implementation deviations (2026-09-13)
+
+- `TRY400` not enabled: ruff can't see structlog `_log` objects as loggers, so it would report nothing.
+- SES operation is `send_email` (not `send`) — matches the actual `boto3` sesv2 call name.
+- Embed tasks log `error_type`/`http_status` on `EmbeddingProviderError` without a traceback — the message can carry provider text.
+- `FallbackResumeParser` re-raises `TransientParserError` instead of silently degrading to library — Celery retries the whole parse.
+- Task receivers reset the exact contextvar tokens they bound instead of `clear_contextvars()` — eager tasks can run inside an API request.
+- `task.failed` carries no second traceback — `celery.app.trace` already logs the canonical one.
+- Context key is `task_retries` (not `retries`) to avoid colliding with Celery's own request attribute name.
+- `/ready` dependency failures log without a traceback (WARNING) — probe frequency would flood the log with repeat tracebacks.
+- `sweep.retry-scheduled`/`sweep.max-attempts-reached` log `error=<sanitized ChannelResult message>` instead of `error_type` — the message is already a closed, PII-free vocabulary (`ses:<Type>[:status]`, `unknown_channel:<x>`, `<ExcClass>`).
+- `parse.failed` carries `error_type` without a traceback — `reason` (a classified slug, or on retry-exhaustion `str(TransientParserError)`) can carry extraction-library text.
+- `BLE` was enabled in the Task 1 commit (not Task 6) so `RUF100` ordering doesn't reject later `# noqa: BLE001` directives.
+- Eager mode with `task_eager_propagates=True` makes a raising task's outcome `error` (not `retry`/`failure`) and fires neither `task_retry` nor `task_failure` — only real workers produce the actual outcome.

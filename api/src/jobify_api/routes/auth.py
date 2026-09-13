@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 from uuid import UUID
 
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
@@ -21,6 +22,7 @@ from pydantic import BaseModel, Field
 from jobify_api.auth.service import AuthService, get_auth_service
 from jobify_api.rate_limit import RateLimitExceededError, client_address
 
+_log = structlog.get_logger(__name__)
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
 
 
@@ -40,7 +42,10 @@ async def _enforce_auth_limit(
             detail="rate_limit_exceeded",
             headers={"Retry-After": str(exc.retry_after)},
         ) from exc
-    except Exception as exc:
+    except Exception as exc:  # re-raises as 503, so BLE001 doesn't fire — no noqa (RUF100)
+        # Any limiter backend failure fails closed with 503.
+        # The key embeds the client address + identity: log the scope only.
+        _log.exception("auth.rate-limiter-unavailable", scope=scope)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="rate_limiter_unavailable",

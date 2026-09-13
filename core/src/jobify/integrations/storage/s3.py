@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+from jobify.observability.external import observe_external_call
+
 
 class S3Storage:
     """Async facade over boto3's synchronous S3 client."""
@@ -47,20 +49,25 @@ class S3Storage:
         return f"{self._prefix}/{clean}" if self._prefix else clean
 
     async def save(self, *, key: str, content: bytes, content_type: str) -> None:
-        await asyncio.to_thread(
-            self._client.put_object,
-            Bucket=self._bucket,
-            Key=self._key(key),
-            Body=content,
-            ContentType=content_type,
-            ServerSideEncryption="AES256",
-        )
+        with observe_external_call("s3", "put_object"):
+            await asyncio.to_thread(
+                self._client.put_object,
+                Bucket=self._bucket,
+                Key=self._key(key),
+                Body=content,
+                ContentType=content_type,
+                ServerSideEncryption="AES256",
+            )
 
     async def read(self, key: str) -> bytes:
-        response = await asyncio.to_thread(
-            self._client.get_object, Bucket=self._bucket, Key=self._key(key)
-        )
-        return await asyncio.to_thread(response["Body"].read)
+        with observe_external_call("s3", "get_object"):
+            response = await asyncio.to_thread(
+                self._client.get_object, Bucket=self._bucket, Key=self._key(key)
+            )
+            return await asyncio.to_thread(response["Body"].read)
 
     async def delete(self, key: str) -> None:
-        await asyncio.to_thread(self._client.delete_object, Bucket=self._bucket, Key=self._key(key))
+        with observe_external_call("s3", "delete_object"):
+            await asyncio.to_thread(
+                self._client.delete_object, Bucket=self._bucket, Key=self._key(key)
+            )

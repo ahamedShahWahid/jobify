@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobify.audit import audit_log
+from jobify.db.errors import constraint_name
 from jobify.db.models import (
     Applicant,
     Employer,
@@ -106,6 +107,11 @@ async def add_member(
         await session.flush()
     except IntegrityError as exc:
         await session.rollback()
+        _log.info(
+            "team.member-add-conflict",
+            employer_id=str(employer_id),
+            constraint=constraint_name(exc),
+        )
         raise TeamCommandError("already_a_member", status_code=409) from exc
     snapshot = await _member_snapshot(session, link, target)
     await audit_log(
@@ -241,6 +247,11 @@ async def create_invite(
         await session.flush()
     except IntegrityError as exc:
         await session.rollback()
+        _log.info(
+            "team.invite-conflict",
+            employer_id=str(employer_id),
+            constraint=constraint_name(exc),
+        )
         raise TeamCommandError("invite_already_pending", status_code=409) from exc
 
     if target is not None:

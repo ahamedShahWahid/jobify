@@ -18,6 +18,8 @@ import jwt as pyjwt
 import structlog
 from fastapi import Request
 
+from jobify.observability.external import observe_external_call
+
 _GOOGLE_ISSUERS: Final[frozenset[str]] = frozenset(
     {"accounts.google.com", "https://accounts.google.com"}
 )
@@ -83,14 +85,17 @@ class JwksGoogleIdTokenVerifier:
         try:
             unverified_header = pyjwt.get_unverified_header(id_token)
         except pyjwt.PyJWTError as exc:
+            _log.warning("google.id-token-rejected", reason="header_invalid")
             raise InvalidGoogleTokenError() from exc
 
         kid = unverified_header.get("kid")
         if not kid:
+            _log.warning("google.id-token-rejected", reason="kid_missing")
             raise InvalidGoogleTokenError()
 
         key = await self._get_signing_key(kid)
         if key is None:
+            _log.warning("google.id-token-rejected", reason="kid_unknown")
             raise InvalidGoogleTokenError()
 
         try:
@@ -102,23 +107,32 @@ class JwksGoogleIdTokenVerifier:
                 options={"require": ["iss", "sub", "aud", "exp", "iat"]},
             )
         except pyjwt.PyJWTError as exc:
+            _log.warning(
+                "google.id-token-rejected",
+                reason="signature_or_claims_invalid",
+                error_type=type(exc).__name__,
+            )
             raise InvalidGoogleTokenError() from exc
 
         if claims["iss"] not in _GOOGLE_ISSUERS:
+            _log.warning("google.id-token-rejected", reason="issuer_invalid")
             raise InvalidGoogleTokenError()
 
         email = claims.get("email")
         if not isinstance(email, str) or not email:
+            _log.warning("google.id-token-rejected", reason="email_missing")
             raise InvalidGoogleTokenError()
 
         raw_aud = claims["aud"]
         if isinstance(raw_aud, list):
             if not raw_aud:
+                _log.warning("google.id-token-rejected", reason="audience_invalid")
                 raise InvalidGoogleTokenError()
             aud_str = raw_aud[0]
         else:
             aud_str = raw_aud
         if not isinstance(aud_str, str):
+            _log.warning("google.id-token-rejected", reason="audience_invalid")
             raise InvalidGoogleTokenError()
 
         return GoogleClaims(
@@ -148,12 +162,14 @@ class JwksGoogleIdTokenVerifier:
     async def _refetch_locked(self) -> None:
         """Fetch JWKS and replace the cache. Lock must be held by caller."""
         try:
-            async with self._http_factory() as client:
-                resp = await client.get(self._jwks_url)
-                resp.raise_for_status()
-                body = resp.json()
+            with observe_external_call("google", "jwks_fetch"):
+                async with self._http_factory() as client:
+                    resp = await client.get(self._jwks_url)
+                    resp.raise_for_status()
+                    body = resp.json()
         except (httpx.HTTPError, ValueError) as exc:
-            _log.warning("jwks-fetch-failed", url=self._jwks_url, error=str(exc))
+            # external.call (WARNING, with traceback) already recorded the failure.
+            _log.warning("jwks-fetch-failed", serving_stale=bool(self._cache_keys))
             if self._cache_keys:
                 # Serve stale on transient failure.
                 return

@@ -71,15 +71,18 @@ def parse_resume(self, resume_id_str: str) -> None:  # type: ignore[no-untyped-d
         run_async(lambda: _parse_resume_async(UUID(resume_id_str)))
     except TransientParserError as exc:
         if self.request.retries >= self.max_retries:
-            # Capture the reason string before the except-clause variable goes
-            # out of scope in Python 3, so the helper lambda captures a str
-            # (not the exception object itself).
+            # Capture the reason string (and error type name) before the
+            # except-clause variable goes out of scope in Python 3, so the
+            # helper lambda captures plain strs (not the exception object
+            # itself).
             reason = f"max_retries_exceeded: {exc}"
+            error_type = type(exc).__name__
             run_async(
                 lambda: _mark_failed(
                     get_session_maker(),
                     UUID(resume_id_str),
                     reason=reason,
+                    error_type=error_type,
                 )
             )
         raise
@@ -140,7 +143,7 @@ async def _parse_resume_async(
         content = await storage.read(storage_key)  # type: ignore[attr-defined]
         parsed: ParsedResume = await parser.parse(content=content, content_type=content_type)
     except ParserError as exc:
-        await _mark_failed(sm, resume_id, reason=str(exc))
+        await _mark_failed(sm, resume_id, reason=str(exc), error_type=type(exc).__name__)
         return
     except TransientParserError:
         # Reraise unchanged so Celery autoretry fires. Row stays at 'parsing'.
@@ -179,6 +182,7 @@ async def _mark_failed(
     resume_id: UUID,
     *,
     reason: str,
+    error_type: str | None = None,
 ) -> None:
     async with sm() as session:
         resume = await session.get(Resume, resume_id)
@@ -196,4 +200,8 @@ async def _mark_failed(
         resume.parse_status = ResumeParseStatus.FAILED
         resume.parse_error = reason[:1000]
         await session.commit()
-    _log.warning("parse.failed", resume_id=str(resume_id), reason=reason)
+    # No traceback: `reason` is a classified slug for a permanent ParserError,
+    # but on the retry-exhaustion path it embeds str(TransientParserError),
+    # which can carry extraction-library text — error_type is the class name
+    # only, never a traceback.
+    _log.warning("parse.failed", resume_id=str(resume_id), reason=reason, error_type=error_type)

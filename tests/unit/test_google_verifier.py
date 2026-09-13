@@ -15,12 +15,19 @@ import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from jwt.utils import to_base64url_uint
+from prometheus_client import REGISTRY
+from structlog.testing import capture_logs
 
 from jobify_api.auth.google_verifier import (
     GoogleJwksUnavailableError,
     InvalidGoogleTokenError,
     JwksGoogleIdTokenVerifier,
 )
+
+
+def _external_calls(service: str, operation: str, outcome: str) -> float:
+    labels = {"service": service, "operation": operation, "outcome": outcome}
+    return REGISTRY.get_sample_value("jobify_external_calls_total", labels) or 0.0
 
 
 def _make_keypair_and_jwks(kid: str) -> tuple[Any, dict[str, Any]]:
@@ -120,6 +127,7 @@ async def test_verify_happy_path(jwks_url: str, client_id: str) -> None:
 
     transport = httpx.MockTransport(handler)
     v = _build_verifier(jwks_url, client_id, transport)
+    before = _external_calls("google", "jwks_fetch", "success")
 
     claims = await v.verify(token)
 
@@ -127,6 +135,7 @@ async def test_verify_happy_path(jwks_url: str, client_id: str) -> None:
     assert claims.email == "a@example.com"
     assert claims.aud == client_id
     assert claims.email_verified is True
+    assert _external_calls("google", "jwks_fetch", "success") == before + 1
 
 
 async def test_verify_rejects_wrong_aud(jwks_url: str, client_id: str) -> None:
@@ -160,6 +169,26 @@ async def test_verify_rejects_wrong_iss(jwks_url: str, client_id: str) -> None:
 
     with pytest.raises(InvalidGoogleTokenError):
         await v.verify(token)
+
+
+async def test_rejected_token_logs_reason_without_token(jwks_url: str, client_id: str) -> None:
+    private, jwks = _make_keypair_and_jwks(kid="key-1")
+    token = _sign_id_token(
+        private_key=private,
+        kid="key-1",
+        sub="x",
+        aud=client_id,
+        email="a@example.com",
+        iss="https://accounts.google.com.evil",
+    )
+    transport = httpx.MockTransport(lambda r: httpx.Response(200, json=jwks))
+    v = _build_verifier(jwks_url, client_id, transport)
+
+    with capture_logs() as logs, pytest.raises(InvalidGoogleTokenError):
+        await v.verify(token)
+    (line,) = (e for e in logs if e["event"] == "google.id-token-rejected")
+    assert line["reason"] == "issuer_invalid"
+    assert token not in repr(line)
 
 
 async def test_verify_rejects_expired_token(jwks_url: str, client_id: str) -> None:
@@ -237,9 +266,12 @@ async def test_jwks_unavailable_raises(jwks_url: str, client_id: str) -> None:
 
     transport = httpx.MockTransport(handler)
     v = _build_verifier(jwks_url, client_id, transport)
+    before = _external_calls("google", "jwks_fetch", "error")
 
     with pytest.raises(GoogleJwksUnavailableError):
         await v.verify(token)
+
+    assert _external_calls("google", "jwks_fetch", "error") == before + 1
 
 
 async def test_verify_accepts_aud_as_array(jwks_url: str, client_id: str) -> None:
