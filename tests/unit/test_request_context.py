@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Iterator
 from typing import Any
 
@@ -11,9 +10,8 @@ import structlog
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
-from jobify.observability.logging import configure_logging
 from jobify_api.app_factory import create_app
-from tests.logging_helpers import json_log_lines
+from tests.logging_helpers import json_log_lines, rebind_logging_per_request
 
 _log = structlog.get_logger("test.request_context")
 
@@ -56,22 +54,11 @@ def app_client(
 ) -> Iterator[TestClient]:
     """A TestClient whose requests always log through the CALL-phase stream.
 
-    pytest's ``capsys`` tears down and recreates its capture buffer between
-    the setup and call phases (``CaptureManager.item_capture`` calls
-    ``deactivate_fixture``/``activate_fixture`` around every phase). Building
-    the app here (setup phase) binds ``configure_logging()``'s
-    ``PrintLoggerFactory``/root handler to that phase's (about-to-be-closed)
-    stream; making requests from the test body (call phase) against that
-    stale binding raises ``ValueError: I/O operation on closed file`` inside
-    the access-log call. Re-running ``configure_logging()`` immediately
-    before each request rebinds it to the live call-phase stream — the same
-    reason ``test_probe_access_lines_are_debug`` (which calls ``create_app()``
-    directly in the test body) never hits this.
-
-    httpx's own request-line log (INFO, propagates to root) is silenced here
-    too — it would otherwise print the raw path + query string this suite
-    asserts never appear, and it's a TestClient-only artifact (no httpx
-    client exists in the request path production serves).
+    See ``tests.logging_helpers.rebind_logging_per_request`` for why this is
+    necessary — the same reason ``test_probe_access_lines_are_debug`` (which
+    calls ``create_app()`` directly in the test body) never hits this. This
+    suite additionally asserts the raw path + query string never appear,
+    which is exactly what that helper's httpx silencing protects.
     """
     _env(monkeypatch)
     app = create_app()
@@ -79,14 +66,7 @@ def app_client(
     structlog.contextvars.clear_contextvars()
     with TestClient(app, raise_server_exceptions=False) as client:
         capsys.readouterr()
-        logging.getLogger("httpx").setLevel(logging.WARNING)
-        real_request = client.request
-
-        def _request(*args: Any, **kwargs: Any) -> Any:
-            configure_logging()
-            return real_request(*args, **kwargs)
-
-        client.request = _request  # type: ignore[method-assign]
+        rebind_logging_per_request(client, monkeypatch)
         yield client
     structlog.contextvars.clear_contextvars()
 

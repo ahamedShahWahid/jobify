@@ -16,6 +16,8 @@ Load-bearing invariants for the HTTP layer (`api/src/jobify_api`): app factory, 
 
 `jobify_api.middleware.error_handler`: `HTTPException` + unhandled `Exception` flow through `_problem()` → `application/problem+json` with `request_id`. The unhandled path re-attaches `X-Request-Id` (`ServerErrorMiddleware` sits outside `RequestIdMiddleware`). `HTTPException.detail` is user-visible — a user-facing string, not a debug aid.
 
+Logging: `HTTPException` ≥500 → ERROR `http.error` (status, detail slug, route); <500 relies on the access line. `RequestValidationError` → WARNING `http.validation-failed` with `fields=[{loc, type}]` only — never `input`/`msg`/`ctx` (they echo submitted values) — and the response is FastAPI's default `{"detail": [...]}` **byte-for-byte** (pinned by test; the Flutter and React clients parse it, so reshaping is a cross-package change). `unhandled-exception` is the one canonical traceback line.
+
 ## Don't reuse models as response schemas
 
 SQLAlchemy models are never response models. Define `*Read`/`*Create`/`*Update` Pydantic v2 in the route module (`ResumeRead` with `ConfigDict(from_attributes=True)`).
