@@ -3,15 +3,18 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from uuid import UUID
 
 import httpx
 import pytest
-from sqlalchemy import select
+from fastapi import HTTPException
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from jobify.db.models import ApplicantPreferences, User, UserRole
+from jobify.db.models import Applicant, ApplicantPreferences, User, UserRole
 from jobify_api.auth.google_verifier import GoogleClaims
 from jobify_api.auth.tokens import mint_access_token
+from jobify_api.routes.applicants import _require_preferences_row
 from tests.integration.outbox_helpers import task_event_args
 
 pytestmark = pytest.mark.integration
@@ -268,6 +271,91 @@ async def test_get_soft_deleted_preferences_row_returns_500(
     resp = await async_client.get("/v1/applicants/me/preferences", headers=headers)
     assert resp.status_code == 500
     assert resp.json()["detail"] == "applicant_preferences_missing"
+
+
+async def _hard_delete_preferences_row(session: AsyncSession, applicant_id: str) -> None:
+    """Simulate an applicant that predates migration 0021 (no row ever created)."""
+    await session.execute(
+        delete(ApplicantPreferences).where(ApplicantPreferences.applicant_id == applicant_id)
+    )
+    await session.commit()
+
+
+async def _live_preferences_rows(session: AsyncSession, applicant_id: str) -> int:
+    return (
+        await session.execute(
+            select(func.count())
+            .select_from(ApplicantPreferences)
+            .where(
+                ApplicantPreferences.applicant_id == applicant_id,
+                ApplicantPreferences.deleted_at.is_(None),
+            )
+        )
+    ).scalar_one()
+
+
+async def test_get_preferences_creates_defaults_when_row_never_existed(
+    async_client: httpx.AsyncClient, google_verifier, session: AsyncSession
+) -> None:
+    """Pre-0021 accounts have no preferences row at all (0021 did not backfill;
+    0028 does). The route provisions the default row instead of 500ing."""
+    signin = await _signin(async_client, google_verifier)
+    headers = {"Authorization": f"Bearer {signin['access_token']}"}
+    applicant_id = signin["user"]["applicant_id"]
+    await _hard_delete_preferences_row(session, applicant_id)
+
+    resp = await async_client.get("/v1/applicants/me/preferences", headers=headers)
+    assert resp.status_code == 200
+    assert resp.json() == {
+        "desired_role": None,
+        "locations": [],
+        "expected_ctc": None,
+        "language": "en",
+    }
+    assert await _live_preferences_rows(session, applicant_id) == 1
+
+    # A second read reuses the provisioned row rather than inserting another.
+    resp = await async_client.get("/v1/applicants/me/preferences", headers=headers)
+    assert resp.status_code == 200
+    assert await _live_preferences_rows(session, applicant_id) == 1
+
+
+async def test_patch_preferences_creates_row_when_row_never_existed(
+    async_client: httpx.AsyncClient, google_verifier, session: AsyncSession
+) -> None:
+    signin = await _signin(async_client, google_verifier)
+    headers = {"Authorization": f"Bearer {signin['access_token']}"}
+    applicant_id = signin["user"]["applicant_id"]
+    await _hard_delete_preferences_row(session, applicant_id)
+
+    resp = await async_client.patch(
+        "/v1/applicants/me/preferences", headers=headers, json={"language": "hi"}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["language"] == "hi"
+    assert await _live_preferences_rows(session, applicant_id) == 1
+
+
+async def test_provisioning_skips_applicant_erased_after_auth_check(
+    async_client: httpx.AsyncClient, google_verifier, session: AsyncSession
+) -> None:
+    """DSR erasure racing a preferences request: the request passed
+    require_applicant, then the deleter committed (hard-deletes the prefs row,
+    soft-deletes the applicant). Provisioning must not recreate a live row —
+    PATCH would otherwise write location/CTC back for an erased applicant."""
+    signin = await _signin(async_client, google_verifier)
+    applicant_id = signin["user"]["applicant_id"]
+    await _hard_delete_preferences_row(session, applicant_id)
+    await session.execute(
+        update(Applicant).where(Applicant.id == applicant_id).values(deleted_at=datetime.now(UTC))
+    )
+    await session.commit()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await _require_preferences_row(UUID(applicant_id), session)
+    assert exc_info.value.status_code == 500
+    assert exc_info.value.detail == "applicant_preferences_missing"
+    assert await _live_preferences_rows(session, applicant_id) == 0
 
 
 async def test_preferences_language_defaults_en_and_round_trips(
