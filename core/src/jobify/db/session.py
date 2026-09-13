@@ -44,6 +44,9 @@ def create_engine_from_settings(
     kwargs: dict[str, Any] = {
         "echo": False,
         "pool_pre_ping": True,
+        # Exception text (and so every logged traceback) must not embed bound
+        # values — they are applicant PII. See core/CLAUDE.md "Logging + redaction".
+        "hide_parameters": True,
         "connect_args": {
             "server_settings": {"search_path": _SCHEMA},
             "command_timeout": settings.db_command_timeout_seconds,

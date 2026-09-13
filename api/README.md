@@ -26,8 +26,10 @@ Then set up Postgres — see [Database](#database).
 All commands run from the **repo root** (not from `api/`). The `.env` file lives at the repo root.
 
 ```bash
-uv run --env-file=.env uvicorn jobify_api.main:app --reload --port 8000
+uv run --env-file=.env uvicorn jobify_api.main:app --reload --port 8000 --no-access-log
 ```
+
+`--no-access-log`: the API writes its own structured `http.request` access line (route template, no query string). `uvicorn.access` is already disabled in code by `configure_logging` (see `core/CLAUDE.md`) — the flag is kept as belt-and-braces.
 
 - `--reload` watches source dirs and restarts on code changes.
 - `--port 8000` is the convention; pick anything free if 8000 is in use.
@@ -36,7 +38,7 @@ Inline env vars (for one-off overrides):
 
 ```bash
 JOBIFY_ENV=local JOBIFY_SERVICE_NAME=jobify-api \
-  uv run uvicorn jobify_api.main:app --reload --port 8000
+  uv run uvicorn jobify_api.main:app --reload --port 8000 --no-access-log
 ```
 
 ### Verify it's up

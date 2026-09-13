@@ -8,6 +8,14 @@ Load-bearing invariants for the FastAPI- and Celery-free domain package (`core/s
 
 Every domain table: `id` (uuid4), `created_at`, `updated_at`, `deleted_at TIMESTAMPTZ NULL`. Live queries filter `deleted_at IS NULL`; uniqueness via partial indexes `WHERE deleted_at IS NULL` (e.g. `User.ix_users_email_live`). New tables reuse the `CreatedAt`/`UpdatedAt`/`DeletedAt` `Annotated` types in `db/models.py`. `Base.__table_args__` is typed `Any` + `# noqa: RUF012` — don't "fix" the noqa.
 
+## Logging + redaction — spec `2026-09-13-backend-observability-foundation-design.md`
+
+- **One format for every log line.** `configure_logging` routes stdlib records (uvicorn, SQLAlchemy, httpx, Celery) through a `ProcessorFormatter` on the single root handler; structlog stays on `PrintLoggerFactory`. Don't attach handlers to individual loggers — anything not reaching the root handler escapes redaction.
+- **Log shapes, never values.** No query strings, raw paths, bodies, validation inputs, tokens or emails in fields. `redact_sensitive` (`observability/redaction.py`) is the safety net, not the policy: it masks a fixed key list at any depth and email addresses in every string (incl. rendered tracebacks). Adding a key is an invariant change.
+- **Redaction tests must use the real chain** (`configure_logging` + `capsys`, helpers in `tests/logging_helpers.py`). `structlog.testing.capture_logs()` replaces the processor chain and proves nothing about redaction.
+- **DB errors never embed bound values** — the engine is built with `hide_parameters=True`.
+- **`uvicorn.access` is disabled in code, not via the CLI flag.** uvicorn decides per-connection whether to emit an access-log record by checking `self.access_logger.hasHandlers()` — which walks up to the root handler if the logger propagates, so `--no-access-log` alone doesn't stop it once `configure_logging` has run. `uvicorn.access` is therefore reset to no handlers **and `propagate=False`** (unlike `uvicorn`/`uvicorn.error`, which do propagate) so `hasHandlers()` stays False and the raw request line — method, path, AND query string, e.g. `/v1/feed?q=<free-text search>` — never gets emitted. The app's own `http.request` line (route template, no query string) is the access log.
+
 ## Applicant preferences (`applicant_preferences`) — spec `2026-07-01-resume-review-preferences-design.md`
 
 - **One live row per applicant** (partial-unique `ix_applicant_preferences_applicant_live`), **eagerly created at signup** by `AuthService._upsert_identity` (like consent seeding), and backfilled for older applicants by migration 0028 — the API provisions a row that never existed but 500s on a soft-deleted-only row (see `api/CLAUDE.md`). Workers still outer-join defensively for seeded/test applicants, with `deleted_at IS NULL` in the JOIN's **ON clause** so a soft-deleted row degrades to "no prefs" rather than dropping the applicant (see `worker/CLAUDE.md` → Scoring).

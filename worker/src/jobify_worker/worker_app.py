@@ -4,6 +4,7 @@ Imports the shared app, registers all task modules, and wires runtime signals.
 """
 
 from jobify_worker import (
+    observability,  # noqa: F401  (connects setup_logging so Celery logs render via structlog)
     runtime,  # noqa: F401  (connects worker_process_init/shutdown signals on import)
 )
 from jobify_worker.celery_app import celery_app  # noqa: F401  (the -A target)

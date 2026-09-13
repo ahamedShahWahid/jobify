@@ -6,10 +6,11 @@ settings, Celery routing/beat configuration, runtime factories, and tasks live h
 ## Run (from repo root, needs Redis + root .env)
 
     uv run --env-file=.env celery -A jobify_worker.worker_app worker \
-        --pool=solo --concurrency=1 -Q parse,embed,score,notify,outbox --loglevel=info
+        --pool=solo --concurrency=1 -Q parse,embed,score,notify,outbox
 
 - `--pool=solo`: single-concurrency for MVP. Switch to `--pool=prefork` when load justifies parallelism.
 - `-Q parse,embed,score,notify,outbox`: consume from all queues. Pin a second worker to a single queue for isolation.
+- Log level/format come from `JOBIFY_LOG_LEVEL`/`JOBIFY_LOG_FORMAT`; Celery's `--loglevel` has no effect once the `setup_logging` receiver is connected (`jobify_worker/observability.py`).
 
 ## Beat (scheduler)
 
@@ -17,7 +18,7 @@ settings, Celery routing/beat configuration, runtime factories, and tasks live h
 (default 60) via `celery_app.conf.beat_schedule`. Beat must run as its own
 process alongside the worker — it only enqueues, it doesn't execute:
 
-    uv run --env-file=.env celery -A jobify_worker.worker_app beat --loglevel=info
+    uv run --env-file=.env celery -A jobify_worker.worker_app beat
 
 `sweep_outbox` runs every `JOBIFY_OUTBOX_SWEEP_INTERVAL_SECONDS` seconds
 (default 5). API and worker transactions write task dispatch and blob cleanup

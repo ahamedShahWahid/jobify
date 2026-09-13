@@ -78,6 +78,8 @@ async def current_user(
 
     request.state.current_user_id = user.id
     request.state.current_role = user.role.value
+    # Every later log line in this request carries the caller (UUID, not PII).
+    structlog.contextvars.bind_contextvars(user_id=str(user.id))
     return user
 
 
