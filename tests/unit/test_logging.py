@@ -172,10 +172,28 @@ def test_uvicorn_loggers_propagate_to_root_after_configure() -> None:
 
     configure_logging(LogSettings())
 
-    for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+    for name in ("uvicorn", "uvicorn.error"):
         logger = logging.getLogger(name)
         assert logger.handlers == []
         assert logger.propagate is True
+
+
+def test_uvicorn_access_logger_is_disabled_after_configure() -> None:
+    # uvicorn decides per-connection whether to emit access-log records via
+    # `self.access_logger.hasHandlers()` (h11_impl.py / httptools_impl.py). If
+    # `uvicorn.access` propagates to the root handler, hasHandlers() returns
+    # True regardless of `--no-access-log`, and uvicorn logs the raw request
+    # line — method, path AND query string (e.g. `?q=<free-text search>`) —
+    # straight into `event`, bypassing redaction. So this logger must end up
+    # with no handlers of its own AND propagate=False, unlike its siblings.
+    uvicorn_access = logging.getLogger("uvicorn.access")
+    uvicorn_access.addHandler(logging.StreamHandler(sys.stderr))
+    uvicorn_access.propagate = True
+
+    configure_logging(LogSettings())
+
+    assert uvicorn_access.hasHandlers() is False
+    assert uvicorn_access.propagate is False
 
 
 def test_uvicorn_duplicate_asgi_traceback_is_dropped(

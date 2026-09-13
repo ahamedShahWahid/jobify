@@ -44,7 +44,7 @@ _LEVEL_MAP: Final[dict[str, int]] = {
 
 # uvicorn installs its own handlers with propagate=False before importing the
 # app; resetting them sends its records through the root handler below.
-_UVICORN_LOGGERS: Final[tuple[str, ...]] = ("uvicorn", "uvicorn.error", "uvicorn.access")
+_UVICORN_LOGGERS: Final[tuple[str, ...]] = ("uvicorn", "uvicorn.error")
 
 
 class DropUvicornDuplicateTraceback(logging.Filter):
@@ -122,6 +122,21 @@ def configure_logging(settings: LoggingSettings | None = None) -> None:
         uvicorn_logger = logging.getLogger(name)
         uvicorn_logger.handlers.clear()
         uvicorn_logger.propagate = True
+
+    # uvicorn decides per-connection whether to emit an access-log record via
+    # `self.access_logger.hasHandlers()` (h11_impl.py / httptools_impl.py) —
+    # NOT by reading `--no-access-log` at request time. `hasHandlers()` walks
+    # up the logger tree, so if `uvicorn.access` propagates to the root
+    # handler it returns True regardless of the CLI flag, and uvicorn writes
+    # the raw request line (method, path, AND query string — e.g. our
+    # `/v1/feed?q=<free-text search>`) straight into `event`, bypassing
+    # `redact_sensitive` entirely. So `uvicorn.access` must have no handlers
+    # of its own AND never propagate, unlike `uvicorn`/`uvicorn.error` above —
+    # the app's own `http.request` middleware line (route template, no query
+    # string) is the access log.
+    uvicorn_access = logging.getLogger("uvicorn.access")
+    uvicorn_access.handlers.clear()
+    uvicorn_access.propagate = False
 
     structlog.configure(
         processors=[

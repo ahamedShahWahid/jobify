@@ -14,6 +14,7 @@ Every domain table: `id` (uuid4), `created_at`, `updated_at`, `deleted_at TIMEST
 - **Log shapes, never values.** No query strings, raw paths, bodies, validation inputs, tokens or emails in fields. `redact_sensitive` (`observability/redaction.py`) is the safety net, not the policy: it masks a fixed key list at any depth and email addresses in every string (incl. rendered tracebacks). Adding a key is an invariant change.
 - **Redaction tests must use the real chain** (`configure_logging` + `capsys`, helpers in `tests/logging_helpers.py`). `structlog.testing.capture_logs()` replaces the processor chain and proves nothing about redaction.
 - **DB errors never embed bound values** — the engine is built with `hide_parameters=True`.
+- **`uvicorn.access` is disabled in code, not via the CLI flag.** uvicorn decides per-connection whether to emit an access-log record by checking `self.access_logger.hasHandlers()` — which walks up to the root handler if the logger propagates, so `--no-access-log` alone doesn't stop it once `configure_logging` has run. `uvicorn.access` is therefore reset to no handlers **and `propagate=False`** (unlike `uvicorn`/`uvicorn.error`, which do propagate) so `hasHandlers()` stays False and the raw request line — method, path, AND query string, e.g. `/v1/feed?q=<free-text search>` — never gets emitted. The app's own `http.request` line (route template, no query string) is the access log.
 
 ## Applicant preferences (`applicant_preferences`) — spec `2026-07-01-resume-review-preferences-design.md`
 
