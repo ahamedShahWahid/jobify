@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Iterator
 from typing import Any
 
@@ -11,6 +12,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 from jobify_api.app_factory import create_app
+from jobify_api.middleware.request_context import RequestContextMiddleware
 from tests.logging_helpers import json_log_lines, rebind_logging_per_request
 
 _log = structlog.get_logger("test.request_context")
@@ -104,6 +106,61 @@ def test_handler_logs_carry_request_id(
     assert inside["request_id"] == response.headers["x-request-id"]
 
 
+async def _noop_receive() -> dict[str, Any]:
+    return {"type": "http.disconnect"}
+
+
+async def _noop_send(_message: dict[str, Any]) -> None:
+    return None
+
+
+def test_context_cleared_between_calls_in_one_asyncio_context() -> None:
+    """Drive RequestContextMiddleware TWICE within one asyncio context directly.
+
+    ``test_context_does_not_bleed_between_requests`` below uses a TestClient,
+    whose requests each run in a COPIED contextvars context — it would pass
+    even if ``clear_contextvars()`` were deleted from the middleware, since
+    the copy alone would isolate them. Calling ``__call__`` twice in a row
+    inside one ``asyncio.run()`` shares a single context, so only the
+    middleware's own clear can isolate the second call. Confirmed to fail
+    (the ``user_id`` assertion) with ``clear_contextvars()`` temporarily
+    commented out in ``RequestContextMiddleware.__call__`` — see the fix
+    report for that run's output.
+    """
+    captured: dict[str, Any] = {}
+
+    async def inner_app_first(_scope: dict[str, Any], _receive: object, _send: object) -> None:
+        # Simulates current_user binding user_id mid-request.
+        structlog.contextvars.bind_contextvars(user_id="leaky-user")
+
+    async def inner_app_second(_scope: dict[str, Any], _receive: object, _send: object) -> None:
+        captured["ctx"] = structlog.contextvars.get_contextvars()
+
+    first = RequestContextMiddleware(inner_app_first)  # type: ignore[arg-type]
+    second = RequestContextMiddleware(inner_app_second)  # type: ignore[arg-type]
+
+    async def scenario() -> None:
+        scope1: dict[str, Any] = {
+            "type": "http",
+            "method": "GET",
+            "state": {"request_id": "req-1"},
+        }
+        await first(scope1, _noop_receive, _noop_send)  # type: ignore[arg-type]
+
+        scope2: dict[str, Any] = {
+            "type": "http",
+            "method": "GET",
+            "state": {"request_id": "req-2"},
+        }
+        await second(scope2, _noop_receive, _noop_send)  # type: ignore[arg-type]
+
+    asyncio.run(scenario())
+
+    ctx = captured["ctx"]
+    assert ctx["request_id"] == "req-2"
+    assert "user_id" not in ctx
+
+
 def test_context_does_not_bleed_between_requests(
     app_client: TestClient, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -154,7 +211,12 @@ def test_probe_access_lines_are_debug(
     with TestClient(create_app()) as client:
         capsys.readouterr()
         client.get("/health")
-        assert _access_lines(capsys.readouterr().out) == []
+        client.get("/definitely/not/a/route/456")
+        lines = _access_lines(capsys.readouterr().out)
+        # Anchor: a non-probe route's access line IS present at INFO — proves
+        # JSON logging is actually configured, so the `/health` assertion
+        # below isn't vacuously true because nothing was logged at all.
+        assert [line["route"] for line in lines] == ["__unmatched__"]
 
     _env(monkeypatch, level="DEBUG")
     with TestClient(create_app()) as client:

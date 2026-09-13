@@ -131,6 +131,25 @@ def test_sensitive_keys_redacted_at_any_depth_case_insensitive(
     assert line["items"] == [{"EMAIL": "[REDACTED]"}, {"kind": "x"}]
 
 
+def test_underscore_prefixed_keys_are_redacted_like_any_other_key(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # An underscore prefix is not processor metadata for a caller-supplied
+    # key — it must not bypass either guard. `_email` is not in
+    # SENSITIVE_KEYS, so it is NOT key-masked, but the email inside its value
+    # is still scrubbed (value-scrub, same as any other key). `_token` is
+    # likewise not in SENSITIVE_KEYS and carries no email, so it passes
+    # through unchanged — that's the code's actual behavior, not a bypass.
+    configure_logging(LogSettings())
+    capsys.readouterr()
+
+    structlog.get_logger("t").info("signin", _email="a@b.com", _token="abc123not-an-email")
+
+    (line,) = json_log_lines(capsys.readouterr().out)
+    assert line["_email"] == "[REDACTED_EMAIL]"
+    assert line["_token"] == "abc123not-an-email"
+
+
 def test_sensitive_stdlib_extras_are_redacted(capsys: pytest.CaptureFixture[str]) -> None:
     configure_logging(LogSettings())
     capsys.readouterr()

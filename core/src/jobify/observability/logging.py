@@ -62,11 +62,27 @@ class DropUvicornDuplicateTraceback(logging.Filter):
         )
 
 
-def _drop_color_message(
+# Known-noisy stdlib `extra` keys dropped from every foreign record before
+# redaction/rendering — each is a duplicate of data already in the rendered
+# event, not new information.
+_NOISY_STDLIB_EXTRAS: Final[tuple[str, ...]] = (
+    # uvicorn attaches an ANSI-coloured duplicate of every message as an extra.
+    "color_message",
+    # Celery's `celery.app.trace` logs task received/succeeded/failed with
+    # `extra={"data": context}` (celery/app/trace.py); `context` duplicates
+    # `id`/`name`/`runtime`/`return_value` already interpolated into the
+    # rendered message, plus (on failure) a second copy of the traceback, and
+    # carries `args`/`kwargs` verbatim — neither key is in SENSITIVE_KEYS, so
+    # `redact_sensitive` would pass task arguments through unredacted.
+    "data",
+)
+
+
+def _drop_noisy_stdlib_extras(
     _logger: WrappedLogger, _method_name: str, event_dict: EventDict
 ) -> EventDict:
-    # uvicorn attaches an ANSI-coloured duplicate of every message as an extra.
-    event_dict.pop("color_message", None)
+    for key in _NOISY_STDLIB_EXTRAS:
+        event_dict.pop(key, None)
     return event_dict
 
 
@@ -104,7 +120,7 @@ def configure_logging(settings: LoggingSettings | None = None) -> None:
                 *shared,
                 structlog.stdlib.add_logger_name,
                 structlog.stdlib.ExtraAdder(),
-                _drop_color_message,
+                _drop_noisy_stdlib_extras,
             ],
             processors=[
                 structlog.stdlib.ProcessorFormatter.remove_processors_meta,

@@ -67,13 +67,13 @@ def _scrub(value: Any) -> Any:
 def redact_sensitive(_logger: WrappedLogger, _method_name: str, event_dict: EventDict) -> EventDict:
     """structlog processor: mask sensitive keys and email addresses.
 
-    Underscore-prefixed keys are processor metadata (``_record``,
-    ``_from_structlog``) and pass through untouched. On the stdlib path,
-    ``ProcessorFormatter.remove_processors_meta`` already strips these before
-    this processor runs; the guard here covers the native structlog path,
-    where they are still present when a bound logger's context carries them.
+    Every key is redacted uniformly, underscore-prefixed or not — an
+    underscore is not a signal that a key is processor metadata rather than a
+    log field a caller chose, and letting it skip both key-masking and the
+    email scrub would be a silent bypass (e.g. ``log.info("x",
+    _email="a@b.com")``). On the stdlib path, ``ProcessorFormatter.
+    remove_processors_meta`` strips structlog's own ``_record``/
+    ``_from_structlog`` metadata keys before this processor runs; on the
+    native structlog path no such metadata keys reach here.
     """
-    return {
-        key: value if key.startswith("_") else _redact_item(key, value)
-        for key, value in event_dict.items()
-    }
+    return {key: _redact_item(key, value) for key, value in event_dict.items()}
