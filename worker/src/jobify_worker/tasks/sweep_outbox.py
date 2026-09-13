@@ -60,7 +60,7 @@ async def _sweep_outbox_async(
                 storage=storage,
                 dispatch=dispatch,
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 — per-event isolation: any failure is recorded on the row and retried
             await _record_failure(sm, event_id, dispatch_token, exc)
 
 

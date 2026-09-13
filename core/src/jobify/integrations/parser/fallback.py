@@ -36,6 +36,6 @@ class FallbackResumeParser:
         except ParserError:
             # Extraction failure — permanent for the fallback too; re-raise.
             raise
-        except Exception as exc:  # degradation boundary by design
+        except Exception as exc:  # noqa: BLE001 — degradation boundary by design
             _log.warning("parse.llm-failed", error=str(exc), error_class=type(exc).__name__)
         return await self._fallback.parse(content=content, content_type=content_type)

@@ -75,6 +75,32 @@ VALIDATION_FAILURES: Final[Counter] = Counter(
     ("route",),
 )
 
+_EXTERNAL_CALL_BUCKETS: Final[tuple[float, ...]] = (0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30)
+_TASK_DURATION_BUCKETS: Final[tuple[float, ...]] = (0.1, 0.5, 1, 5, 10, 30, 60, 120, 300)
+
+EXTERNAL_CALLS: Final[Counter] = Counter(
+    "jobify_external_calls",
+    "External provider calls by service, operation and outcome (success|error).",
+    ("service", "operation", "outcome"),
+)
+EXTERNAL_CALL_DURATION: Final[Histogram] = Histogram(
+    "jobify_external_call_duration_seconds",
+    "External provider call duration by service and operation.",
+    ("service", "operation"),
+    buckets=_EXTERNAL_CALL_BUCKETS,
+)
+TASK_RUNS: Final[Counter] = Counter(
+    "jobify_task_runs",
+    "Celery task runs by registered task name and outcome (success|retry|failure|error).",
+    ("task", "outcome"),
+)
+TASK_DURATION: Final[Histogram] = Histogram(
+    "jobify_task_duration_seconds",
+    "Celery task run duration by registered task name.",
+    ("task",),
+    buckets=_TASK_DURATION_BUCKETS,
+)
+
 
 def multiprocess_enabled() -> bool:
     """True when this process runs in prometheus_client multiprocess mode.

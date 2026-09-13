@@ -120,7 +120,7 @@ class GeminiMatchExplainer:
                 "generator": LLM_GENERATOR,
                 "generator_version": LLM_GENERATOR_VERSION,
             }
-        except Exception:
+        except Exception:  # noqa: BLE001 — explain() NEVER raises; any failure degrades to templated
             # raw_text is the diagnosis handle — the templated fallback makes
             # this failure invisible everywhere else.
             _log.warning("explain.llm-failed", raw_text=(text or "")[:200], exc_info=True)

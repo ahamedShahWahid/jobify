@@ -75,7 +75,7 @@ class SesEmailChannel:
                     }
                 },
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 — channel contract: provider failures become ChannelResult.failed (sweep retries)
             return ChannelResult.failed(f"ses:{type(exc).__name__}:{exc}"[:1000])
         return ChannelResult.success()
 

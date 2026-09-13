@@ -121,7 +121,7 @@ async def _sweep_notifications_async(
                 notification_id=notification_id,
                 dispatch_token=dispatch_token,
             )
-        except Exception:
+        except Exception:  # noqa: BLE001 — per-row isolation; the lease makes the row recoverable
             # The lease makes this recoverable: a later sweep reclaims the row.
             _log.exception("sweep.dispatch-unexpected", notification_id=str(notification_id))
     _log.info("sweep.batch-claimed", count=claimed_count)
@@ -279,7 +279,7 @@ async def _dispatch_one(
             result = ChannelResult.success()
         else:
             result = ChannelResult.failed(f"unknown_channel:{channel}")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — a channel crash is a failed attempt, retried with backoff
         result = ChannelResult.failed(f"{type(exc).__name__}:{exc}"[:1000])
 
     # --- State transition, guarded by the exact claim token ---

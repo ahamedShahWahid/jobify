@@ -32,7 +32,7 @@ async def ready(request: Request) -> JSONResponse:
         # SQLAlchemy-wrapped driver errors (e.g. auth failure, unknown host via DNS).
         checks["db"] = f"error: {type(exc).__name__}"
         overall_ok = False
-    except Exception as exc:  # asyncpg raises raw OSError, not SQLAlchemyError
+    except Exception as exc:  # noqa: BLE001 — readiness boundary: any dependency error is a 503, not a 500
         # asyncpg surfaces network-level failures (connection refused, unreachable host)
         # as raw OSError subclasses rather than wrapping them in SQLAlchemyError.
         # We catch Exception here deliberately at this boundary so a transient network
@@ -43,7 +43,7 @@ async def ready(request: Request) -> JSONResponse:
     try:
         await request.app.state.redis.ping()
         checks["redis"] = "ok"
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — readiness boundary: any dependency error is a 503, not a 500
         checks["redis"] = f"error: {type(exc).__name__}"
         overall_ok = False
 
