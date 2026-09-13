@@ -249,7 +249,7 @@ All settings are read from environment variables prefixed `JOBIFY_`. The `.env` 
 | `JOBIFY_CORS_ALLOW_ORIGINS` | no | `http://localhost:8080` | Comma-separated list of allowed CORS origins (web frontend). |
 | `JOBIFY_REDIS_URL`    | yes      | —       | Redis for API rate limits and readiness. |
 | `JOBIFY_METRICS_BEARER_TOKEN` | staging/prod | — | Bearer token protecting `/metrics` |
-| `PROMETHEUS_MULTIPROC_DIR` | multi-process deploys | — | prometheus_client multiprocess mode: a directory owned by the API alone, emptied before start. Unset = single-process metrics |
+| `PROMETHEUS_MULTIPROC_DIR` | multi-process deploys | — | prometheus_client multiprocess mode: a directory owned by the API alone. It **must already exist and be emptied before the API starts** — deploy entrypoints own that, not the app. The app refuses to boot (`RuntimeError`) if this is set but not an existing directory. In this mode the `/metrics` scrape carries only the metrics this app declares — no `process_*`/`python_gc_*`/`python_info`. Unset = single-process metrics (those default collectors included) |
 
 The API refuses to boot if required variables are missing or invalid. Worker-only
 Gemini, email, lease, batch, and Celery settings are documented in `worker/README.md`.
