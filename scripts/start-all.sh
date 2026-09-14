@@ -3,8 +3,8 @@
 # start-all.sh — boot the full local Jobify stack in the background.
 #
 # Brings up (idempotently — safe to re-run):
-#   • Postgres     (Homebrew service)        • Celery worker (parse/embed/score/notify/outbox) — metrics on :9101
-#   • Celery beat  (sweep schedules)
+#   • Postgres     (Homebrew service)        • Celery worker-fast (parse/embed/score) — metrics on :9101
+#   • Celery beat  (sweep schedules)         • Celery worker-io   (notify/outbox)     — metrics on :9102
 #   • Redis        (Homebrew service)         • Frontend     (Vite dev server  :5173)
 #   • Alembic migrations → head               • Flutter web  (:8080, opt-in)
 #   • API          (FastAPI/uvicorn  :8000)
@@ -126,9 +126,20 @@ spawn api "$RUN_DIR/api.pid" "$RUN_DIR/api.log" \
 # beat process below, an upload stages `jobify.parse_resume` and nothing ever
 # runs it — no parse, no embed, no score, empty feed. Keep in step with
 # worker/README.md and the root CLAUDE.md command.
-spawn worker "$RUN_DIR/worker.pid" "$RUN_DIR/worker.log" \
-  "cd '$ROOT' && PROMETHEUS_MULTIPROC_DIR='$PROM_DIR/worker' JOBIFY_WORKER_METRICS_PORT=9101 exec uv run --env-file='$ENV_FILE' celery -A jobify_worker.worker_app worker --pool=solo --concurrency=1 -Q parse,embed,score,notify,outbox" \
-  "$PROM_DIR/worker"
+#
+# Two worker processes, not one (PERF-03): a single process on all five
+# queues means one slow parse/score batch blocks notify+outbox behind it —
+# email delivery and dispatch of the NEXT task stage stall for that batch's
+# full duration. Splitting keeps the notify/outbox path (small, latency-
+# sensitive: it's what makes the next pipeline stage actually run) off the
+# queue that can carry a multi-second Gemini call.
+spawn worker-fast "$RUN_DIR/worker-fast.pid" "$RUN_DIR/worker-fast.log" \
+  "cd '$ROOT' && PROMETHEUS_MULTIPROC_DIR='$PROM_DIR/worker-fast' JOBIFY_WORKER_METRICS_PORT=9101 exec uv run --env-file='$ENV_FILE' celery -A jobify_worker.worker_app worker --pool=solo --concurrency=1 -Q parse,embed,score --hostname=worker-fast@%h" \
+  "$PROM_DIR/worker-fast"
+
+spawn worker-io "$RUN_DIR/worker-io.pid" "$RUN_DIR/worker-io.log" \
+  "cd '$ROOT' && PROMETHEUS_MULTIPROC_DIR='$PROM_DIR/worker-io' JOBIFY_WORKER_METRICS_PORT=9102 exec uv run --env-file='$ENV_FILE' celery -A jobify_worker.worker_app worker --pool=solo --concurrency=1 -Q notify,outbox --hostname=worker-io@%h" \
+  "$PROM_DIR/worker-io"
 
 # Beat only ENQUEUES; the worker above executes. Both sweeps (notifications +
 # durable outbox) and the daily outbox cleanup live in its schedule.
@@ -160,7 +171,7 @@ printf '\n\033[1mServices\033[0m\n'
 printf '  API        http://127.0.0.1:8000   (/docs, /health, /ready)\n'
 printf '  Frontend   http://localhost:5173   (/, /#/employers, /#/console)\n'
 [ "$WITH_FLUTTER" -eq 1 ] && printf '  Flutter    http://localhost:8080   (DDC build — first paint is slow)\n'
-printf '  Worker     queues: parse, embed, score, notify, outbox\n'
-printf '  Beat       schedules: sweep_outbox (5s), sweep_notifications (60s), cleanup_outbox (24h)\n'
+printf '  Worker     worker-fast: parse, embed, score  ·  worker-io: notify, outbox\n'
+printf '  Beat       schedules: sweep_outbox (5s), sweep_notifications (60s), cleanup_outbox (24h), cleanup_refresh_tokens (24h)\n'
 printf '\nLogs: %s/*.log   ·   Stop: scripts/stop-all.sh%s\n' \
   "${RUN_DIR#$ROOT/}" "$([ "$WITH_FLUTTER" -eq 1 ] && echo '' )"

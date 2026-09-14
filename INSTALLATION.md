@@ -219,10 +219,18 @@ Every response carries an `X-Request-Id` header — the log-correlation handle.
 
 ### 4.8 Run the worker
 
+A single process on all five queues is the quickest way to see everything
+work end to end for the first time:
+
 ```bash
 uv run --env-file=.env celery -A jobify_worker.worker_app worker \
     --pool=solo --concurrency=1 -Q parse,embed,score,notify,outbox --loglevel=info
 ```
+
+For anything past a first run, split into two processes instead — see
+`worker/README.md` for why (one slow parse/score batch otherwise blocks email
+delivery and dispatch of the next pipeline stage behind it) and the exact
+commands; `scripts/start-all.sh` already launches the split.
 
 | Queue    | Tasks |
 |----------|-------|
@@ -230,7 +238,7 @@ uv run --env-file=.env celery -A jobify_worker.worker_app worker \
 | `embed`  | `jobify.embed_applicant`, `jobify.embed_job` |
 | `score`  | `jobify.score_applicant`, `jobify.score_job` |
 | `notify` | `jobify.sweep_notifications` |
-| `outbox` | `jobify.sweep_outbox` |
+| `outbox` | `jobify.sweep_outbox`, `jobify.cleanup_outbox`, `jobify.cleanup_refresh_tokens` |
 
 API and worker transactions stage task names and arguments in `outbox_events`.
 `jobify.sweep_outbox` leases those rows and publishes them to Celery.
