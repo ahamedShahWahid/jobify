@@ -74,6 +74,21 @@ class WorkerSettings(BaseSettings):
     outbox_max_attempts: int = Field(default=10, ge=1, le=100)
     outbox_retention_days: int = Field(default=30, ge=1, le=3650)
     outbox_cleanup_batch_size: int = Field(default=1000, ge=1, le=10_000)
+    # Safety valve, not a normal-operation limit: at the default batch size
+    # this caps a single cleanup_outbox run at 1M rows. A real backlog this
+    # large means the daily schedule already fell behind — the run logs a
+    # warning and stops rather than holding the outbox queue's worker
+    # (see PERF-06) for an unbounded number of batches.
+    outbox_cleanup_max_batches: int = Field(default=1000, ge=1, le=100_000)
+    # PERF-08: refresh_tokens has no cleanup at all today and grows ~12
+    # rows/active-user/day (rotation on every refresh). 7 days keeps the
+    # reuse-detection window (a revoked row found on replay triggers family
+    # revocation) far past any plausible attacker replay window — the access
+    # token TTL that bounds a stolen-token's useful life is minutes, not days
+    # — while bounding the table's growth.
+    refresh_token_retention_days: int = Field(default=7, ge=1, le=3650)
+    refresh_token_cleanup_batch_size: int = Field(default=1000, ge=1, le=10_000)
+    refresh_token_cleanup_max_batches: int = Field(default=1000, ge=1, le=100_000)
 
     provider_connect_timeout_seconds: float = Field(default=5.0, gt=0, le=60)
     provider_read_timeout_seconds: float = Field(default=30.0, gt=0, le=300)

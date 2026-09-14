@@ -5,11 +5,33 @@ settings, Celery routing/beat configuration, runtime factories, and tasks live h
 
 ## Run (from repo root, needs Redis + root .env)
 
-    uv run --env-file=.env celery -A jobify_worker.worker_app worker \
-        --pool=solo --concurrency=1 -Q parse,embed,score,notify,outbox
+Two processes, not one — `scripts/start-all.sh` runs both:
 
-- `--pool=solo`: single-concurrency for MVP. Switch to `--pool=prefork` when load justifies parallelism.
-- `-Q parse,embed,score,notify,outbox`: consume from all queues. Pin a second worker to a single queue for isolation.
+    uv run --env-file=.env celery -A jobify_worker.worker_app worker \
+        --pool=solo --concurrency=1 -Q parse,embed,score --hostname=worker-fast@%h
+
+    uv run --env-file=.env celery -A jobify_worker.worker_app worker \
+        --pool=solo --concurrency=1 -Q notify,outbox --hostname=worker-io@%h
+
+- **Why split:** on one process across all five queues, a slow parse/score
+  batch (a multi-second Gemini call, or a chained score continuation) blocks
+  `notify`/`outbox` behind it — email delivery and dispatch of the *next*
+  pipeline stage stall for that batch's full duration, since `sweep_outbox`
+  (the only thing that publishes a staged task) can't run until the batch
+  ahead of it in the same process finishes. Splitting keeps that small,
+  latency-sensitive path off the queue that can carry a long provider call.
+- `--hostname` gives each process a distinct Celery node name. Without it,
+  two processes on the same host both default to `celery@<hostname>` —
+  identical node names make `celery inspect`/`celery control` unable to
+  target one process without the other.
+- `--pool=solo`: single-concurrency for MVP. Switch to `--pool=prefork` when
+  load justifies parallelism — note this also makes `task_soft_time_limit`/
+  `task_time_limit` actually apply (the solo pool ignores them), but
+  `task_acks_late=True` means a killed task on a degraded provider can be
+  redelivered and re-attempt the same timeout; add a bounded-retry guard on
+  the score tasks before flipping this in production.
+- For a single first run, one process on all five queues also works — see
+  `INSTALLATION.md` §4.8.
 - Log level/format come from `JOBIFY_LOG_LEVEL`/`JOBIFY_LOG_FORMAT`; Celery's `--loglevel` has no effect once the `setup_logging` receiver is connected (`jobify_worker/observability.py`).
 
 ## Beat (scheduler)
@@ -44,19 +66,29 @@ After fixing the cause of terminal failures, requeue them with:
     uv run --env-file=.env jobify-requeue-outbox --dry-run
     uv run --env-file=.env jobify-requeue-outbox --limit 100
 
-`cleanup_outbox` runs every 86400 seconds. Each run physically deletes at most
-`JOBIFY_OUTBOX_CLEANUP_BATCH_SIZE` live `completed` or `failed` rows older than
-`JOBIFY_OUTBOX_RETENTION_DAYS` (defaults: 1000 rows and 30 days).
+`cleanup_outbox` runs every 86400 seconds. Each run loops batches of
+`JOBIFY_OUTBOX_CLEANUP_BATCH_SIZE` (default 1000) until one comes back short,
+deleting live `completed`/`failed` rows older than `JOBIFY_OUTBOX_RETENTION_DAYS`
+(default 30 days) — a backlog too large to clear within
+`JOBIFY_OUTBOX_CLEANUP_MAX_BATCHES` (default 1000) batches stops and logs a
+warning rather than holding the `outbox` queue's worker indefinitely.
+
+`cleanup_refresh_tokens` runs every 86400 seconds, same loop-until-empty shape.
+Deletes naturally expired rows immediately and revoked rows after
+`JOBIFY_REFRESH_TOKEN_RETENTION_DAYS` (default 7) — long enough past any
+plausible attacker replay window to preserve the reuse-detection signal
+`AuthService.refresh` relies on (a revoked row found on replay triggers family
+revocation), short enough to bound the table's growth.
 
 ## Queues
 
-| Queue    | Tasks                                          |
-|----------|------------------------------------------------|
-| `parse`  | `jobify.parse_resume`                          |
-| `embed`  | `jobify.embed_applicant`, `jobify.embed_job`   |
-| `score`  | `jobify.score_applicant`, `jobify.score_job`   |
-| `notify` | `jobify.sweep_notifications`                   |
-| `outbox` | `jobify.sweep_outbox`, `jobify.cleanup_outbox` |
+| Queue    | Tasks                                                                    |
+|----------|---------------------------------------------------------------------------|
+| `parse`  | `jobify.parse_resume`                                                    |
+| `embed`  | `jobify.embed_applicant`, `jobify.embed_job`                             |
+| `score`  | `jobify.score_applicant`, `jobify.score_job`                             |
+| `notify` | `jobify.sweep_notifications`                                             |
+| `outbox` | `jobify.sweep_outbox`, `jobify.cleanup_outbox`, `jobify.cleanup_refresh_tokens` |
 
 The API and pipeline tasks persist task-name + args in `outbox_events` in the
 same database transaction as the business change. `sweep_outbox` publishes the

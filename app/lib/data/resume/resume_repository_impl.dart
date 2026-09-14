@@ -18,7 +18,11 @@ class ResumeRepositoryImpl implements ResumeRepository {
   Future<ResumeDto?> current() async {
     try {
       final list = await _api.list();
-      return list.isEmpty ? null : list.first;
+      if (list.isEmpty) return null;
+      // The list row omits parsedJson (PERF-09) — every caller of `current()`
+      // (e.g. the post-upload resume summary card) needs it, so fetch the
+      // latest resume's own detail rather than returning the list row as-is.
+      return await _api.get(list.first.id);
     } on DioException catch (e) {
       throw mapDioException(e);
     }

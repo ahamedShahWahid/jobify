@@ -60,9 +60,11 @@ stop_pidfile() {
 say "Stopping app-layer services…"
 stop_pidfile flutter  "$RUN_DIR/flutter.pid"
 stop_pidfile frontend "$RUN_DIR/frontend.pid"
-stop_pidfile beat     "$RUN_DIR/beat.pid"
-stop_pidfile worker   "$RUN_DIR/worker.pid"
-stop_pidfile api      "$RUN_DIR/api.pid"
+stop_pidfile beat        "$RUN_DIR/beat.pid"
+stop_pidfile worker-fast "$RUN_DIR/worker-fast.pid"
+stop_pidfile worker-io   "$RUN_DIR/worker-io.pid"
+stop_pidfile worker      "$RUN_DIR/worker.pid"  # pre-split pidfile, harmless if absent
+stop_pidfile api         "$RUN_DIR/api.pid"
 
 # Safety net — catch anything respawned/orphaned that the pidfiles missed.
 say "Sweeping ports + worker pattern…"

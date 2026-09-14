@@ -27,6 +27,7 @@ celery_app.conf.update(
         "jobify.sweep_notifications": {"queue": "notify"},
         "jobify.sweep_outbox": {"queue": "outbox"},
         "jobify.cleanup_outbox": {"queue": "outbox"},
+        "jobify.cleanup_refresh_tokens": {"queue": "outbox"},
     },
 )
 celery_app.conf.beat_schedule = {
@@ -40,6 +41,10 @@ celery_app.conf.beat_schedule = {
     },
     "cleanup-outbox": {
         "task": "jobify.cleanup_outbox",
+        "schedule": celery_schedule(run_every=86400),
+    },
+    "cleanup-refresh-tokens": {
+        "task": "jobify.cleanup_refresh_tokens",
         "schedule": celery_schedule(run_every=86400),
     },
 }

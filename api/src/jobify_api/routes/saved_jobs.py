@@ -36,7 +36,7 @@ from jobify_api.auth.dependencies import (
 )
 from jobify_api.dependencies import get_session
 from jobify_api.pagination import decode_cursor, encode_cursor, make_weak_etag
-from jobify_api.routes.schemas import EmployerRead, JobRead
+from jobify_api.routes.schemas import EmployerRead, JobSummaryRead
 
 _log = structlog.get_logger(__name__)
 router = APIRouter(prefix="/v1", tags=["saved_jobs"])
@@ -57,7 +57,7 @@ class SavedJobRead(BaseModel):
 
 class SavedJobListItem(BaseModel):
     saved_job: SavedJobRead
-    job: JobRead
+    job: JobSummaryRead
     employer: EmployerRead
 
 
@@ -278,7 +278,7 @@ async def list_saved_jobs(
         items.append(
             SavedJobListItem(
                 saved_job=SavedJobRead.model_validate(saved_job),
-                job=JobRead.from_job_and_employer(job, employer),
+                job=JobSummaryRead.from_job_and_employer(job, employer),
                 employer=EmployerRead(
                     id=employer.id,
                     name=employer.name,

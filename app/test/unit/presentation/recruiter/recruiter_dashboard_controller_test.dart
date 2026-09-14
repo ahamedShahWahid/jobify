@@ -22,6 +22,10 @@ class _FakeRepo implements RecruiterJobsRepository {
   }) async => _page;
 
   @override
+  Future<RecruiterJobDto> getJob(String jobId) async =>
+      throw UnimplementedError();
+
+  @override
   Future<RecruiterJobDto> createJob(Map<String, dynamic> body) async =>
       throw UnimplementedError();
 

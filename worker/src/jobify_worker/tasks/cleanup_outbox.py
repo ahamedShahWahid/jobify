@@ -33,6 +33,34 @@ async def _cleanup_outbox_async(
     now = now or datetime.now(UTC)
     cutoff = now - timedelta(days=settings.outbox_retention_days)
 
+    total_deleted = 0
+    exhausted = True
+    for _ in range(settings.outbox_cleanup_max_batches):
+        batch_deleted = await _delete_one_batch(sm, cutoff)
+        total_deleted += batch_deleted
+        if batch_deleted < settings.outbox_cleanup_batch_size:
+            exhausted = False
+            break
+
+    if exhausted:
+        _log.warning(
+            "outbox.cleanup-max-batches-reached",
+            deleted_count=total_deleted,
+            max_batches=settings.outbox_cleanup_max_batches,
+            retention_days=settings.outbox_retention_days,
+            cutoff=cutoff,
+        )
+
+    _log.info(
+        "outbox.cleanup-completed",
+        deleted_count=total_deleted,
+        retention_days=settings.outbox_retention_days,
+        cutoff=cutoff,
+    )
+    return total_deleted
+
+
+async def _delete_one_batch(sm: async_sessionmaker[AsyncSession], cutoff: datetime) -> int:
     async with sm() as session:
         rows = (
             (
@@ -56,12 +84,4 @@ async def _cleanup_outbox_async(
         for event in rows:
             await session.delete(event)
         await session.commit()
-
-    deleted_count = len(rows)
-    _log.info(
-        "outbox.cleanup-completed",
-        deleted_count=deleted_count,
-        retention_days=settings.outbox_retention_days,
-        cutoff=cutoff,
-    )
-    return deleted_count
+    return len(rows)

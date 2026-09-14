@@ -29,6 +29,7 @@ from jobify.db.models import (
     Job,
     JobEmbedding,
     JobStatus,
+    Match,
 )
 from jobify.scoring.match import TransientScoringError
 from jobify_worker.async_bridge import run_async
@@ -120,6 +121,31 @@ async def _score_applicant_async(
         has_more = len(job_rows) > limit
         job_rows = job_rows[:limit]
         next_after_job_id = job_rows[-1][0].id if has_more and job_rows else None
+
+        # PERF-01: load this batch's existing LLM-generated explanations so
+        # explain_scores() can skip re-calling the explainer for pairs whose
+        # explanation-relevant inputs haven't changed. explanation_key is
+        # only ever non-null for a genuine LLM explanation (never templated
+        # or an LLM-failure fallback — see _scoring_common.explain_scores).
+        batch_job_ids = [job.id for job, _emb, _name in job_rows]
+        existing_explanations: dict[tuple[UUID, UUID], tuple[str, dict[str, str]]] = {}
+        if batch_job_ids:
+            existing_rows = (
+                await session.execute(
+                    select(Match.job_id, Match.explanation_key, Match.explanation).where(
+                        Match.applicant_id == applicant_id,
+                        Match.job_id.in_(batch_job_ids),
+                        Match.deleted_at.is_(None),
+                        Match.explanation_key.is_not(None),
+                    )
+                )
+            ).all()
+            existing_explanations = {
+                (applicant_id, job_id): (key, explanation)
+                for job_id, key, explanation in existing_rows
+                if explanation is not None
+            }
+
         # Detach all entities from this session before closing — we read scalars in compute step.
         scored_inputs = []
         for job, job_emb, employer_name in job_rows:
@@ -193,6 +219,7 @@ async def _score_applicant_async(
         scoring_inputs,
         vector_weight=_settings.match_vector_weight,
         threshold=_settings.match_surface_threshold,
+        existing_explanations=existing_explanations,
     )
 
     # --- Txn 2: UPSERT each row + durable continuation ---

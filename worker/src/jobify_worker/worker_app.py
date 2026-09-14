@@ -10,6 +10,7 @@ from jobify_worker import (
 from jobify_worker.celery_app import celery_app  # noqa: F401  (the -A target)
 from jobify_worker.tasks import (  # noqa: F401  (register tasks onto celery_app)
     cleanup_outbox,
+    cleanup_refresh_tokens,
     embed,
     embed_job,
     parse,

@@ -41,6 +41,9 @@ class _FakeRepo implements RecruiterJobsRepository {
   }) async => const RecruiterJobsPageDto(items: []);
 
   @override
+  Future<RecruiterJobDto> getJob(String jobId) async => _stubJob(jobId);
+
+  @override
   Future<RecruiterJobDto> createJob(Map<String, dynamic> body) async {
     createCallCount++;
     lastCreateBody = Map.from(body);

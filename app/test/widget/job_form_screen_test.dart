@@ -28,6 +28,28 @@ Widget _wrap(FakeRecruiterJobsRepository repo) {
   );
 }
 
+/// Mirrors the real router's edit route: EditJobResolver reached with a
+/// jobId path param and, deliberately, no `extra` — proving the form is
+/// populated by the detail fetch, not a passed-in (possibly list-sourced,
+/// description-less) row.
+Widget _wrapEdit(FakeRecruiterJobsRepository repo, String jobId) {
+  final router = GoRouter(
+    routes: [
+      GoRoute(path: '/', builder: (_, __) => EditJobResolver(jobId: jobId)),
+    ],
+  );
+  return ProviderScope(
+    overrides: [
+      recruiterJobsRepositoryProvider.overrideWithValue(repo),
+      recruiterEmployersProvider.overrideWith((ref) async => [_employer()]),
+    ],
+    child: MaterialApp.router(
+      theme: ThemeData.light(useMaterial3: true),
+      routerConfig: router,
+    ),
+  );
+}
+
 Future<void> _fillValid(WidgetTester tester) async {
   await tester.enterText(
     find.widgetWithText(TextFormField, 'Title'),
@@ -91,4 +113,28 @@ void main() {
     expect(repo.createdBody!['min_exp_years'], 1);
     expect(repo.createdBody!['max_exp_years'], 4);
   });
+
+  testWidgets(
+    'EditJobResolver fetches the job by id and prefills description from it '
+    '(PERF-09: list rows have no description to prefill from)',
+    (tester) async {
+      final repo = FakeRecruiterJobsRepository(
+        getJobResult: fakeRecruiterJob(id: 'job-1', title: 'Staff Engineer'),
+      );
+
+      await tester.pumpWidget(_wrapEdit(repo, 'job-1'));
+      await tester.pumpAndSettle();
+
+      expect(repo.getJobCalledWith, 'job-1');
+      final descriptionField = tester.widget<TextFormField>(
+        find.widgetWithText(TextFormField, 'Description'),
+      );
+      // fakeRecruiterJob's default description — proves the field was
+      // prefilled from the fetched detail, not left blank.
+      expect(
+        descriptionField.controller?.text,
+        'A great role doing great things.',
+      );
+    },
+  );
 }

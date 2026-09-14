@@ -13,6 +13,16 @@ class ResumeApi {
         .toList();
   }
 
+  /// GET /v1/applicants/me/resumes/{id} — the one resume shape that carries
+  /// parsedJson. List rows omit it (PERF-09; the extracted text can run to
+  /// 64KB and no list/card view renders it).
+  Future<ResumeDto> get(String id) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/v1/applicants/me/resumes/$id',
+    );
+    return ResumeDto.fromJson(res.data!);
+  }
+
   Future<ResumeDto> upload({
     required List<int> bytes,
     required String filename,

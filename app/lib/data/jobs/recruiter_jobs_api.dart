@@ -41,6 +41,16 @@ class RecruiterJobsApi {
     return RecruiterJobsPageDto.fromJson(res.data!);
   }
 
+  /// GET /v1/jobs/me/{jobId} — full job detail, including description.
+  ///
+  /// The list rows from [listMyJobs] omit description (PERF-09) — anything
+  /// that needs the full job for one specific id (opening the edit form)
+  /// must go through this, not a list row.
+  Future<RecruiterJobDto> getMyJob(String jobId) async {
+    final res = await _dio.get<Map<String, dynamic>>('/v1/jobs/me/$jobId');
+    return RecruiterJobDto.fromJson(res.data!);
+  }
+
   /// POST /v1/jobs — create a new job posting.
   Future<RecruiterJobDto> createJob(Map<String, dynamic> body) async {
     final res = await _dio.post<Map<String, dynamic>>('/v1/jobs', data: body);

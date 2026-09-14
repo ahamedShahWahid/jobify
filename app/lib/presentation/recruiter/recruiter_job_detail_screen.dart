@@ -5,16 +5,14 @@ import 'package:go_router/go_router.dart';
 import 'package:jobify_app/data/jobs/recruiter_job_dto.dart';
 import 'package:jobify_app/presentation/profile/ctc_format.dart';
 import 'package:jobify_app/presentation/recruiter/job_form_controller.dart';
-import 'package:jobify_app/presentation/recruiter/recruiter_jobs_controller.dart';
 import 'package:jobify_app/presentation/routing/routes.dart';
 import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
 import 'package:jobify_app/presentation/widgets/jobify_empty_state.dart';
 import 'package:jobify_app/presentation/widgets/jobify_loading_view.dart';
 
-/// Recruiter-side job detail. When navigated from a card the full
-/// [RecruiterJobDto] arrives via `GoRouterState.extra` (no refetch). On a
-/// deep link (pasted URL) `initialJob` is null, so we resolve the job from the
-/// include-closed jobs list by id.
+/// Recruiter-side job detail. Always resolves the full job by id (PERF-09:
+/// GET /v1/jobs/me's rows omit description — this screen renders it, so a
+/// list-sourced `extra` or list-scan fallback can no longer supply it).
 class RecruiterJobDetailScreen extends ConsumerWidget {
   const RecruiterJobDetailScreen({
     required this.jobId,
@@ -23,26 +21,18 @@ class RecruiterJobDetailScreen extends ConsumerWidget {
   });
 
   final String jobId;
+
+  /// Unused for rendering (may lack description) — accepted only so router
+  /// wiring that still passes `extra` doesn't need to change.
   final RecruiterJobDto? initialJob;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final fromExtra = initialJob;
-    if (fromExtra != null) {
-      return _DetailScaffold(job: fromExtra);
-    }
-
-    // Deep-link path: find the job in the include-closed list.
-    final value = ref.watch(recruiterJobsControllerProvider(true));
+    final value = ref.watch(recruiterJobDetailProvider(jobId));
     return value.when(
       loading: () => const Scaffold(body: JobifyLoadingView()),
       error: (_, __) => _NotFoundScaffold(),
-      data: (state) {
-        for (final j in state.items) {
-          if (j.id == jobId) return _DetailScaffold(job: j);
-        }
-        return _NotFoundScaffold();
-      },
+      data: (job) => _DetailScaffold(job: job),
     );
   }
 }
@@ -139,7 +129,10 @@ class _DetailScaffold extends ConsumerWidget {
           const SizedBox(height: JobifySpacing.lg),
           Text('Description', style: theme.textTheme.titleMedium),
           const SizedBox(height: JobifySpacing.sm),
-          Text(job.description, style: theme.textTheme.bodyMedium),
+          // description is non-null in practice for this screen (always
+          // reached via the detail fetch, never a list row) — the DTO field
+          // itself stays nullable since it's shared with list rows.
+          Text(job.description ?? '', style: theme.textTheme.bodyMedium),
           const SizedBox(height: JobifySpacing.xl),
           FilledButton.icon(
             onPressed:

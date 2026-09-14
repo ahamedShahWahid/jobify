@@ -20,8 +20,14 @@ const clientContract = {
     "ctc_max", "ctc_min", "description", "employer_verified", "id",
     "locations", "max_exp_years", "min_exp_years", "posted_at", "status", "title",
   ],
+  // No description (PERF-09) — GET /v1/jobs/me's row shape. Detail comes
+  // from GET /v1/jobs/me/{job_id} (JobRead above).
+  JobSummaryRead: [
+    "ctc_max", "ctc_min", "employer_verified", "id",
+    "locations", "max_exp_years", "min_exp_years", "posted_at", "status", "title",
+  ],
   RecruiterJobRow: [
-    "applicant_count", "ctc_max", "ctc_min", "description", "employer_verified",
+    "applicant_count", "ctc_max", "ctc_min", "employer_verified",
     "id", "locations", "max_exp_years", "min_exp_years", "posted_at", "status",
     "surfaced_match_count", "title",
   ],

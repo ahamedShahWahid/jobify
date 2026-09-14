@@ -55,7 +55,7 @@ from jobify_api.routes.applications_schemas import (
     ApplyRequest,
     WithdrawRequest,
 )
-from jobify_api.routes.schemas import EmployerRead, JobRead
+from jobify_api.routes.schemas import EmployerRead, JobSummaryRead
 
 _log = structlog.get_logger(__name__)
 router = APIRouter(prefix="/v1", tags=["applications"])
@@ -244,7 +244,7 @@ async def list_applications(
         items.append(
             ApplicationListItem(
                 application=ApplicationRead.model_validate(application),
-                job=JobRead.from_job_and_employer(job, employer),
+                job=JobSummaryRead.from_job_and_employer(job, employer),
                 employer=EmployerRead(
                     id=employer.id,
                     name=employer.name,

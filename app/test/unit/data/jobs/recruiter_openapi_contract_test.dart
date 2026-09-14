@@ -14,8 +14,23 @@ void main() {
     final schemas = components['schemas'] as Map<String, dynamic>;
 
     const expected = <String, Set<String>>{
+      // No description (PERF-09) — GET /v1/jobs/me's row shape.
       'RecruiterJobRow': {
         'applicant_count',
+        'ctc_max',
+        'ctc_min',
+        'employer_verified',
+        'id',
+        'locations',
+        'max_exp_years',
+        'min_exp_years',
+        'posted_at',
+        'status',
+        'surfaced_match_count',
+        'title',
+      },
+      // Full detail — GET /v1/jobs/me/{job_id}, POST /v1/jobs, PATCH /v1/jobs/{id}.
+      'JobRead': {
         'ctc_max',
         'ctc_min',
         'description',
@@ -26,7 +41,6 @@ void main() {
         'min_exp_years',
         'posted_at',
         'status',
-        'surfaced_match_count',
         'title',
       },
       'ApplicantOfJobRow': {

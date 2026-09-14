@@ -434,3 +434,61 @@ async def test_score_applicant_skips_when_no_applicant_embedding(
 
     rows = (await session.execute(select(func.count()).select_from(Match))).scalar_one()
     assert rows == 0
+
+
+@pytest.mark.integration
+async def test_score_applicant_rescore_reuses_cached_explanation(
+    session: AsyncSession,
+    patched_match_explainer,
+) -> None:
+    """PERF-01: a rescore whose explanation-relevant inputs are unchanged
+    must not call the explainer a second time — the exact scenario a job's
+    description-only edit produces (re-embeds the job, re-triggers this
+    applicant's rescore, but changes nothing the explanation depends on)."""
+    applicant = await _seed_applicant(session)
+    job = await _seed_job(session, embedding=[1.0] * 1536)
+    await session.commit()
+
+    await _score_applicant_async(applicant.id, sm=_make_sm(session))
+    assert len(patched_match_explainer.calls) == 1
+
+    await _score_applicant_async(applicant.id, sm=_make_sm(session))
+
+    assert len(patched_match_explainer.calls) == 1  # unchanged — the rerun hit the cache
+
+    row = (
+        await session.execute(
+            select(Match).where(Match.applicant_id == applicant.id, Match.job_id == job.id)
+        )
+    ).scalar_one()
+    assert row.explanation_key is not None
+    assert row.explanation["fit"] == "fake-llm fit string"
+
+
+@pytest.mark.integration
+async def test_score_applicant_rescore_after_job_title_change_calls_explainer_again(
+    session: AsyncSession,
+    patched_match_explainer,
+) -> None:
+    """A real content change (job title) must still regenerate — the cache
+    must never mask an actual explanation-relevant edit."""
+    applicant = await _seed_applicant(session)
+    job = await _seed_job(session, title="Engineer I", embedding=[1.0] * 1536)
+    await session.commit()
+
+    await _score_applicant_async(applicant.id, sm=_make_sm(session))
+    assert len(patched_match_explainer.calls) == 1
+
+    job.title = "Engineer II"
+    await session.commit()
+
+    await _score_applicant_async(applicant.id, sm=_make_sm(session))
+
+    assert len(patched_match_explainer.calls) == 2
+
+    row = (
+        await session.execute(
+            select(Match).where(Match.applicant_id == applicant.id, Match.job_id == job.id)
+        )
+    ).scalar_one()
+    assert row.explanation_key is not None

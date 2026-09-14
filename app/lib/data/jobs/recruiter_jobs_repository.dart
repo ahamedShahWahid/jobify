@@ -10,6 +10,11 @@ abstract interface class RecruiterJobsRepository {
     int limit = 20,
   });
 
+  /// Full detail for one job, including description (list rows omit it —
+  /// see RecruiterJobDto). Always use this to open the edit form, regardless
+  /// of how it was reached.
+  Future<RecruiterJobDto> getJob(String jobId);
+
   Future<RecruiterJobDto> createJob(Map<String, dynamic> body);
 
   Future<RecruiterJobDto> patchJob(String id, Map<String, dynamic> body);

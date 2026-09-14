@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { errorMessage } from "../../api/client";
-import { findMyJob } from "../../api/recruiterJobs";
-import type { EmployerRead, JobCreate, RecruiterJobRow } from "../../api/types";
+import type { EmployerRead, JobCreate, JobRead } from "../../api/types";
 import { ErrorNotice, Field, lakh } from "../../components/bits";
 import { useSession } from "../../session";
 import {
@@ -20,9 +19,13 @@ import type { JobFormState } from "./jobForm";
  * Job composer — a full-page authoring surface for a posting, with a live
  * candidate-view preview. Reached from the Postings list:
  *   /recruiter/jobs/new            → create
- *   /recruiter/jobs/:jobId/edit    → edit (job passed via router state; on a
- *                                    cold deep-link it's resolved by id, like the
- *                                    Flutter EditJobResolver).
+ *   /recruiter/jobs/:jobId/edit    → edit — ALWAYS fetches the full job via
+ *                                    EmployerClient.getMyJob(id), regardless
+ *                                    of router state. GET /v1/jobs/me rows
+ *                                    have no description (PERF-09), so a
+ *                                    list-sourced `state.job` can't safely
+ *                                    prefill the form either (mirrors the
+ *                                    Flutter EditJobResolver fix).
  *
  * Backend-true semantics (api CLAUDE.md): editing a content field re-embeds the
  * job for matching; a status-only change does not. The edit PATCH carries only
@@ -58,16 +61,13 @@ function previewExp(form: JobFormState): string {
 export function JobComposer() {
   const { client } = useSession();
   const { jobId } = useParams();
-  const location = useLocation();
   const navigate = useNavigate();
   const isCreate = !jobId;
 
-  const stateJob = (location.state as { job?: RecruiterJobRow } | null)?.job ?? null;
-
   const [employers, setEmployers] = useState<EmployerRead[]>([]);
   const [form, setForm] = useState<JobFormState>(emptyForm(""));
-  const [editJob, setEditJob] = useState<RecruiterJobRow | null>(stateJob);
-  const [resolving, setResolving] = useState(!isCreate && stateJob === null);
+  const [editJob, setEditJob] = useState<JobRead | null>(null);
+  const [resolving, setResolving] = useState(!isCreate);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [formError, setFormError] = useState<string | null>(null);
@@ -79,27 +79,17 @@ export function JobComposer() {
   }, [client]);
 
   // Seed the form: create → empty (employer filled once employers load); edit →
-  // from the passed job, or resolve it by id on a cold deep-link.
+  // always the full detail fetch (PERF-09 — no list row has description).
   useEffect(() => {
     if (isCreate) return;
-    if (stateJob) {
-      setForm(formFromJob(stateJob));
-      setEditJob(stateJob);
-      setResolving(false);
-      return;
-    }
     let cancelled = false;
     setResolving(true);
     (async () => {
       try {
-        const job = await findMyJob(client, jobId!);
+        const job = await client.getMyJob(jobId!);
         if (cancelled) return;
-        if (!job) {
-          setLoadError("That posting couldn't be found — it may have been deleted.");
-        } else {
-          setForm(formFromJob(job));
-          setEditJob(job);
-        }
+        setForm(formFromJob(job));
+        setEditJob(job);
       } catch (e) {
         if (!cancelled) setLoadError(errorMessage(e));
       } finally {
@@ -109,7 +99,7 @@ export function JobComposer() {
     return () => {
       cancelled = true;
     };
-  }, [client, isCreate, jobId, stateJob]);
+  }, [client, isCreate, jobId]);
 
   // Default the employer selector to the first employer once loaded (create).
   useEffect(() => {

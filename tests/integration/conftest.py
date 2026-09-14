@@ -149,6 +149,7 @@ class FakeMatchExplainer:
     calls: list[ExplainContext] = field(default_factory=list)
     fit: str = "fake-llm fit string"
     caveat: str = "fake-llm caveat string"
+    generator_version: str = "test"
 
     async def explain(self, ctx: ExplainContext) -> dict[str, str]:
         self.calls.append(ctx)
@@ -156,7 +157,7 @@ class FakeMatchExplainer:
             "fit": self.fit,
             "caveat": self.caveat,
             "generator": "fake-llm",
-            "generator_version": "test",
+            "generator_version": self.generator_version,
         }
 
 

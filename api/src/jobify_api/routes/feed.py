@@ -49,7 +49,7 @@ from jobify_api.routes.schemas import (
     EmployerRead,
     FeedItemRead,
     FeedResponse,
-    JobRead,
+    JobSummaryRead,
     MatchRead,
 )
 
@@ -227,7 +227,7 @@ async def get_feed(
         items.append(
             FeedItemRead(
                 match=match_read,
-                job=JobRead.from_job_and_employer(job, employer),
+                job=JobSummaryRead.from_job_and_employer(job, employer),
                 employer=EmployerRead(
                     id=employer.id,
                     name=employer.name,

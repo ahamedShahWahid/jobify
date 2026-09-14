@@ -453,7 +453,7 @@
             "$ref": "#/components/schemas/jobify_api__routes__schemas__EmployerRead"
           },
           "job": {
-            "$ref": "#/components/schemas/JobRead"
+            "$ref": "#/components/schemas/JobSummaryRead"
           }
         },
         "required": [
@@ -955,7 +955,7 @@
             "$ref": "#/components/schemas/jobify_api__routes__schemas__EmployerRead"
           },
           "job": {
-            "$ref": "#/components/schemas/JobRead"
+            "$ref": "#/components/schemas/JobSummaryRead"
           },
           "match": {
             "$ref": "#/components/schemas/MatchRead"
@@ -1520,6 +1520,7 @@
         "type": "object"
       },
       "JobRead": {
+        "description": "Full job shape for detail routes \u2014 JobSummaryRead + description.",
         "properties": {
           "ctc_max": {
             "anyOf": [
@@ -1588,7 +1589,85 @@
         "required": [
           "id",
           "title",
-          "description",
+          "locations",
+          "min_exp_years",
+          "max_exp_years",
+          "ctc_min",
+          "ctc_max",
+          "status",
+          "posted_at",
+          "employer_verified",
+          "description"
+        ],
+        "title": "JobRead",
+        "type": "object"
+      },
+      "JobSummaryRead": {
+        "description": "Every JobRead field except ``description`` \u2014 for list contexts.\n\nPERF-09: list endpoints (feed, applications, saved jobs, the recruiter\njob list) don't render the description text, and it's the single\nlargest field on a job (up to 10,000 chars) \u2014 sending it on every item\nof every page is pure wire-size waste on top of what the screen shows.\nJob DETAIL routes (applicant ``GET /v1/jobs/{id}``, recruiter\n``GET /v1/jobs/me/{id}``) use ``JobRead`` below, which adds it back.",
+        "properties": {
+          "ctc_max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ctc Max"
+          },
+          "ctc_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ctc Min"
+          },
+          "employer_verified": {
+            "title": "Employer Verified",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "locations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Locations",
+            "type": "array"
+          },
+          "max_exp_years": {
+            "title": "Max Exp Years",
+            "type": "integer"
+          },
+          "min_exp_years": {
+            "title": "Min Exp Years",
+            "type": "integer"
+          },
+          "posted_at": {
+            "format": "date-time",
+            "title": "Posted At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
           "locations",
           "min_exp_years",
           "max_exp_years",
@@ -1598,7 +1677,7 @@
           "posted_at",
           "employer_verified"
         ],
-        "title": "JobRead",
+        "title": "JobSummaryRead",
         "type": "object"
       },
       "LogoutRequest": {
@@ -2251,6 +2330,7 @@
         "type": "object"
       },
       "RecruiterJobRow": {
+        "description": "List row for GET /v1/jobs/me \u2014 no description (PERF-09). A recruiter\nediting a job reached this way must fetch the full job via\nGET /v1/jobs/me/{job_id} first; don't prefill an edit form from this.",
         "properties": {
           "applicant_count": {
             "title": "Applicant Count",
@@ -2277,10 +2357,6 @@
               }
             ],
             "title": "Ctc Min"
-          },
-          "description": {
-            "title": "Description",
-            "type": "string"
           },
           "employer_verified": {
             "title": "Employer Verified",
@@ -2327,7 +2403,6 @@
         "required": [
           "id",
           "title",
-          "description",
           "locations",
           "min_exp_years",
           "max_exp_years",
@@ -2439,7 +2514,7 @@
         "type": "string"
       },
       "ResumeRead": {
-        "description": "Response shape for resume metadata. Bytes are never returned here.",
+        "description": "Full resume shape for the upload response and GET /resumes/{id}.",
         "properties": {
           "applicant_id": {
             "format": "uuid",
@@ -2496,6 +2571,52 @@
         "title": "ResumeRead",
         "type": "object"
       },
+      "ResumeSummaryRead": {
+        "description": "List row for GET /resumes \u2014 no parsed_json (PERF-09).\n\nThe extracted resume text (up to 64KB, see ParsedResume.raw_text) has no\nreason to travel on every item of an applicant's resume list; only a\nsingle resume's own detail view (GET /resumes/{id}) needs it. Bytes are\nnever returned by either shape.",
+        "properties": {
+          "applicant_id": {
+            "format": "uuid",
+            "title": "Applicant Id",
+            "type": "string"
+          },
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "original_filename": {
+            "title": "Original Filename",
+            "type": "string"
+          },
+          "parse_status": {
+            "$ref": "#/components/schemas/ResumeParseStatus"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "applicant_id",
+          "original_filename",
+          "content_type",
+          "size_bytes",
+          "parse_status",
+          "created_at"
+        ],
+        "title": "ResumeSummaryRead",
+        "type": "object"
+      },
       "RoleCategory": {
         "enum": [
           "software_engineering",
@@ -2524,7 +2645,7 @@
             "$ref": "#/components/schemas/jobify_api__routes__schemas__EmployerRead"
           },
           "job": {
-            "$ref": "#/components/schemas/JobRead"
+            "$ref": "#/components/schemas/JobSummaryRead"
           },
           "saved_job": {
             "$ref": "#/components/schemas/SavedJobRead"
@@ -3651,7 +3772,7 @@
     },
     "/v1/applicants/me/resumes": {
       "get": {
-        "description": "List the authenticated applicant's resumes, newest first.",
+        "description": "List the authenticated applicant's resumes, newest first.\n\nNo parsed_json (PERF-09) \u2014 callers that need a specific resume's\nextracted text call GET /resumes/{id}.",
         "operationId": "list_resumes_v1_applicants_me_resumes_get",
         "responses": {
           "200": {
@@ -3659,7 +3780,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/ResumeRead"
+                    "$ref": "#/components/schemas/ResumeSummaryRead"
                   },
                   "title": "Response List Resumes V1 Applicants Me Resumes Get",
                   "type": "array"
@@ -4746,6 +4867,50 @@
           }
         },
         "summary": "List My Jobs",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/v1/jobs/me/{job_id}": {
+      "get": {
+        "description": "Full job detail (incl. description) for one of the caller's own jobs.\n\nPERF-09: GET /v1/jobs/me's rows omit description; a client that needs\nthe full job for a specific id (e.g. opening an edit form reached via a\ndeep link, with no list row already in memory) fetches it here instead\nof falling back to whatever a stale/absent list row happened to have.\nUniform 404 across unknown id and another employer's job \u2014 same\n_load_recruiter_job-equivalent join as PATCH/DELETE below.",
+        "operationId": "get_my_job_v1_jobs_me__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get My Job",
         "tags": [
           "jobs"
         ]

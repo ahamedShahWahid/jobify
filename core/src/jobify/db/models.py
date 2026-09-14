@@ -110,6 +110,16 @@ class User(Base):
     __table_args__ = (
         Index("ix_users_email_live", "email", postgresql_where="deleted_at IS NULL"),
         Index("ix_users_phone_live", "phone", postgresql_where="deleted_at IS NULL"),
+        Index(
+            # Every live equality lookup compares func.lower(email) against an
+            # already-lowercased value (team_service.add_member, routes/invites.py,
+            # dsr export/deleter); a plain btree on email can't serve that. Kept
+            # alongside ix_users_email_live, which still serves the two exact-case
+            # comparisons in auth/service.py and scripts/grant_admin.py.
+            "ix_users_email_lower_live",
+            text("lower(email)"),
+            postgresql_where="deleted_at IS NULL",
+        ),
         {"schema": "jobify"},
     )
 
@@ -410,6 +420,17 @@ class RefreshToken(Base):
             "user_id",
             postgresql_where="revoked_at IS NULL",
         ),
+        # Serve cleanup_refresh_tokens' `expires_at < now() OR revoked_at <
+        # cutoff` as a bitmap-or instead of a sequential scan (PERF-08). The
+        # revoked_at index is partial: a NULL row never matches `revoked_at <
+        # cutoff`, and that condition implies IS NOT NULL, so the planner can
+        # still use it.
+        Index("ix_refresh_tokens_expires_at", "expires_at"),
+        Index(
+            "ix_refresh_tokens_revoked_at",
+            "revoked_at",
+            postgresql_where="revoked_at IS NOT NULL",
+        ),
         {"schema": "jobify"},
     )
 
@@ -567,6 +588,15 @@ class EmployerInvite(Base):
         Index(
             "ix_employer_invites_email_live",
             "email",
+            postgresql_where="deleted_at IS NULL AND status = 'pending'",
+        ),
+        # Every live call site (routes/invites.py, dsr export/deleter) compares
+        # func.lower(email) against an already-lowercased value — the plain
+        # index above can't serve that. Kept alongside it; nothing queries
+        # EmployerInvite.email with exact case.
+        Index(
+            "ix_employer_invites_email_lower_live",
+            text("lower(email)"),
             postgresql_where="deleted_at IS NULL AND status = 'pending'",
         ),
         CheckConstraint("role IN ('owner','member')", name="ck_employer_invites_role"),
@@ -762,6 +792,18 @@ class Application(Base):
             "ix_applications_applicant_created_at",
             "applicant_id",
             text("created_at DESC"),
+            postgresql_where="deleted_at IS NULL",
+        ),
+        Index(
+            # Serves GET /v1/jobs/{id}/applicants' (created_at DESC, id DESC)
+            # keyset filtered by job_id, and the applicant_count scalar
+            # subquery in GET /v1/jobs/me (job_id + deleted_at is null, then
+            # status='applied' filtered from the same index scan). Neither
+            # existing index leads with job_id.
+            "ix_applications_job_created_live",
+            "job_id",
+            text("created_at DESC"),
+            text("id DESC"),
             postgresql_where="deleted_at IS NULL",
         ),
         {"schema": "jobify"},
@@ -1122,6 +1164,16 @@ class AuditLog(Base):
         server_default=func.now(),
     )
 
+    __table_args__ = (
+        # GET /v1/admin/audit-logs with no filters (the common case) keysets
+        # on (created_at DESC, id DESC). No column-specific filter is here
+        # because there wasn't one before this index — the filtered call
+        # shapes stay index-free scans over a table that is admin-only and,
+        # unlike every other table here, has no deleted_at to key off.
+        Index("ix_audit_logs_created_id", text("created_at DESC"), text("id DESC")),
+        {"schema": "jobify"},
+    )
+
 
 class Match(Base):
     """Hybrid applicant x job match score -- see spec §6.3 and the P2.2 design doc.
@@ -1156,6 +1208,11 @@ class Match(Base):
     model_versions: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     surfaced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     explanation: Mapped[dict[str, str] | None] = mapped_column(JSONB, nullable=True)
+    # sha256 hex digest of the inputs that actually vary an LLM explanation
+    # (see jobify.scoring.explainer.explanation_cache_key) — set only when
+    # `explanation` came from the LLM explainer's current generator_version,
+    # never for a templated explanation or an LLM-failure fallback (PERF-01).
+    explanation_key: Mapped[str | None] = mapped_column(CHAR(64), nullable=True)
     created_at: Mapped[CreatedAt]
     updated_at: Mapped[UpdatedAt]
     deleted_at: Mapped[DeletedAt]

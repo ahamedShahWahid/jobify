@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -44,12 +44,21 @@ class EmployerRead(BaseModel):
     verified: bool
 
 
-class JobRead(BaseModel):
+class JobSummaryRead(BaseModel):
+    """Every JobRead field except ``description`` — for list contexts.
+
+    PERF-09: list endpoints (feed, applications, saved jobs, the recruiter
+    job list) don't render the description text, and it's the single
+    largest field on a job (up to 10,000 chars) — sending it on every item
+    of every page is pure wire-size waste on top of what the screen shows.
+    Job DETAIL routes (applicant ``GET /v1/jobs/{id}``, recruiter
+    ``GET /v1/jobs/me/{id}``) use ``JobRead`` below, which adds it back.
+    """
+
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
     title: str
-    description: str
     locations: list[str]
     min_exp_years: int
     max_exp_years: int
@@ -62,16 +71,14 @@ class JobRead(BaseModel):
     employer_verified: bool
 
     @classmethod
-    def from_job_and_employer(
-        cls,
-        job: Job,
-        employer: Employer,
-    ) -> JobRead:
-        """Build a JobRead from a Job ORM row and its associated Employer row.
+    def from_job_and_employer(cls, job: Job, employer: Employer) -> Self:
+        """Build a JobSummaryRead/JobRead from a Job + Employer ORM row.
 
         Single construction point so every caller sets employer_verified
-        consistently. The field is required (no default) to force all future
-        callers through here.
+        consistently. Shared by both classes: ``description`` is always
+        passed, and Pydantic's default ``extra="ignore"`` drops it for
+        JobSummaryRead (which doesn't declare the field) — nothing extra to
+        override on JobRead itself.
         """
         return cls.model_validate(
             {
@@ -90,9 +97,15 @@ class JobRead(BaseModel):
         )
 
 
+class JobRead(JobSummaryRead):
+    """Full job shape for detail routes — JobSummaryRead + description."""
+
+    description: str
+
+
 class FeedItemRead(BaseModel):
     match: MatchRead
-    job: JobRead
+    job: JobSummaryRead
     employer: EmployerRead
 
 

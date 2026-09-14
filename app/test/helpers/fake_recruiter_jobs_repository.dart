@@ -16,11 +16,18 @@ class FakeRecruiterJobsRepository implements RecruiterJobsRepository {
     this.jobsPage = const RecruiterJobsPageDto(items: []),
     this.applicantsPage = const ApplicantsOfJobPageDto(items: []),
     this.resume,
+    this.getJobResult,
   });
 
   RecruiterJobsPageDto jobsPage;
   ApplicantsOfJobPageDto applicantsPage;
   ResumeDownload? resume;
+
+  /// Returned by [getJob]; defaults to a full [fakeRecruiterJob] with the
+  /// requested id so tests that don't care about the exact content still
+  /// get a job with a non-null description.
+  RecruiterJobDto? getJobResult;
+  String? getJobCalledWith;
 
   Map<String, dynamic>? createdBody;
   String? patchedId;
@@ -43,6 +50,12 @@ class FakeRecruiterJobsRepository implements RecruiterJobsRepository {
     String? cursor,
     int limit = 20,
   }) async => jobsPage;
+
+  @override
+  Future<RecruiterJobDto> getJob(String jobId) async {
+    getJobCalledWith = jobId;
+    return getJobResult ?? fakeRecruiterJob(id: jobId);
+  }
 
   @override
   Future<RecruiterJobDto> createJob(Map<String, dynamic> body) async {

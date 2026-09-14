@@ -7,6 +7,7 @@ authenticated applicant from the access JWT — never from the URL.
 from __future__ import annotations
 
 import io
+import uuid
 import zipfile
 from datetime import datetime
 from typing import Any
@@ -46,8 +47,14 @@ _UPLOAD_READ_CHUNK_BYTES = 1024 * 1024
 _LEGACY_DOC_MAGIC = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
 
 
-class ResumeRead(BaseModel):
-    """Response shape for resume metadata. Bytes are never returned here."""
+class ResumeSummaryRead(BaseModel):
+    """List row for GET /resumes — no parsed_json (PERF-09).
+
+    The extracted resume text (up to 64KB, see ParsedResume.raw_text) has no
+    reason to travel on every item of an applicant's resume list; only a
+    single resume's own detail view (GET /resumes/{id}) needs it. Bytes are
+    never returned by either shape.
+    """
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -57,8 +64,13 @@ class ResumeRead(BaseModel):
     content_type: str
     size_bytes: int
     parse_status: ResumeParseStatus
-    parsed_json: dict[str, Any] | None = None
     created_at: datetime
+
+
+class ResumeRead(ResumeSummaryRead):
+    """Full resume shape for the upload response and GET /resumes/{id}."""
+
+    parsed_json: dict[str, Any] | None = None
 
 
 async def _read_upload_capped(file: UploadFile, *, max_bytes: int) -> bytes:
@@ -129,35 +141,54 @@ async def upload_resume(
 
     applicant = await _require_applicant(user, session)
 
-    resume = Resume(
-        applicant_id=applicant.id,
-        original_filename=file.filename or "(unnamed)",
-        content_type=file.content_type,
-        size_bytes=len(content),
-        storage_key="",  # set below once we know the resume id
-        parse_status=ResumeParseStatus.PENDING,
-    )
-    session.add(resume)
-    await session.flush()  # populates resume.id
-
+    # PERF-07: the id is generated here, before any DB write, so the blob
+    # upload (up to max_upload_bytes, S3 latency) never happens while a row
+    # is flushed and holding a pooled connection. If the DB write below
+    # fails after a successful upload, the blob is orphaned (never
+    # referenced by a row) — compensated by best-effort deleting it in the
+    # except clause rather than a periodic sweep, since Storage has no
+    # list() capability to scan for orphans against.
+    resume_id = uuid.uuid4()
     ext = _CONTENT_TYPE_TO_EXT[file.content_type]
-    storage_key = f"resumes/{resume.id}{ext}"
-    resume.storage_key = storage_key
+    storage_key = f"resumes/{resume_id}{ext}"
 
     await storage.save(key=storage_key, content=content, content_type=file.content_type)
-    enqueue_task(session, "jobify.parse_resume", str(resume.id))
-    await session.commit()
+
+    try:
+        resume = Resume(
+            id=resume_id,
+            applicant_id=applicant.id,
+            original_filename=file.filename or "(unnamed)",
+            content_type=file.content_type,
+            size_bytes=len(content),
+            storage_key=storage_key,
+            parse_status=ResumeParseStatus.PENDING,
+        )
+        session.add(resume)
+        await session.flush()
+        enqueue_task(session, "jobify.parse_resume", str(resume.id))
+        await session.commit()
+    except Exception:
+        try:
+            await storage.delete(storage_key)
+        except Exception:  # noqa: BLE001 — best-effort cleanup; the DB error below is the one that matters
+            _log.warning("resume.orphan-blob-cleanup-failed", storage_key=storage_key)
+        raise
 
     await session.refresh(resume)
     return resume
 
 
-@router.get("/resumes", response_model=list[ResumeRead])
+@router.get("/resumes", response_model=list[ResumeSummaryRead])
 async def list_resumes(
     user: User = Depends(current_user),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
-) -> list[ResumeRead]:
-    """List the authenticated applicant's resumes, newest first."""
+) -> list[ResumeSummaryRead]:
+    """List the authenticated applicant's resumes, newest first.
+
+    No parsed_json (PERF-09) — callers that need a specific resume's
+    extracted text call GET /resumes/{id}.
+    """
     applicant = await _require_applicant(user, session)
     # No applicant JOIN here (unlike get_resume): we resolved `applicant` one
     # await ago and there's no user-supplied resource id, so the soft-delete
@@ -176,7 +207,7 @@ async def list_resumes(
         .scalars()
         .all()
     )
-    return [ResumeRead.model_validate(r) for r in rows]
+    return [ResumeSummaryRead.model_validate(r) for r in rows]
 
 
 @router.get(

@@ -10,7 +10,6 @@ RecruiterJobDto _$RecruiterJobDtoFromJson(Map<String, dynamic> json) =>
     RecruiterJobDto(
       id: json['id'] as String,
       title: json['title'] as String,
-      description: json['description'] as String,
       locations:
           (json['locations'] as List<dynamic>).map((e) => e as String).toList(),
       minExpYears: (json['min_exp_years'] as num).toInt(),
@@ -18,6 +17,7 @@ RecruiterJobDto _$RecruiterJobDtoFromJson(Map<String, dynamic> json) =>
       status: json['status'] as String,
       postedAt: DateTime.parse(json['posted_at'] as String),
       employerVerified: json['employer_verified'] as bool,
+      description: json['description'] as String?,
       ctcMin: (json['ctc_min'] as num?)?.toDouble(),
       ctcMax: (json['ctc_max'] as num?)?.toDouble(),
       applicantCount: (json['applicant_count'] as num?)?.toInt() ?? 0,
