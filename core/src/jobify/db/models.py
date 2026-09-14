@@ -1208,6 +1208,11 @@ class Match(Base):
     model_versions: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     surfaced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     explanation: Mapped[dict[str, str] | None] = mapped_column(JSONB, nullable=True)
+    # sha256 hex digest of the inputs that actually vary an LLM explanation
+    # (see jobify.scoring.explainer.explanation_cache_key) — set only when
+    # `explanation` came from the LLM explainer's current generator_version,
+    # never for a templated explanation or an LLM-failure fallback (PERF-01).
+    explanation_key: Mapped[str | None] = mapped_column(CHAR(64), nullable=True)
     created_at: Mapped[CreatedAt]
     updated_at: Mapped[UpdatedAt]
     deleted_at: Mapped[DeletedAt]

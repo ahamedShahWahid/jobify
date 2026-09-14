@@ -19,7 +19,7 @@ from sqlalchemy.sql import func
 
 from jobify.db.models import Match
 from jobify.outbox import enqueue_task
-from jobify.scoring.explainer import ExplainContext
+from jobify.scoring.explainer import ExplainContext, explanation_cache_key
 from jobify.scoring.match import MatchScore, TransientScoringError, score_match
 
 if TYPE_CHECKING:
@@ -63,6 +63,7 @@ class ScoredMatch:
     score: MatchScore
     model_versions: dict[str, Any]
     explanation: dict[str, str]
+    explanation_key: str | None = None
 
 
 def _compute(
@@ -108,18 +109,59 @@ async def explain_scores(
     *,
     vector_weight: float,
     threshold: float,
+    existing_explanations: dict[tuple[UUID, UUID], tuple[str, dict[str, str]]] | None = None,
 ) -> list[ScoredMatch]:
-    """Compute + explain a batch, bounded so a large batch doesn't stampede the LLM API."""
+    """Compute + explain a batch, bounded so a large batch doesn't stampede the LLM API.
+
+    PERF-01: a surfaced (>= threshold) pair whose explanation-relevant inputs
+    (job/applicant facts, rounded components, language, generator_version —
+    see explanation_cache_key) are unchanged from the stored row reuses that
+    row's explanation verbatim instead of calling the explainer again. A
+    job's description-only edit re-embeds it (moves the vector score) without
+    touching any of those inputs, so a batch re-run after one hits the cache
+    for every applicant whose own profile also hasn't changed.
+
+    ``existing_explanations`` maps (applicant_id, job_id) -> (explanation_key,
+    explanation) for rows whose PRIOR explanation was actually LLM-generated
+    (never templated/fallback — see the storage-side check below, mirrored by
+    callers when they build this dict from the loaded Match rows).
+    """
+    existing_explanations = existing_explanations or {}
     pending = [
         (inp, *_compute(inp, vector_weight=vector_weight, threshold=threshold)) for inp in inputs
     ]
     sem = asyncio.Semaphore(EXPLAIN_CONCURRENCY)
 
-    async def _explain_bounded(ctx: ExplainContext) -> dict[str, str]:
-        async with sem:
-            return await explainer.explain(ctx)
+    async def _explain_one(
+        inp: ScoringInput, ctx: ExplainContext
+    ) -> tuple[dict[str, str], str | None]:
+        candidate_key: str | None = None
+        if ctx.total >= ctx.threshold:
+            candidate_key = explanation_cache_key(
+                ctx, generator_version=explainer.generator_version
+            )
+            prior = existing_explanations.get((inp.applicant_id, inp.job_id))
+            if prior is not None and prior[0] == candidate_key:
+                return prior[1], candidate_key  # cache hit — no explainer call at all
 
-    explanations = await asyncio.gather(*(_explain_bounded(ctx) for _, _, ctx in pending))
+        async with sem:
+            explanation = await explainer.explain(ctx)
+
+        # Only persist a key when the returned explanation actually came from
+        # THIS explainer's current version — not a templated fallback after
+        # an LLM failure (which reports the templated generator_version, so
+        # this naturally mismatches and the row self-heals on the next
+        # rescore once the provider recovers, rather than caching the
+        # degraded text as if it were a valid answer for this key).
+        stored_key = (
+            candidate_key
+            if candidate_key is not None
+            and explanation.get("generator_version") == explainer.generator_version
+            else None
+        )
+        return explanation, stored_key
+
+    results = await asyncio.gather(*(_explain_one(inp, ctx) for inp, _ms, ctx in pending))
     return [
         ScoredMatch(
             applicant_id=inp.applicant_id,
@@ -132,8 +174,9 @@ async def explain_scores(
                 "threshold": threshold,
             },
             explanation=explanation,
+            explanation_key=explanation_key,
         )
-        for (inp, ms, _ctx), explanation in zip(pending, explanations, strict=True)
+        for (inp, ms, _ctx), (explanation, explanation_key) in zip(pending, results, strict=True)
     ]
 
 
@@ -154,6 +197,7 @@ def match_upsert_statement(scored: ScoredMatch) -> Any:
             model_versions=scored.model_versions,
             surfaced_at=func.now() if ms.crosses_threshold else None,
             explanation=scored.explanation,
+            explanation_key=scored.explanation_key,
         )
         .on_conflict_do_update(
             index_elements=["applicant_id", "job_id"],
@@ -172,6 +216,7 @@ def match_upsert_statement(scored: ScoredMatch) -> Any:
                     ),
                 ),
                 "explanation": scored.explanation,
+                "explanation_key": scored.explanation_key,
                 "updated_at": func.now(),
             },
         )

@@ -65,6 +65,8 @@ class GeminiMatchExplainer:
     ``jobify_worker.runtime.get_match_explainer``.
     """
 
+    generator_version = LLM_GENERATOR_VERSION
+
     def __init__(self, *, client: GenaiClient, model: str) -> None:
         self._client = client
         self._model = model

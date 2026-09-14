@@ -8,7 +8,12 @@ from decimal import Decimal
 import pytest
 
 from jobify.scoring.explain import templated_explanation
-from jobify.scoring.explainer import ExplainContext, TemplatedExplainer, _templated_from_ctx
+from jobify.scoring.explainer import (
+    ExplainContext,
+    TemplatedExplainer,
+    _templated_from_ctx,
+    explanation_cache_key,
+)
 
 
 def _ctx(**overrides: object) -> ExplainContext:
@@ -88,3 +93,98 @@ def test_templated_explanation_default_language_unchanged() -> None:
     ctx = _ctx()  # no language arg -> "en" default
     result = _templated_from_ctx(ctx)
     assert not any("ऀ" <= ch <= "ॿ" for ch in result["fit"])
+
+
+# --- explanation_cache_key (PERF-01) ---------------------------------------
+
+
+def test_cache_key_is_deterministic() -> None:
+    ctx = _ctx()
+    assert explanation_cache_key(ctx, generator_version="2") == explanation_cache_key(
+        ctx, generator_version="2"
+    )
+
+
+def test_cache_key_changes_with_generator_version() -> None:
+    """A deliberate prompt/template bump must invalidate every cached row —
+    it's the whole mechanism, not a config knob to work around."""
+    ctx = _ctx()
+    assert explanation_cache_key(ctx, generator_version="2") != explanation_cache_key(
+        ctx, generator_version="3"
+    )
+
+
+def test_cache_key_changes_with_language() -> None:
+    en = explanation_cache_key(_ctx(language="en"), generator_version="2")
+    hi = explanation_cache_key(_ctx(language="hi"), generator_version="2")
+    assert en != hi
+
+
+@pytest.mark.parametrize(
+    "override",
+    [
+        {"job_title": "Staff Backend Engineer"},
+        {"job_locations": ["Mumbai"]},
+        {"job_min_exp_years": 3},
+        {"job_max_exp_years": 12},
+        {"job_ctc_max": Decimal("5000000")},
+        {"employer_name": "Different Co"},
+        {"applicant_expected_ctc": Decimal("3500000")},
+        {"applicant_locations": ["Pune"]},
+    ],
+)
+def test_cache_key_changes_when_a_prompt_input_changes(override: dict[str, object]) -> None:
+    base_key = explanation_cache_key(_ctx(), generator_version="2")
+    changed_key = explanation_cache_key(_ctx(**override), generator_version="2")
+    assert base_key != changed_key
+
+
+def test_cache_key_ignores_raw_scores_not_in_the_prompt() -> None:
+    """vector/structured/total never reach the LLM prompt (only the three
+    rounded components do) — a description-only job edit that moves the
+    vector score must not change the key, or the whole point of the cache
+    (skip re-explaining a batch a description edit re-triggers) is lost."""
+    base_key = explanation_cache_key(_ctx(), generator_version="2")
+    moved_score_key = explanation_cache_key(
+        _ctx(vector=0.2, structured=0.5, total=0.5), generator_version="2"
+    )
+    assert base_key == moved_score_key
+
+
+def test_cache_key_rounds_components_to_the_same_precision_as_the_prompt() -> None:
+    """The prompt formats components as f'{value:.2f}' — two component
+    values that round to the same two decimals must produce the same key,
+    since the actual LLM input text would be byte-identical."""
+    a = explanation_cache_key(
+        _ctx(components={"location": 0.601, "exp": 1.0, "ctc": 1.0}), generator_version="2"
+    )
+    b = explanation_cache_key(
+        _ctx(components={"location": 0.604, "exp": 1.0, "ctc": 1.0}), generator_version="2"
+    )
+    assert a == b
+
+
+def test_cache_key_changes_when_rounded_component_differs() -> None:
+    a = explanation_cache_key(
+        _ctx(components={"location": 0.60, "exp": 1.0, "ctc": 1.0}), generator_version="2"
+    )
+    b = explanation_cache_key(
+        _ctx(components={"location": 0.70, "exp": 1.0, "ctc": 1.0}), generator_version="2"
+    )
+    assert a != b
+
+
+def test_cache_key_handles_none_ctc_values() -> None:
+    """job_ctc_max / applicant_expected_ctc are both optional — must not raise."""
+    key = explanation_cache_key(
+        _ctx(job_ctc_max=None, applicant_expected_ctc=None), generator_version="2"
+    )
+    assert isinstance(key, str) and len(key) == 64  # sha256 hex digest
+
+
+def test_templated_explainer_carries_the_templated_generator_version() -> None:
+    """The whole cache-skip-on-fallback safety property
+    (_scoring_common.explain_scores) depends on a templated fallback's
+    generator_version being a fixed, LLM-distinct tag — never derived from
+    whatever explainer happened to be configured."""
+    assert TemplatedExplainer.generator_version == "1"

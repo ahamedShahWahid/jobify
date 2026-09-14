@@ -19,6 +19,7 @@ from jobify.db.models import (
     User,
     UserRole,
 )
+from jobify.scoring.explainer import ExplainContext
 from jobify_worker.tasks.score_job import _score_job_async
 from tests.integration.outbox_helpers import task_event_args
 
@@ -282,3 +283,72 @@ async def test_score_job_skips_when_no_job_embedding(session: AsyncSession) -> N
 
     rows = (await session.execute(select(func.count()).select_from(Match))).scalar_one()
     assert rows == 0
+
+
+def _calls_for_seeded_applicant(explainer) -> list[ExplainContext]:
+    """score_job walks EVERY applicant with an embedding, including whatever
+    pre-existing rows the shared local dev DB happens to already have (this
+    file's own tests already tolerate that noise by not asserting exact
+    per-run scored-row counts against the whole table — see e.g.
+    test_score_job_writes_rows_for_all_applicants_with_embeddings' known
+    flakiness under a populated DB). Those rows have no ApplicantPreferences
+    (score.preferences-missing), which _seed_applicant_with_emb's rows always
+    have — locations=["Bangalore"] reliably isolates calls for the applicant
+    THIS test actually seeded from that unrelated noise."""
+    return [c for c in explainer.calls if c.applicant_locations == ["Bangalore"]]
+
+
+@pytest.mark.integration
+async def test_score_job_rescore_reuses_cached_explanation(
+    session: AsyncSession,
+    patched_match_explainer,
+) -> None:
+    """PERF-01: a rescore whose explanation-relevant inputs are unchanged
+    must not call the explainer a second time."""
+    applicant = await _seed_applicant_with_emb(session, email="cache-reuse@example.com")
+    job = await _seed_job_with_emb(session)
+    await session.commit()
+
+    await _score_job_async(job.id, sm=_make_sm(session))
+    assert len(_calls_for_seeded_applicant(patched_match_explainer)) == 1
+
+    await _score_job_async(job.id, sm=_make_sm(session))
+
+    # unchanged — the rerun hit the cache
+    assert len(_calls_for_seeded_applicant(patched_match_explainer)) == 1
+
+    row = (
+        await session.execute(
+            select(Match).where(Match.applicant_id == applicant.id, Match.job_id == job.id)
+        )
+    ).scalar_one()
+    assert row.explanation_key is not None
+    assert row.explanation["fit"] == "fake-llm fit string"
+
+
+@pytest.mark.integration
+async def test_score_job_rescore_after_title_change_calls_explainer_again(
+    session: AsyncSession,
+    patched_match_explainer,
+) -> None:
+    """A real content change (job title) must still regenerate."""
+    applicant = await _seed_applicant_with_emb(session, email="cache-miss@example.com")
+    job = await _seed_job_with_emb(session)
+    await session.commit()
+
+    await _score_job_async(job.id, sm=_make_sm(session))
+    assert len(_calls_for_seeded_applicant(patched_match_explainer)) == 1
+
+    job.title = "Renamed Role"
+    await session.commit()
+
+    await _score_job_async(job.id, sm=_make_sm(session))
+
+    assert len(_calls_for_seeded_applicant(patched_match_explainer)) == 2
+
+    row = (
+        await session.execute(
+            select(Match).where(Match.applicant_id == applicant.id, Match.job_id == job.id)
+        )
+    ).scalar_one()
+    assert row.explanation_key is not None
