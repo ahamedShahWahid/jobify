@@ -57,6 +57,14 @@ class JobFormData {
   }
 }
 
+/// Full job detail for the edit form — list rows omit description
+/// (PERF-09), so EditJobResolver always resolves through here rather than
+/// trusting whatever row it was reached with (a passed `extra` or a cold
+/// deep-link). autoDispose: only needed transiently while opening the form.
+@riverpod
+Future<RecruiterJobDto> recruiterJobDetail(Ref ref, String jobId) =>
+    ref.read(recruiterJobsRepositoryProvider).getJob(jobId);
+
 @riverpod
 class JobFormController extends _$JobFormController {
   @override

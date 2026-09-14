@@ -2,7 +2,7 @@
 
 Kept separate from the handler logic in ``applications.py`` so the request/response
 contracts read on their own. ``ApplicationListItem`` composes the shared
-``JobRead`` / ``EmployerRead`` from ``routes.schemas``.
+``JobSummaryRead`` / ``EmployerRead`` from ``routes.schemas``.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
-from jobify_api.routes.schemas import EmployerRead, JobRead
+from jobify_api.routes.schemas import EmployerRead, JobSummaryRead
 
 
 class ApplicationRead(BaseModel):
@@ -29,7 +29,7 @@ class ApplicationRead(BaseModel):
 
 class ApplicationListItem(BaseModel):
     application: ApplicationRead
-    job: JobRead
+    job: JobSummaryRead
     employer: EmployerRead
 
 

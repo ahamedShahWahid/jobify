@@ -32,6 +32,15 @@ class RecruiterJobsRepositoryImpl implements RecruiterJobsRepository {
   }
 
   @override
+  Future<RecruiterJobDto> getJob(String jobId) async {
+    try {
+      return await _api.getMyJob(jobId);
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
+  @override
   Future<RecruiterJobDto> createJob(Map<String, dynamic> body) async {
     try {
       return await _api.createJob(body);

@@ -15,10 +15,13 @@ export interface MeResponse {
 
 // ---- /v1/jobs (recruiter) --------------------------------------
 
-export interface JobRead {
+/** Every JobRead field except description — GET /v1/jobs/me's row shape
+ * (PERF-09; description is the largest field on a job and no list/card view
+ * renders it). GET /v1/jobs/me/{id} (and create/patch responses) return the
+ * full JobRead below instead. */
+export interface JobSummaryRead {
   id: string;
   title: string;
-  description: string;
   locations: string[];
   min_exp_years: number;
   max_exp_years: number;
@@ -29,7 +32,14 @@ export interface JobRead {
   employer_verified: boolean;
 }
 
-export interface RecruiterJobRow extends JobRead {
+export interface JobRead extends JobSummaryRead {
+  description: string;
+}
+
+/** GET /v1/jobs/me row — no description. Opening the edit form or the job
+ * detail view must fetch the full job via EmployerClient.getMyJob(id)
+ * first; never prefill/render description from one of these. */
+export interface RecruiterJobRow extends JobSummaryRead {
   applicant_count: number;
   surfaced_match_count: number;
 }

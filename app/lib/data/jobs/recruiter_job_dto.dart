@@ -2,24 +2,29 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recruiter_job_dto.g.dart';
 
-/// Mirrors the backend's flat RecruiterJobRow (= JobRead + applicant/match
-/// counts). Used by GET /v1/jobs/me.
+/// Mirrors the backend's flat RecruiterJobRow (= JobSummaryRead + applicant/
+/// match counts) for GET /v1/jobs/me, and plain JobRead for
+/// GET /v1/jobs/me/{id}, POST /v1/jobs, and PATCH /v1/jobs/{id}.
 ///
-/// POST /v1/jobs and PATCH /v1/jobs/{id} return a plain JobRead WITHOUT the
-/// two count fields. The @JsonKey(defaultValue:) annotations ensure those
-/// responses also parse cleanly (missing keys → 0).
+/// `description` is nullable: list rows from GET /v1/jobs/me omit it
+/// entirely (PERF-09 — it's the largest field on a job and unused by any
+/// list/card view). Only GET /v1/jobs/me/{id} (and the create/patch
+/// responses) carry it. Opening the edit form must always go through
+/// RecruiterJobsRepository.getJob(id) — see EditJobResolver — never prefill
+/// from a list row directly. The @JsonKey(defaultValue:) count fields
+/// handle the reverse gap: POST/PATCH responses have no counts.
 @JsonSerializable()
 class RecruiterJobDto {
   const RecruiterJobDto({
     required this.id,
     required this.title,
-    required this.description,
     required this.locations,
     required this.minExpYears,
     required this.maxExpYears,
     required this.status,
     required this.postedAt,
     required this.employerVerified,
+    this.description,
     this.ctcMin,
     this.ctcMax,
     this.applicantCount = 0,
@@ -31,7 +36,7 @@ class RecruiterJobDto {
 
   final String id;
   final String title;
-  final String description;
+  final String? description;
   final List<String> locations;
 
   @JsonKey(name: 'min_exp_years')

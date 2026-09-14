@@ -48,16 +48,21 @@ from jobify_api.jobs.service import (
     RecruiterJobError,
     create_recruiter_job,
     delete_recruiter_job,
+    get_recruiter_job,
     patch_recruiter_job,
 )
 from jobify_api.pagination import decode_cursor, encode_cursor
-from jobify_api.routes.schemas import JobRead
+from jobify_api.routes.schemas import JobRead, JobSummaryRead
 
 _log = structlog.get_logger(__name__)
 router = APIRouter(prefix="/v1", tags=["jobs"])
 
 
-class RecruiterJobRow(JobRead):
+class RecruiterJobRow(JobSummaryRead):
+    """List row for GET /v1/jobs/me — no description (PERF-09). A recruiter
+    editing a job reached this way must fetch the full job via
+    GET /v1/jobs/me/{job_id} first; don't prefill an edit form from this."""
+
     applicant_count: int
     surfaced_match_count: int
 
@@ -157,7 +162,7 @@ async def list_my_jobs(
     items: list[RecruiterJobRow] = []
     for row in rows:
         job, employer, applicant_count, surfaced_match_count = row
-        base = JobRead.from_job_and_employer(job, employer)
+        base = JobSummaryRead.from_job_and_employer(job, employer)
         items.append(
             RecruiterJobRow(
                 **base.model_dump(),
@@ -170,6 +175,29 @@ async def list_my_jobs(
         _encode_jobs_me_cursor(rows[-1][0].posted_at, rows[-1][0].id) if has_more and rows else None
     )
     return RecruiterJobsPage(items=items, next_cursor=next_cursor)
+
+
+@router.get("/jobs/me/{job_id}", response_model=JobRead)
+async def get_my_job(
+    job_id: uuid.UUID,
+    user: User = Depends(current_user),  # noqa: B008
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> JobRead:
+    """Full job detail (incl. description) for one of the caller's own jobs.
+
+    PERF-09: GET /v1/jobs/me's rows omit description; a client that needs
+    the full job for a specific id (e.g. opening an edit form reached via a
+    deep link, with no list row already in memory) fetches it here instead
+    of falling back to whatever a stale/absent list row happened to have.
+    Uniform 404 across unknown id and another employer's job — same
+    _load_recruiter_job-equivalent join as PATCH/DELETE below.
+    """
+    await _require_recruiter(user)
+    try:
+        job, employer = await get_recruiter_job(session, job_id=job_id, recruiter_user_id=user.id)
+    except RecruiterJobError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return JobRead.from_job_and_employer(job, employer)
 
 
 class JobCreate(BaseModel):

@@ -78,6 +78,24 @@ async def test_list_newest_first_and_scoped(
     assert created_ats == sorted(created_ats, reverse=True)
 
 
+async def test_list_omits_parsed_json(async_client: httpx.AsyncClient, google_verifier) -> None:
+    """PERF-09: the list row is ResumeSummaryRead, not ResumeRead — the
+    extracted text (up to 64KB) has no reason to travel on every list item.
+    GET /resumes/{id} is the one shape that carries it."""
+    signin = await _signin(async_client, google_verifier, _claims())
+    access = signin["access_token"]
+    await _upload(async_client, access, "one.pdf")
+
+    resp = await async_client.get(
+        "/v1/applicants/me/resumes",
+        headers={"Authorization": f"Bearer {access}"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body) == 1
+    assert "parsed_json" not in body[0]
+
+
 async def test_list_recruiter_403(async_client: httpx.AsyncClient, session: AsyncSession) -> None:
     user = User(
         email=f"rec-resume-{uuid.uuid4()}@example.com",

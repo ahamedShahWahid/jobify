@@ -47,8 +47,14 @@ _UPLOAD_READ_CHUNK_BYTES = 1024 * 1024
 _LEGACY_DOC_MAGIC = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
 
 
-class ResumeRead(BaseModel):
-    """Response shape for resume metadata. Bytes are never returned here."""
+class ResumeSummaryRead(BaseModel):
+    """List row for GET /resumes — no parsed_json (PERF-09).
+
+    The extracted resume text (up to 64KB, see ParsedResume.raw_text) has no
+    reason to travel on every item of an applicant's resume list; only a
+    single resume's own detail view (GET /resumes/{id}) needs it. Bytes are
+    never returned by either shape.
+    """
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -58,8 +64,13 @@ class ResumeRead(BaseModel):
     content_type: str
     size_bytes: int
     parse_status: ResumeParseStatus
-    parsed_json: dict[str, Any] | None = None
     created_at: datetime
+
+
+class ResumeRead(ResumeSummaryRead):
+    """Full resume shape for the upload response and GET /resumes/{id}."""
+
+    parsed_json: dict[str, Any] | None = None
 
 
 async def _read_upload_capped(file: UploadFile, *, max_bytes: int) -> bytes:
@@ -168,12 +179,16 @@ async def upload_resume(
     return resume
 
 
-@router.get("/resumes", response_model=list[ResumeRead])
+@router.get("/resumes", response_model=list[ResumeSummaryRead])
 async def list_resumes(
     user: User = Depends(current_user),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
-) -> list[ResumeRead]:
-    """List the authenticated applicant's resumes, newest first."""
+) -> list[ResumeSummaryRead]:
+    """List the authenticated applicant's resumes, newest first.
+
+    No parsed_json (PERF-09) — callers that need a specific resume's
+    extracted text call GET /resumes/{id}.
+    """
     applicant = await _require_applicant(user, session)
     # No applicant JOIN here (unlike get_resume): we resolved `applicant` one
     # await ago and there's no user-supplied resource id, so the soft-delete
@@ -192,7 +207,7 @@ async def list_resumes(
         .scalars()
         .all()
     )
-    return [ResumeRead.model_validate(r) for r in rows]
+    return [ResumeSummaryRead.model_validate(r) for r in rows]
 
 
 @router.get(

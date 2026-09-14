@@ -42,7 +42,7 @@ _JWT_SECRET = "x" * 32  # matches JOBIFY_JWT_SECRET set by the integration fixtu
 # When you bump one, bump the matching Flutter DTO in the SAME PR.
 # ---------------------------------------------------------------------------
 
-# routes/feed.py
+# routes/jobs/applicant.py job detail — full JobRead, incl. description.
 _JOB_READ_KEYS = {
     "id",
     "title",
@@ -56,6 +56,9 @@ _JOB_READ_KEYS = {
     "posted_at",
     "employer_verified",
 }
+# routes/feed.py, applications_schemas.py, saved_jobs.py list items — no
+# description (PERF-09; JobSummaryRead, not JobRead).
+_JOB_SUMMARY_READ_KEYS = _JOB_READ_KEYS - {"description"}
 _EMPLOYER_READ_KEYS = {"id", "name", "verified"}
 _MATCH_READ_KEYS = {
     "id",
@@ -209,7 +212,7 @@ async def test_feed_wire_shape(session: AsyncSession, async_client: AsyncClient)
     assert len(body["items"]) == 1
     item = body["items"][0]
     assert set(item.keys()) == _FEED_ITEM_KEYS
-    assert set(item["job"].keys()) == _JOB_READ_KEYS
+    assert set(item["job"].keys()) == _JOB_SUMMARY_READ_KEYS
     assert set(item["employer"].keys()) == _EMPLOYER_READ_KEYS
     assert set(item["match"].keys()) == _MATCH_READ_KEYS
 
@@ -243,7 +246,7 @@ async def test_applications_list_wire_shape(
     item = body["items"][0]
     assert set(item.keys()) == _APPLICATION_LIST_ITEM_KEYS
     assert set(item["application"].keys()) == _APPLICATION_READ_KEYS
-    assert set(item["job"].keys()) == _JOB_READ_KEYS
+    assert set(item["job"].keys()) == _JOB_SUMMARY_READ_KEYS
     assert set(item["employer"].keys()) == _EMPLOYER_READ_KEYS
 
 
@@ -267,7 +270,7 @@ async def test_saved_list_wire_shape(session: AsyncSession, async_client: AsyncC
     item = body["items"][0]
     assert set(item.keys()) == _SAVED_LIST_ITEM_KEYS
     assert set(item["saved_job"].keys()) == _SAVED_JOB_READ_KEYS
-    assert set(item["job"].keys()) == _JOB_READ_KEYS
+    assert set(item["job"].keys()) == _JOB_SUMMARY_READ_KEYS
     assert set(item["employer"].keys()) == _EMPLOYER_READ_KEYS
 
 

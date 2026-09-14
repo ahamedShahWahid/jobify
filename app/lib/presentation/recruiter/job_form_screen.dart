@@ -7,39 +7,32 @@ import 'package:jobify_app/data/employers/employer_dto.dart';
 import 'package:jobify_app/data/jobs/recruiter_job_dto.dart';
 import 'package:jobify_app/presentation/recruiter/active_employer_provider.dart';
 import 'package:jobify_app/presentation/recruiter/job_form_controller.dart';
-import 'package:jobify_app/presentation/recruiter/recruiter_jobs_controller.dart';
 import 'package:jobify_app/presentation/routing/routes.dart';
 import 'package:jobify_app/presentation/theme/jobify_spacing.dart';
 import 'package:jobify_app/presentation/widgets/async_value_widget.dart';
 import 'package:jobify_app/presentation/widgets/jobify_empty_state.dart';
 import 'package:jobify_app/presentation/widgets/jobify_loading_view.dart';
 
-/// Edit-route entry. When navigated from the detail screen the full
-/// [RecruiterJobDto] arrives via `extra`. On a deep link / refresh `extra` is
-/// null, so resolve the job from the include-closed jobs list by id (mirrors
-/// `RecruiterJobDetailScreen`) rather than silently rendering a blank CREATE
-/// form against the wrong path.
+/// Edit-route entry. Always resolves the full job by id (PERF-09:
+/// GET /v1/jobs/me's rows omit description, so a passed `extra` — from the
+/// detail screen's card, itself sourced from the list — or a cold deep-link
+/// can't safely prefill the form either way; both go through the same fetch).
 class EditJobResolver extends ConsumerWidget {
   const EditJobResolver({required this.jobId, this.initialJob, super.key});
 
   final String jobId;
+
+  /// Unused for prefill (may lack description) — accepted only so router
+  /// wiring that still passes `extra` doesn't need to change.
   final RecruiterJobDto? initialJob;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final fromExtra = initialJob;
-    if (fromExtra != null) return JobFormScreen(job: fromExtra);
-
-    final value = ref.watch(recruiterJobsControllerProvider(true));
+    final value = ref.watch(recruiterJobDetailProvider(jobId));
     return value.when(
       loading: () => const Scaffold(body: JobifyLoadingView()),
       error: (_, __) => _notFound(context),
-      data: (state) {
-        for (final j in state.items) {
-          if (j.id == jobId) return JobFormScreen(job: j);
-        }
-        return _notFound(context);
-      },
+      data: (job) => JobFormScreen(job: job),
     );
   }
 

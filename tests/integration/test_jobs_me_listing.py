@@ -6,6 +6,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from jobify.db.models import Applicant, Application, ApplicationStatus, Match, User, UserRole
+from jobify_api.auth.tokens import mint_access_token
 
 pytestmark = pytest.mark.integration
 
@@ -47,6 +48,66 @@ async def test_me_lists_my_jobs(async_client, applicant_user_and_token):
         assert row["surfaced_match_count"] == 0
         # JobRead.employer_verified field flows through
         assert row["employer_verified"] is False
+        # PERF-09: list rows omit description (JobSummaryRead, not JobRead).
+        assert "description" not in row
+
+
+async def test_get_my_job_returns_full_detail_including_description(
+    async_client, applicant_user_and_token
+):
+    """GET /v1/jobs/me/{job_id} is the one recruiter route that carries
+    description — the client's edit form must fetch through here, never
+    prefill from a GET /v1/jobs/me list row."""
+    _, token = applicant_user_and_token
+    emp_id = await _setup_employer(async_client, token)
+    job_id = await _create_job(async_client, token, emp_id, "Staff Engineer")
+
+    r = await async_client.get(
+        f"/v1/jobs/me/{job_id}", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["id"] == job_id
+    assert body["title"] == "Staff Engineer"
+    assert body["description"] == "Build distributed systems." * 2
+    # No count fields — this is JobRead, not RecruiterJobRow.
+    assert "applicant_count" not in body
+
+
+async def test_get_my_job_unknown_id_returns_404(async_client, applicant_user_and_token):
+    _, token = applicant_user_and_token
+    await _setup_employer(async_client, token)
+    bogus = "00000000-0000-0000-0000-000000000000"
+
+    r = await async_client.get(f"/v1/jobs/me/{bogus}", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 404
+
+
+async def test_get_my_job_other_employers_job_returns_404(
+    async_client, session, applicant_user_and_token
+):
+    """Uniform 404 — same shape as PATCH/DELETE's _load_recruiter_job guard."""
+    _, token = applicant_user_and_token
+    emp_id = await _setup_employer(async_client, token)
+    job_id = await _create_job(async_client, token, emp_id, "Owner A's role")
+
+    other = User(email="other-recruiter@example.com", role=UserRole.APPLICANT)
+    session.add(other)
+    await session.flush()
+    other_token = mint_access_token(
+        user_id=other.id, role=other.role.value, secret="x" * 32, ttl_seconds=600
+    )
+    r1 = await async_client.post(
+        "/v1/employers",
+        json={"name": "Beta"},
+        headers={"Authorization": f"Bearer {other_token}"},
+    )
+    assert r1.status_code == 201
+
+    r = await async_client.get(
+        f"/v1/jobs/me/{job_id}", headers={"Authorization": f"Bearer {other_token}"}
+    )
+    assert r.status_code == 404
 
 
 async def test_me_hides_closed_by_default_shows_with_filter(async_client, applicant_user_and_token):

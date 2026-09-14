@@ -23,6 +23,7 @@ export interface EmployerClient {
   me(): Promise<MeResponse>;
 
   listMyJobs(status: "open" | "closed", cursor?: string): Promise<RecruiterJobsPage>;
+  getMyJob(jobId: string): Promise<JobRead>;
   createJob(payload: JobCreate): Promise<JobRead>;
   patchJob(jobId: string, payload: JobPatch): Promise<JobRead>;
   deleteJob(jobId: string): Promise<void>;
@@ -57,6 +58,11 @@ export class HttpClient extends BaseHttpClient implements EmployerClient {
     const params = new URLSearchParams({ status });
     if (cursor) params.set("cursor", cursor);
     return this.request("GET", `/v1/jobs/me?${params}`);
+  }
+
+  /** Full job detail, incl. description — listMyJobs rows omit it (PERF-09). */
+  getMyJob(jobId: string): Promise<JobRead> {
+    return this.request("GET", `/v1/jobs/me/${jobId}`);
   }
 
   createJob(payload: JobCreate): Promise<JobRead> {

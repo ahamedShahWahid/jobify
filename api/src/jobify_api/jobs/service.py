@@ -59,6 +59,15 @@ async def load_recruiter_job(
     return job
 
 
+async def get_recruiter_job(
+    session: AsyncSession, *, job_id: uuid.UUID, recruiter_user_id: uuid.UUID
+) -> tuple[Job, Employer]:
+    """GET /v1/jobs/me/{job_id} — the one recruiter route that needs the
+    full job including description (list rows omit it, see JobSummaryRead)."""
+    job = await load_recruiter_job(session, job_id=job_id, recruiter_user_id=recruiter_user_id)
+    return job, await _employer_for_job(session, job)
+
+
 async def create_recruiter_job(
     session: AsyncSession, *, employer_id: uuid.UUID, values: Mapping[str, Any]
 ) -> tuple[Job, Employer]:
